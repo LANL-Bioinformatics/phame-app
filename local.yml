@@ -1,0 +1,45 @@
+version: '2'
+
+volumes:
+  postgres_data_local: {}
+  postgres_backup_local: {}
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+    image: phame_api01_local_django
+    depends_on:
+      - postgres
+    volumes:
+      - .:/app
+    env_file:
+      - ./.envs/.local/.django
+      - ./.envs/.local/.postgres
+    ports:
+      - "8000:8000"
+    command: /start
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: phame_api01_production_postgres
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+      - postgres_backup_local:/backups
+    env_file:
+      - ./.envs/.local/.postgres
+
+  phame:
+    build:
+      context: .
+      dockerfile: ./compose/local/PhaME-1/Dockerfile
+    image: phame_api01_phame-1
+    volumes:
+      - .:/phame_analysis_folder/refdir
+      - .:/phame_analysis_folder/workdir
+    entrypoint: /bin/sh
+    stdin_open: true
+    tty: true
