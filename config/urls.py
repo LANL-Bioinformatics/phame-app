@@ -21,6 +21,11 @@ urlpatterns = [
     ),
     path("accounts/", include("allauth.urls")),
     # Your stuff: custom urls includes go here
+    path(
+        "phame_app/",
+        include("phame_api01.phame_app.urls", namespace="phame_app"),
+    ),
+
 ] + static(
     settings.MEDIA_URL, document_root=settings.MEDIA_ROOT
 )
