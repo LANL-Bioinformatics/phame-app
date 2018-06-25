@@ -1,8 +1,8 @@
-       refdir = {{ refdir }} # directory where reference files are located
-      workdir = {{ workdir }} # directory where contigs/reads files are located and output is stored
+       refdir = {{ form.ref_dir }} # directory where reference files are located
+      workdir = {{ form.work_dir }} # directory where contigs/reads files are located and output is stored
 
-    reference = {{ reference|default:2 }}  # 0:pick a random reference; 1:use given reference; 2: use ANI based reference
-      reffile = {{ reference_filename }}  # reference filename
+    reference = {{ form.reference|default:2 }}  # 0:pick a random reference; 1:use given reference; 2: use ANI based reference
+      reffile = {{ form.reference_filename }}  # reference filename
 
       project = ecoli  # main alignment file name
 

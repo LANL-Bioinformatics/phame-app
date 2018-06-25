@@ -24,12 +24,12 @@ RUN apt-get install -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 \
 	ocl-icd-opencl-dev mpich doxygen libssl-dev
 RUN apt-get -y upgrade
 RUN apt-get clean
-RUN mkdir -p phame_analysis_folder && mkdir -p phame_analysis_folder/refdir && mkdir -p phame_analysis_folder/workdir
+#RUN mkdir -p phame_analysis_folder && mkdir -p phame_analysis_folder/refdir && mkdir -p phame_analysis_folder/workdir
 RUN	git clone https://github.com/mshakya/PhaME-1.git
 WORKDIR /PhaME-1
 RUN ./INSTALL.sh
 ENV PATH="/PhaME-1/thirdParty/miniconda/bin:/PhaME-1/src:${PATH}"
-CMD ["/bin/sh"]
+#CMD ["/bin/sh"]
 #COPY env_docker_new.yml /PhaME-1
 #RUN conda env create -n phame_api -f env_docker_new.yml
 #RUN [ "/bin/bash", "-c", "source activate phame_api"]
