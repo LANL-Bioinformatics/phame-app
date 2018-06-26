@@ -5,7 +5,7 @@ class Run(models.Model):
     ref_dir = models.FileField(null=True, upload_to='refdir')
     work_dir = models.FileField(null=True, upload_to='workdir')
 
-    REF_CHOICES = (('random', '0'), ('given', '1'), ('ANI', '2'))
+    REF_CHOICES = (('0', '0'), ('1', '1'), ('2', '2'))
     reference = models.CharField(max_length=6, choices=REF_CHOICES)
 
     ref_file = models.FileField(null=True)

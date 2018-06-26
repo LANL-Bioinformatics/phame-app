@@ -39,10 +39,13 @@ class InputView(FormView):
         form = self.get_form(form_class)
         ref_dir = request.FILES.getlist('ref_dir')
         work_dir = request.FILES.getlist('work_dir')
+
         if form.is_valid():
             # if form.cleaned_data['data'] in [1, 2, 5] and form.cleaned_data['reference'] != 2:
             #     return render(request, 'phame_app/input.html', {'form': form})
-            # Run.objects.create(**form.cleaned_data)
+            form.cleaned_data['ref_dir'] = os.path.join(settings.MEDIA_ROOT, 'refdir')
+            form.cleaned_data['work_dir'] = os.path.join(settings.MEDIA_ROOT, 'workdir')
+            Run.objects.create(**form.cleaned_data)
             return self.form_valid(form)
 
 class RunView(View):
@@ -66,7 +69,7 @@ class RunView(View):
         config_file_path = os.path.join(settings.MEDIA_ROOT, 'config.ctl')
         with open(config_file_path, 'w') as config_file:
             config_file.write(content)
-        p1 = subprocess.Popen('docker run --rm -v $/Devel/phame_examples/ecoli:/data phame_api01_phame-1 perl src/runPhaME.pl /data/ecoli.ctl',
+        p1 = subprocess.Popen('docker run --rm -v /Devel/phame_examples/ecoli:/data phame_api01_phame-1 perl src/runPhaME.pl /data/ecoli.ctl',
                               shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         p1.communicate()
-        return Response(content)
+        return HttpResponseRedirect('/phame_app/input')

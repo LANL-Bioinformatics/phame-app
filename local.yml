@@ -1,8 +1,9 @@
-version: '2'
+version: '3.2'
 
 volumes:
   postgres_data_local: {}
   postgres_backup_local: {}
+#  django_data:
 
 services:
   django:
@@ -38,8 +39,7 @@ services:
       dockerfile: ./compose/local/PhaME-1/Dockerfile
     image: phame_api01_phame-1
     volumes:
-      - .:/phame_analysis_folder/refdir
-      - .:/phame_analysis_folder/workdir
+      - .:/phame_api01/media
     entrypoint: /bin/sh
     stdin_open: true
     tty: true
