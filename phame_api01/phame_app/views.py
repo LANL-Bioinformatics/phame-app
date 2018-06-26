@@ -48,8 +48,14 @@ class InputView(FormView):
 class RunView(View):
     renderer_classes = (TemplateHTMLRenderer, )
     def get(self, request):
-        all_runs = Run.objects.all()
-        run = all_runs.last()
+        # run_objs = Run.objects.filter(edge_proj_name=request.data['edge-proj-name'])
+        # run_values = run_objs.values()[0]
+        # user_proj = UsersProjects.objects.get(run=run_values['id'])
+        # run_serializer = RunSerializer(data=run_values)
+        #
+
+        all_runs = Run.objects.filter(id=1)
+        run = all_runs.values()[0]
         run_serializer = RunSerializer(data=run)
         run_serializer.is_valid()
         run_dict = dict(run_serializer.data)
