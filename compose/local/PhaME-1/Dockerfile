@@ -22,14 +22,22 @@ RUN apt-get -y update --fix-missing
 RUN apt-get install -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 \
 	libxrender1 git curl make gcc gfortran g++ grep unzip cmake libcurl4-gnutls-dev \
 	ocl-icd-opencl-dev mpich doxygen libssl-dev
+RUN apt-get install -y python-pip python-dev build-essential
 RUN apt-get -y upgrade
 RUN apt-get clean
+
 #RUN mkdir -p phame_analysis_folder && mkdir -p phame_analysis_folder/refdir && mkdir -p phame_analysis_folder/workdir
 RUN	git clone https://github.com/mshakya/PhaME-1.git
 WORKDIR /PhaME-1
 RUN ./INSTALL.sh
 ENV PATH="/PhaME-1/thirdParty/miniconda/bin:/PhaME-1/src:${PATH}"
-#CMD ["/bin/sh"]
+
+COPY /web /app
+WORKDIR /app
+RUN chmod u+x docker_run_phame.sh
+RUN pip install Flask==0.10.1
+ENTRYPOINT ["python"]
+CMD ["app.py"]
 #COPY env_docker_new.yml /PhaME-1
 #RUN conda env create -n phame_api -f env_docker_new.yml
 #RUN [ "/bin/bash", "-c", "source activate phame_api"]
