@@ -8,5 +8,5 @@ class RunSerializer(serializers.ModelSerializer):
     class Meta:
         model = Run
         fields = ('ref_dir', 'work_dir', 'reference', 'ref_file', 'project', 'cds_snps', 'buildSNPdb', 'first_time', 'data',
-                  'reads', 'tree', 'bootstrap', 'N', 'pos_select', 'code', 'clean', 'cutoff', 'threads')
+                  'reads', 'aligner', 'tree', 'bootstrap', 'N', 'pos_select', 'code', 'clean', 'cutoff', 'threads')
 

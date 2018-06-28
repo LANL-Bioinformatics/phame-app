@@ -50,33 +50,37 @@ class InputView(FormView):
             f.ref_dir = '../media/refdir'
             f.save()
             if len(ref_dir) > 0:
-                self.remove_input_files(ref_dir)
-                self.insert_files(ref_dir)
+                self.remove_input_files(settings.MEDIA_ROOT)
+                self.insert_files(ref_dir, 'ref_dir')
 
             if len(work_dir) > 0:
-                self.remove_input_files(work_dir)
-                self.insert_files(work_dir)
+                self.remove_input_files(settings.MEDIA_ROOT)
+                self.insert_files(work_dir, 'work_dir')
 
             return self.form_valid(form)
 
     @staticmethod
     def remove_input_files(dir):
         if len(os.listdir(dir)) > 0:
-            for root, dirs, _ in os.walk(dir):
+            for root, dirs, files in os.walk(dir):
                 for dir in dirs:
                     shutil.rmtree(os.path.join(root, dir))
+                for file in files:
+                    os.remove(os.path.join(root, file))
 
     @staticmethod
-    def insert_files(dir):
+    def insert_files(dir_files, dir_name):
         run = Run.objects.filter().order_by('-id')[0]
-        if dir == 'ref_dir':
-            for ref_file in dir:
+        if dir_name == 'ref_dir':
+            for ref_file in dir_files:
                 instance = ReferenceFile(run=run, ref_file=ref_file)
                 instance.save()
         else:
-            for work_file in dir:
+            for work_file in dir_files:
                 instance = WorkFile(run=run, work_file=work_file)
                 instance.save()
+
+
 class RunView(View):
     renderer_classes = (TemplateHTMLRenderer, )
     def get(self, request):
