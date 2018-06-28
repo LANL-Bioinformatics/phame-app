@@ -2,7 +2,7 @@ refdir      = {{ ref_dir }} # directory where reference files are located
 workdir     = {{ work_dir }} # directory where contigs/reads files are located and output is stored
 
 reference   = {{ reference|default:2 }}  # 0:pick a random reference; 1:use given reference; 2: use ANI based reference
-reffile     = {{ reference_filename }}  # reference filename
+reffile     = {{ ref_file }}  # reference filename
 
 project     = {{ project }}  # main alignment file name
 
