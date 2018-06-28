@@ -19,7 +19,7 @@ class PhameInputForm(ModelForm):
 
     data = forms.ChoiceField(widget=forms.Select(), choices=Run.DATA_CHOICES, initial='0')
     reads = forms.ChoiceField(widget=forms.Select(),choices=Run.READS_CHOICES, initial='2')
-    aligner = forms.ChoiceField(widget=forms.Select(), choices=Run.ALIGNER_CHOICES, initial='0')
+    aligner = forms.ChoiceField(widget=forms.Select(), choices=Run.ALIGNER_CHOICES, initial=Run.ALIGNER_CHOICES[0])
     tree = forms.ChoiceField(widget=forms.Select(), choices=Run.TREE_CHOICES, initial='1', required=False)
     bootstrap = forms.ChoiceField(widget=forms.Select(), choices=Run.BOOL_CHOICES, initial='1', required=False)
     N = forms.IntegerField(initial=100, required=False)

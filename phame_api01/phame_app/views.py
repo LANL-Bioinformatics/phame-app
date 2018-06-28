@@ -1,6 +1,7 @@
 import subprocess
 import os
 import requests
+import shutil
 
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
@@ -49,17 +50,33 @@ class InputView(FormView):
             f.ref_dir = '../media/refdir'
             f.save()
             if len(ref_dir) > 0:
-                run = Run.objects.filter().order_by('-id')[0]
-                for ref_file in ref_dir:
-                    instance = ReferenceFile(run=run, ref_file=ref_file)
-                    instance.save()
+                self.remove_input_files(ref_dir)
+                self.insert_files(ref_dir)
+
             if len(work_dir) > 0:
-                run = Run.objects.filter().order_by('-id')[0]
-                for work_file in work_dir:
-                    instance = WorkFile(run=run, work_file=work_file)
-                    instance.save()
+                self.remove_input_files(work_dir)
+                self.insert_files(work_dir)
+
             return self.form_valid(form)
 
+    @staticmethod
+    def remove_input_files(dir):
+        if len(os.listdir(dir)) > 0:
+            for root, dirs, _ in os.walk(dir):
+                for dir in dirs:
+                    shutil.rmtree(os.path.join(root, dir))
+
+    @staticmethod
+    def insert_files(dir):
+        run = Run.objects.filter().order_by('-id')[0]
+        if dir == 'ref_dir':
+            for ref_file in dir:
+                instance = ReferenceFile(run=run, ref_file=ref_file)
+                instance.save()
+        else:
+            for work_file in dir:
+                instance = WorkFile(run=run, work_file=work_file)
+                instance.save()
 class RunView(View):
     renderer_classes = (TemplateHTMLRenderer, )
     def get(self, request):
