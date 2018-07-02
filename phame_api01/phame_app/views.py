@@ -36,6 +36,10 @@ class InputView(FormView):
     template_name = 'phame_app/input.html'
     success_url = '/phame_app/run'
 
+    # def form_valid(self, form):
+    #     self.remove_input_files(settings.MEDIA_ROOT)
+
+        #     work_dir = request.FILES.getlist('work_dir')
     def post(self, request, *args, **kwargs):
         form_class = self.get_form_class()
         form = self.get_form(form_class)
@@ -45,10 +49,10 @@ class InputView(FormView):
         if form.is_valid():
             # if form.cleaned_data['data'] in [1, 2, 5] and form.cleaned_data['reference'] != 2:
             #     return render(request, 'phame_app/input.html', {'form': form})
-            f = form.save(commit=False)
-            f.work_dir = '../media/workdir'
-            f.ref_dir = '../media/refdir'
-            f.save()
+            # f = form.save(commit=False)
+            # f.work_dir = '../media/workdir'
+            # f.ref_dir = '../media/refdir'
+            # f.save()
             if len(ref_dir) > 0:
                 self.remove_input_files(settings.MEDIA_ROOT)
                 self.insert_files(ref_dir, 'ref_dir')
@@ -88,10 +92,9 @@ class RunView(View):
         run_serializer = RunSerializer(data=run)
         run_serializer.is_valid()
         run_dict = dict(run_serializer.data)
+        run_dict['work_dir'] = '../media/workdir'
+        run_dict['ref_dir'] = '../media/refdir'
         content = render_to_string('phame_app/phame.tmpl', run_dict)
-        # output_dir = os.path.join(settings.MEDIA_ROOT, 'edge_ui/EDGE_output', user_proj.user_path)
-        # if not os.path.exists(output_dir):
-        #     os.mkdir(output_dir)
         config_file_path = os.path.join(settings.MEDIA_ROOT, 'config.ctl')
         with open(config_file_path, 'w') as config_file:
             config_file.write(content)
