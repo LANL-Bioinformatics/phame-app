@@ -8,6 +8,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic.edit import FormView
 from django.views import View
 from django.template.loader import render_to_string
+from django.template import loader
 from django.conf import settings
 
 from rest_framework.renderers import TemplateHTMLRenderer
@@ -49,10 +50,6 @@ class InputView(FormView):
         if form.is_valid():
             # if form.cleaned_data['data'] in [1, 2, 5] and form.cleaned_data['reference'] != 2:
             #     return render(request, 'phame_app/input.html', {'form': form})
-            # f = form.save(commit=False)
-            # f.work_dir = '../media/workdir'
-            # f.ref_dir = '../media/refdir'
-            # f.save()
             if len(ref_dir) > 0:
                 self.remove_input_files(settings.MEDIA_ROOT)
                 self.insert_files(ref_dir, 'ref_dir')
@@ -102,4 +99,6 @@ class RunView(View):
         #                       shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # p1.communicate()
         r = requests.get('http://phame:5000/run')
-        return HttpResponseRedirect('/phame_app/input')
+        print(r.content)
+        template = loader.get_template('phame_app/output.html')
+        return HttpResponse(template.render({'run_phame_output': str(r.content)}, request))
