@@ -35,5 +35,21 @@
 </head>
 <body>
 {{ run_phame_output }}
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Coordinate 1</th>
+    <th>Coordinate 2</th>
+    <th>Type</th>
+  </tr>
+  {%  for c in coords %}
+  <tr>
+    <th> {{ c.name }}</th>
+    <th> {{ c.coord1 }}</th>
+    <th> {{ c.coord2 }}</th>
+    <th> {{ c.type }}</th>
+  </tr>
+  {%  endfor %}
+</table>
 </body>
 </html>

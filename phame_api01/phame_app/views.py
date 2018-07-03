@@ -37,10 +37,6 @@ class InputView(FormView):
     template_name = 'phame_app/input.html'
     success_url = '/phame_app/run'
 
-    # def form_valid(self, form):
-    #     self.remove_input_files(settings.MEDIA_ROOT)
-
-        #     work_dir = request.FILES.getlist('work_dir')
     def post(self, request, *args, **kwargs):
         form_class = self.get_form_class()
         form = self.get_form(form_class)
@@ -101,4 +97,20 @@ class RunView(View):
         r = requests.get('http://phame:5000/run')
         print(r.content)
         template = loader.get_template('phame_app/output.html')
-        return HttpResponse(template.render({'run_phame_output': str(r.content)}, request))
+        coords = []
+        with open(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results', 'CDScoords.txt'), 'r') as fp:
+            lines = fp.readlines()
+            for line in lines:
+                line_split = line.split()
+                coords.append({'name':line_split[0], 'coord1':line_split[1], 'coord2':line_split[2], 'type':line_split[3]})
+        comps = []
+        with open(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results', 'ecoli_comparisons.txt'), 'r') as fp:
+            lines = fp.readlines()
+            indx = 0
+            for line in lines:
+                line_split = line.split()
+                if indx == 0:
+                    comps.append()
+                comps.append(
+                    {'name': line_split[0], 'coord1': line_split[1], 'coord2': line_split[2], 'type': line_split[3]})
+        return HttpResponse(template.render({'run_phame_output': str(r.content), 'coords':coords}, request))
