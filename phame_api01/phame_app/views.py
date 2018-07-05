@@ -2,6 +2,7 @@ import subprocess
 import os
 import requests
 import shutil
+import pandas as pd
 
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
@@ -103,26 +104,21 @@ class RunView(View):
             lines = fp.readlines()
             for line in lines:
                 line_split = line.split()
-                coords.append({'name':line_split[0], 'coord1':line_split[1], 'coord2':line_split[2], 'type':line_split[3]})
+                coords.append({'name':line_split[0], 'coord1':line_split[1], 'coord2':line_split[2],
+                               'type':line_split[3]})
 
         comps = []
-        with open(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results', '{0}_summaryStatistics.txt'.format(run_dict['project'])), 'r') as fp:
+        with open(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results',
+                               '{0}_summaryStatistics.txt'.format(run_dict['project'])), 'r') as fp:
             lines = fp.readlines()
             for line in lines:
                 comps.append({'line':line})
 
         ref_files = ReferenceFile.objects.filter(run_id=run['id'])
-        with open(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results', '{0}_comparisons.txt'.format(run_dict['project'])), 'r') as fp:
-            lines = fp.readlines()
-            indx = 0
-            for line in lines:
-                line_split = line.split()
-                if indx == 1:
-                    row_dict = {}
-                    for fname in ref_files:
-                        row_dict['file'] = fname.ref_file.name.split('/')[1]
-                    comps.append({'row':'', 'file':row_dict})
-                indx += 1
-        #         comps.append(
-        #             {'name': line_split[0], 'coord1': line_split[1], 'coord2': line_split[2], 'type': line_split[3]})
+        comparisons_table = pd.read_table(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results',
+                                                       '{0}_comparisons.txt'.format(run_dict['project'])),
+                                          header=1, index_col=0)
+        comps_cols = comparisons_table.columns[1:]
+        comps = comparisons_table.loc[:, comps_cols].to_dict()
+
         return HttpResponse(template.render({'run_phame_output': str(r.content), 'coords':coords, 'comps':comps}, request))
