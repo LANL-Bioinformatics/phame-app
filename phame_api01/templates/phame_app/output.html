@@ -35,6 +35,7 @@
 </head>
 <body>
 {{ run_phame_output }}
+<h3>CDS Coordinates</h3>
 <table>
   <tr>
     <th>Name</th>
@@ -48,6 +49,14 @@
     <th> {{ c.coord1 }}</th>
     <th> {{ c.coord2 }}</th>
     <th> {{ c.type }}</th>
+  </tr>
+  {%  endfor %}
+</table>
+<h3>Summary Statistics</h3>
+<table>
+  {%  for c in comps %}
+  <tr>
+    <th> {{ c.line }}</th>
   </tr>
   {%  endfor %}
 </table>

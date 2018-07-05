@@ -81,7 +81,7 @@ class InputView(FormView):
 class RunView(View):
     renderer_classes = (TemplateHTMLRenderer, )
     def get(self, request):
-        run = Run.objects.filter().order_by('-id').values()[0]
+        run = Run.objects.filter().order_by('id').values()[3]
         run_serializer = RunSerializer(data=run)
         run_serializer.is_valid()
         run_dict = dict(run_serializer.data)
@@ -97,20 +97,32 @@ class RunView(View):
         r = requests.get('http://phame:5000/run')
         print(r.content)
         template = loader.get_template('phame_app/output.html')
+
         coords = []
         with open(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results', 'CDScoords.txt'), 'r') as fp:
             lines = fp.readlines()
             for line in lines:
                 line_split = line.split()
                 coords.append({'name':line_split[0], 'coord1':line_split[1], 'coord2':line_split[2], 'type':line_split[3]})
+
         comps = []
-        with open(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results', 'ecoli_comparisons.txt'), 'r') as fp:
+        with open(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results', '{0}_summaryStatistics.txt'.format(run_dict['project'])), 'r') as fp:
+            lines = fp.readlines()
+            for line in lines:
+                comps.append({'line':line})
+
+        ref_files = ReferenceFile.objects.filter(run_id=run['id'])
+        with open(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results', '{0}_comparisons.txt'.format(run_dict['project'])), 'r') as fp:
             lines = fp.readlines()
             indx = 0
             for line in lines:
                 line_split = line.split()
-                if indx == 0:
-                    comps.append()
-                comps.append(
-                    {'name': line_split[0], 'coord1': line_split[1], 'coord2': line_split[2], 'type': line_split[3]})
-        return HttpResponse(template.render({'run_phame_output': str(r.content), 'coords':coords}, request))
+                if indx == 1:
+                    row_dict = {}
+                    for fname in ref_files:
+                        row_dict['file'] = fname.ref_file.name.split('/')[1]
+                    comps.append({'row':'', 'file':row_dict})
+                indx += 1
+        #         comps.append(
+        #             {'name': line_split[0], 'coord1': line_split[1], 'coord2': line_split[2], 'type': line_split[3]})
+        return HttpResponse(template.render({'run_phame_output': str(r.content), 'coords':coords, 'comps':comps}, request))
