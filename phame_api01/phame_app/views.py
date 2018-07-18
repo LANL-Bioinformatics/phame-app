@@ -97,28 +97,44 @@ class RunView(View):
         # p1.communicate()
         r = requests.get('http://phame:5000/run')
         print(r.content)
-        template = loader.get_template('phame_app/output.html')
+        template = loader.get_template('phame_app/tree_output2.html')
 
-        coords = []
-        with open(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results', 'CDScoords.txt'), 'r') as fp:
-            lines = fp.readlines()
-            for line in lines:
-                line_split = line.split()
-                coords.append({'name':line_split[0], 'coord1':line_split[1], 'coord2':line_split[2],
-                               'type':line_split[3]})
+        # coords = []
+        # coords_file = os.path.join(settings.MEDIA_ROOT, 'workdir', 'results', 'CDScoords.txt')
+        # coords_df = pd.read_csv(coords_file, sep='\t')
+        # coords_df.set_axis(['name', 'coord1', 'coord2', 'type'],axis=1)
+        # # for row in coords_df.iterrows():
+        # #     print(row)
+        # [coords.append(row[1].to_dict()) for row in coords_df.iterrows()]
+        # # with open(coords_file, 'r') as fp:
+        # #     lines = fp.readlines()
+        # #     for line in lines:
+        # #         line_split = line.split()
+        # #         coords.append({'name':line_split[0], 'coord1':line_split[1], 'coord2':line_split[2],
+        # #                        'type':line_split[3]})
+        #
+        #
+        # with open(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results',
+        #                        '{0}_summaryStatistics.txt'.format(run_dict['project'])), 'r') as fp:
+        #     lines = fp.readlines()
+        #     stats = []
+        #     # for line in lines:
+        #     #     stats.append({'line':line})
+        #     [stats.append({'line': line}) for line in lines]
+        # ref_files = ReferenceFile.objects.filter(run_id=run['id'])
+        # comparisons_table = pd.read_table(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results',
+        #                                                '{0}_comparisons.txt'.format(run_dict['project'])),
+        #                                   header=1, index_col=0)
+        # comps_cols = comparisons_table.columns[1:]
+        #
+        #
+        # comps = comparisons_table.iloc[:,:-1]
+        # comps_list = []
+        # # for index, row in comps.iterrows():
+        # #     comps_list.append([index] + row.tolist())
+        # [comps_list.append([index] + row.tolist()) for index, row in comps.iterrows()]
+        # comps_dict = {'rows':comps_list}
+        # headers = ['pos'] + comps_cols.tolist()
 
-        comps = []
-        with open(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results',
-                               '{0}_summaryStatistics.txt'.format(run_dict['project'])), 'r') as fp:
-            lines = fp.readlines()
-            for line in lines:
-                comps.append({'line':line})
-
-        ref_files = ReferenceFile.objects.filter(run_id=run['id'])
-        comparisons_table = pd.read_table(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results',
-                                                       '{0}_comparisons.txt'.format(run_dict['project'])),
-                                          header=1, index_col=0)
-        comps_cols = comparisons_table.columns[1:]
-        comps = comparisons_table.loc[:, comps_cols].to_dict()
-
-        return HttpResponse(template.render({'run_phame_output': str(r.content), 'coords':coords, 'comps':comps}, request))
+        return HttpResponse(template.render({}, request))
+# return HttpResponse(template.render({'run_phame_output': str(r.content), 'stats':stats, 'coords':coords, 'headers': headers, 'comps':comps_dict}, request))
