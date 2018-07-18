@@ -82,21 +82,21 @@ class InputView(FormView):
 class RunView(View):
     renderer_classes = (TemplateHTMLRenderer, )
     def get(self, request):
-        run = Run.objects.filter().order_by('id').values()[3]
-        run_serializer = RunSerializer(data=run)
-        run_serializer.is_valid()
-        run_dict = dict(run_serializer.data)
-        run_dict['work_dir'] = '../media/workdir'
-        run_dict['ref_dir'] = '../media/refdir'
-        content = render_to_string('phame_app/phame.tmpl', run_dict)
-        config_file_path = os.path.join(settings.MEDIA_ROOT, 'config.ctl')
-        with open(config_file_path, 'w') as config_file:
-            config_file.write(content)
+        # run = Run.objects.filter().order_by('id').values()[3]
+        # run_serializer = RunSerializer(data=run)
+        # run_serializer.is_valid()
+        # run_dict = dict(run_serializer.data)
+        # run_dict['work_dir'] = '../media/workdir'
+        # run_dict['ref_dir'] = '../media/refdir'
+        # content = render_to_string('phame_app/phame.tmpl', run_dict)
+        # config_file_path = os.path.join(settings.MEDIA_ROOT, 'config.ctl')
+        # with open(config_file_path, 'w') as config_file:
+        #     config_file.write(content)
         # p1 = subprocess.Popen('docker run --rm -v /Devel/phame_examples/ecoli:/data phame_api01_phame-1 perl src/runPhaME.pl /data/ecoli.ctl',
         #                       shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # p1.communicate()
         r = requests.get('http://phame:5000/run')
-        print(r.content)
+
         template = loader.get_template('phame_app/tree_output2.html')
 
         # coords = []
@@ -121,11 +121,31 @@ class RunView(View):
         #     # for line in lines:
         #     #     stats.append({'line':line})
         #     [stats.append({'line': line}) for line in lines]
+
+        # print(r.content)
+        template = loader.get_template('phame_app/archeo_example.html')
+        r = requests.post('http://phame:5000/display')
+        # coords = []
+        # with open(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results', 'CDScoords.txt'), 'r') as fp:
+        #     lines = fp.readlines()
+        #     for line in lines:
+        #         line_split = line.split()
+        #         coords.append({'name':line_split[0], 'coord1':line_split[1], 'coord2':line_split[2],
+        #                        'type':line_split[3]})
+        #
+        # comps = []
+        # with open(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results',
+        #                        '{0}_summaryStatistics.txt'.format(run_dict['project'])), 'r') as fp:
+        #     lines = fp.readlines()
+        #     for line in lines:
+        #         comps.append({'line':line})
+        #
         # ref_files = ReferenceFile.objects.filter(run_id=run['id'])
         # comparisons_table = pd.read_table(os.path.join(settings.MEDIA_ROOT, 'workdir', 'results',
         #                                                '{0}_comparisons.txt'.format(run_dict['project'])),
         #                                   header=1, index_col=0)
         # comps_cols = comparisons_table.columns[1:]
+
         #
         #
         # comps = comparisons_table.iloc[:,:-1]

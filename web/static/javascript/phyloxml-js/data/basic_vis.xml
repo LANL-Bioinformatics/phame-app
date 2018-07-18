@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phyloxml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.phyloxml.org http://www.phyloxml.org/1.20/phyloxml.xsd" xmlns="http://www.phyloxml.org">
+ <phylogeny rooted="false" rerootable="true">
+  <clade>
+   <clade>
+    <branch_length>0.000001</branch_length>
+    <clade>
+     <branch_length>0.017443</branch_length>
+     <clade>
+      <branch_length>0.018018</branch_length>
+      <clade>
+       <branch_length>0.012714</branch_length>
+       <clade>
+        <branch_length>0.012877</branch_length>
+        <clade>
+         <branch_length>0.001251</branch_length>
+         <clade>
+          <name>A/Akita/1/95</name>
+          <branch_length>0.000001</branch_length>
+          <sequence>
+           <accession source="unknown">AAC63414</accession>
+          </sequence>
+          <property ref="ird:Year" datatype="xsd:string" applies_to="node">1995</property>
+          <property ref="ird:Country" datatype="xsd:string" applies_to="node">Japan</property>
+          <property ref="ird:Subtype" datatype="xsd:string" applies_to="node">H3N2</property>
+          <property ref="ird:HA" datatype="xsd:string" applies_to="node">3</property>
+          <property ref="ird:Host" datatype="xsd:string" applies_to="node">Human</property>
+          <property ref="ird:Region" datatype="xsd:string" applies_to="node">Asia</property>
+          <property ref="ird:NA" datatype="xsd:string" applies_to="node">2</property>
+         </clade>
+         <clade>
+          <name>A/Akita/1/94</name>
+          <branch_length>0.000001</branch_length>
+          <sequence>
+           <accession source="unknown">AAC63413</accession>
+          </sequence>
+          <property ref="ird:Year" datatype="xsd:string" applies_to="node">1994</property>
+          <property ref="ird:Country" datatype="xsd:string" applies_to="node">Japan</property>
+          <property ref="ird:Subtype" datatype="xsd:string" applies_to="node">H3N2</property>
+          <property ref="ird:HA" datatype="xsd:string" applies_to="node">3</property>
+          <property ref="ird:Host" datatype="xsd:string" applies_to="node">Human</property>
+          <property ref="ird:Region" datatype="xsd:string" applies_to="node">Asia</property>
+          <property ref="ird:NA" datatype="xsd:string" applies_to="node">2</property>
+         </clade>
+        </clade>
+        <clade>
+         <name>A/Akita/4/1993</name>
+         <branch_length>0.002561</branch_length>
+         <sequence>
+          <accession source="unknown">AFH00075</accession>
+         </sequence>
+         <property ref="ird:Year" datatype="xsd:string" applies_to="node">1993</property>
+         <property ref="ird:Country" datatype="xsd:string" applies_to="node">Japan</property>
+         <property ref="ird:Subtype" datatype="xsd:string" applies_to="node">H3N2</property>
+         <property ref="ird:HA" datatype="xsd:string" applies_to="node">3</property>
+         <property ref="ird:Host" datatype="xsd:string" applies_to="node">Human</property>
+         <property ref="ird:Region" datatype="xsd:string" applies_to="node">Asia</property>
+         <property ref="ird:NA" datatype="xsd:string" applies_to="node">2</property>
+        </clade>
+       </clade>
+       <clade>
+        <name>A/Aichi/2/1968</name>
+        <branch_length>0.005067</branch_length>
+        <sequence>
+         <accession source="unknown">AFM71867</accession>
+        </sequence>
+        <property ref="ird:Year" datatype="xsd:string" applies_to="node">1968</property>
+        <property ref="ird:Country" datatype="xsd:string" applies_to="node">Japan</property>
+        <property ref="ird:Subtype" datatype="xsd:string" applies_to="node">H3N2</property>
+        <property ref="ird:HA" datatype="xsd:string" applies_to="node">3</property>
+        <property ref="ird:Host" datatype="xsd:string" applies_to="node">Human</property>
+        <property ref="ird:Region" datatype="xsd:string" applies_to="node">Asia</property>
+        <property ref="ird:NA" datatype="xsd:string" applies_to="node">2</property>
+       </clade>
+      </clade>
+      <clade>
+       <branch_length>0.002676</branch_length>
+       <clade>
+        <name>A/AA/Marton/1943</name>
+        <branch_length>0.003843</branch_length>
+        <sequence>
+         <accession source="unknown">ABO38064</accession>
+        </sequence>
+        <property ref="ird:H1Clade" datatype="xsd:string" applies_to="node">ND</property>
+        <property ref="ird:HA" datatype="xsd:string" applies_to="node">1</property>
+        <property ref="ird:Year" datatype="xsd:string" applies_to="node">1943</property>
+        <property ref="ird:Country" datatype="xsd:string" applies_to="node">USA</property>
+        <property ref="ird:USAState" datatype="xsd:string" applies_to="node">AZ</property>
+        <property ref="ird:GlobalH1Clade" datatype="xsd:string" applies_to="node">Other-Human</property>
+        <property ref="ird:Subtype" datatype="xsd:string" applies_to="node">H1N1</property>
+        <property ref="ird:Region" datatype="xsd:string" applies_to="node">North America</property>
+        <property ref="ird:Host" datatype="xsd:string" applies_to="node">Human</property>
+        <property ref="ird:NA" datatype="xsd:string" applies_to="node">1</property>
+       </clade>
+       <clade>
+        <name>A/AA/Huston/1945</name>
+        <branch_length>0.007654</branch_length>
+        <sequence>
+         <accession source="unknown">ABP49337</accession>
+        </sequence>
+        <property ref="ird:H1Clade" datatype="xsd:string" applies_to="node">ND</property>
+        <property ref="ird:HA" datatype="xsd:string" applies_to="node">1</property>
+        <property ref="ird:Year" datatype="xsd:string" applies_to="node">1945</property>
+        <property ref="ird:Country" datatype="xsd:string" applies_to="node">USA</property>
+        <property ref="ird:USAState" datatype="xsd:string" applies_to="node">IL</property>
+        <property ref="ird:GlobalH1Clade" datatype="xsd:string" applies_to="node">Other-Human</property>
+        <property ref="ird:Subtype" datatype="xsd:string" applies_to="node">H1N1</property>
+        <property ref="ird:Region" datatype="xsd:string" applies_to="node">North America</property>
+        <property ref="ird:Host" datatype="xsd:string" applies_to="node">Human</property>
+        <property ref="ird:NA" datatype="xsd:string" applies_to="node">1</property>
+       </clade>
+      </clade>
+     </clade>
+     <clade>
+      <name>A/African starling/England-Q/983/1979</name>
+      <branch_length>0.013747</branch_length>
+      <sequence>
+       <accession source="unknown">AAU00820</accession>
+      </sequence>
+      <property ref="ird:Year" datatype="xsd:string" applies_to="node">1979</property>
+      <property ref="ird:Country" datatype="xsd:string" applies_to="node">United Kingdom</property>
+      <property ref="ird:Subtype" datatype="xsd:string" applies_to="node">H7N1</property>
+      <property ref="ird:HA" datatype="xsd:string" applies_to="node">7</property>
+      <property ref="ird:Host" datatype="xsd:string" applies_to="node">Avian African Starling</property>
+      <property ref="ird:Region" datatype="xsd:string" applies_to="node">Europe</property>
+      <property ref="ird:NA" datatype="xsd:string" applies_to="node">1</property>
+     </clade>
+    </clade>
+    <clade>
+     <name>A/Aalborg/INS282/2009</name>
+     <branch_length>0.005145</branch_length>
+     <sequence>
+      <accession source="unknown">ADX98798</accession>
+     </sequence>
+     <property ref="ird:H1Clade" datatype="xsd:string" applies_to="node">npdm</property>
+     <property ref="ird:HA" datatype="xsd:string" applies_to="node">1</property>
+     <property ref="ird:Year" datatype="xsd:string" applies_to="node">2009</property>
+     <property ref="ird:Country" datatype="xsd:string" applies_to="node">Denmark</property>
+     <property ref="ird:GlobalH1Clade" datatype="xsd:string" applies_to="node">1A.3.3.2</property>
+     <property ref="ird:Subtype" datatype="xsd:string" applies_to="node">H1N1</property>
+     <property ref="ird:FluSeason" datatype="xsd:string" applies_to="node">09-10</property>
+     <property ref="ird:Region" datatype="xsd:string" applies_to="node">Europe</property>
+     <property ref="ird:Host" datatype="xsd:string" applies_to="node">Human</property>
+     <property ref="ird:NA" datatype="xsd:string" applies_to="node">1</property>
+    </clade>
+   </clade>
+   <clade>
+    <name>A/Aalborg/INS132/2009</name>
+    <branch_length>0.000001</branch_length>
+    <sequence>
+     <accession source="unknown">ADX98969</accession>
+    </sequence>
+    <property ref="ird:H1Clade" datatype="xsd:string" applies_to="node">npdm</property>
+    <property ref="ird:HA" datatype="xsd:string" applies_to="node">1</property>
+    <property ref="ird:Year" datatype="xsd:string" applies_to="node">2009</property>
+    <property ref="ird:Country" datatype="xsd:string" applies_to="node">Denmark</property>
+    <property ref="ird:GlobalH1Clade" datatype="xsd:string" applies_to="node">1A.3.3.2</property>
+    <property ref="ird:Subtype" datatype="xsd:string" applies_to="node">H1N1</property>
+    <property ref="ird:FluSeason" datatype="xsd:string" applies_to="node">09-10</property>
+    <property ref="ird:Region" datatype="xsd:string" applies_to="node">Europe</property>
+    <property ref="ird:Host" datatype="xsd:string" applies_to="node">Human</property>
+    <property ref="ird:NA" datatype="xsd:string" applies_to="node">1</property>
+   </clade>
+   <clade>
+    <name>A/Aalborg/INS133/2009</name>
+    <branch_length>0.000001</branch_length>
+    <sequence>
+     <accession source="unknown">ADH01967</accession>
+    </sequence>
+    <property ref="ird:H1Clade" datatype="xsd:string" applies_to="node">npdm</property>
+    <property ref="ird:HA" datatype="xsd:string" applies_to="node">1</property>
+    <property ref="ird:Year" datatype="xsd:string" applies_to="node">2009</property>
+    <property ref="ird:Country" datatype="xsd:string" applies_to="node">Denmark</property>
+    <property ref="ird:GlobalH1Clade" datatype="xsd:string" applies_to="node">1A.3.3.2</property>
+    <property ref="ird:Subtype" datatype="xsd:string" applies_to="node">H1N1</property>
+    <property ref="ird:FluSeason" datatype="xsd:string" applies_to="node">09-10</property>
+    <property ref="ird:Region" datatype="xsd:string" applies_to="node">Europe</property>
+    <property ref="ird:Host" datatype="xsd:string" applies_to="node">Human</property>
+    <property ref="ird:NA" datatype="xsd:string" applies_to="node">1</property>
+   </clade>
+  </clade>
+ </phylogeny>
+</phyloxml>
