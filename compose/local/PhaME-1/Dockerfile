@@ -36,7 +36,7 @@ COPY /web /app
 WORKDIR /app
 RUN chmod u+x docker_run_phame.sh
 RUN pip install Flask==0.10.1
-ENTRYPOINT ["python"]
+#ENTRYPOINT ["python"]
 CMD ["app.py"]
 #COPY env_docker_new.yml /PhaME-1
 #RUN conda env create -n phame_api -f env_docker_new.yml
