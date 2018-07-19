@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>PhaME</h1>
+    <form action="" method="post" enctype="multipart/form-data" novalidate>
+        {{ form.hidden_tag() }}
+        <p>
+            {{ form.ref_dir.label }}
+            {{ form.ref_dir(size=32) }}
+            {% for error in form.ref_dir.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.work_dir.label }}
+            {{ form.work_dir(size=32) }}
+            {% for error in form.work_dir.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.reference_file.label }}
+            {{ form.reference_file(size=32) }}
+            {% for error in form.reference_file.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.reference.label }}
+            {{ form.reference(size=32) }}
+            {% for error in form.reference.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.project.label }}
+            {{ form.project(size=32) }}
+            {% for error in form.project.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.cds_snps.label }}
+            {{ form.cds_snps(size=32) }}
+            {% for error in form.cds_snps.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.buildSNPdb.label }}
+            {{ form.buildSNPdb(size=32) }}
+            {% for error in form.buildSNPdb.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.first_time.label }}
+            {{ form.first_time(size=32) }}
+            {% for error in form.first_time.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.data.label }}
+            {{ form.data(size=32) }}
+            {% for error in form.data.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.reads.label }}
+            {{ form.reads(size=32) }}
+            {% for error in form.reads.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.aligner.label }}
+            {{ form.aligner(size=32) }}
+            {% for error in form.aligner.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.tree.label }}
+            {{ form.tree(size=32) }}
+            {% for error in form.tree.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.bootstrap.label }}
+            {{ form.bootstrap(size=32) }}
+            {% for error in form.bootstrap.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.N.label }}
+            {{ form.N(size=32) }}
+            {% for error in form.N.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.pos_select.label }}
+            {{ form.pos_select(size=32) }}
+            {% for error in form.pos_select.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.code.label }}
+            {{ form.code(size=32) }}
+            {% for error in form.code.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.clean.label }}
+            {{ form.clean(size=32) }}
+            {% for error in form.clean.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.threads.label }}
+            {{ form.threads(size=32) }}
+            {% for error in form.threads.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.cutoff.label }}
+            {{ form.cutoff(size=32) }}
+            {% for error in form.cutoff.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+
+        <p>{{ form.submit() }}</p>
+    </form>
+{% endblock %}
