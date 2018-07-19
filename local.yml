@@ -46,6 +46,6 @@ services:
       - .:/phame_api01
       - .:/code
 #      - django_data:/app/phame_api01/media
-#    entrypoint: /bin/sh
+#    entrypoint: [ "/bin/bash", "-c", "source activate phame"]
 #    stdin_open: true
 #    tty: true

@@ -1,9 +1,11 @@
-<!DOCTYPE html>
-<meta charset="utf-8">
-<head>
-    <title>Basic Visualization Demo</title>
-
-    <!-- For MS IE/Edge compatibility:-->
+<html>
+    <head>
+      {% if title %}
+      <title>{{ title }} PhaME</title>
+      {% else %}
+      <title>PhaME</title>
+      {% endif %}
+<!-- For MS IE/Edge compatibility:-->
     <meta http-equiv="X-UA-Compatible" content="IE=100">
 
 
@@ -260,7 +262,7 @@
                 sizes: null
             };
 
-            var loc = "{{ url_for('static', filename=tree ) }}";
+            var loc = "{{ url_for('static', filename='basic_vis.xml') }}";
 
             jQuery.get(loc,
                     function (data) {
@@ -291,31 +293,24 @@
                     });
         }
     </script>
-
-
-</head>
-
-<body onload="load()">
-
-<div>
-    <h2>Archaeopteryx.js: Basic Visualization Demo</h2>
-    <p>
-        Data is based on information from the Influenza Research Database (<a href="https://www.fludb.org" target="_blank">fludb.org</a>)
-    </p>
-    <p>
-        Archaeopteryx.js <a href="https://docs.google.com/document/d/16PjoaNeNTWPUNVGcdYukP6Y1G35PFhq39OiIMmD03U8"
-                            target="_blank">documentation</a>
-        <br>
-        <br>
-    </p>
-  <p>
-      <div id='phylogram1'></div>
-      <div id='controls0' class='ui-widget-content'></div>
-   </p>
-</div>
-
-<p>
-    return to <a href="https://sites.google.com/site/cmzmasek/home/software/archaeopteryx-js">Archaeopteryx.js</a>
-</p>
-
-</body>
+    </head>
+    <body>
+        <div>
+          PhaME:
+          <a href="{{ url_for('index') }}">Home</a>
+          <a href="{{ url_for('login') }}">Login</a>
+          <a href="{{ url_for('input') }}">Input</a>
+        </div>
+        <hr>
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul>
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </body>
+</html>
