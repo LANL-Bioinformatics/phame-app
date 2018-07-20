@@ -44,7 +44,6 @@ services:
       - 5000:5000
     volumes:
       - .:/phame_api01
-      - .:/code
 #      - django_data:/app/phame_api01/media
 #    entrypoint: [ "/bin/bash", "-c", "source activate phame"]
 #    stdin_open: true

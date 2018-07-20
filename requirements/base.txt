@@ -4,6 +4,7 @@ Pillow==5.1.0  # https://github.com/python-pillow/Pillow
 rcssmin==1.0.6  # https://github.com/ndparker/rcssmin
 argon2-cffi==18.1.0  # https://github.com/hynek/argon2_cffi
 redis>=2.10.5  # https://github.com/antirez/redis
+pandas==0.23.1
 
 # Django
 # ------------------------------------------------------------------------------
@@ -14,7 +15,7 @@ django-allauth==0.36.0  # https://github.com/pennersr/django-allauth
 django-crispy-forms==1.7.2  # https://github.com/django-crispy-forms/django-crispy-forms
 django-compressor==2.2  # https://github.com/django-compressor/django-compressor
 django-redis==4.9.0  # https://github.com/niwinz/django-redis
-pandas
+
 
 # Django REST Framework
 djangorestframework==3.8.2  # https://github.com/encode/django-rest-framework
