@@ -45,6 +45,7 @@ services:
     volumes:
       - .:/phame_api01
 #      - django_data:/app/phame_api01/media
+#    command: source /PhaME-1/thirdParty/miniconda/bin/activate phame
 #    entrypoint: [ "/bin/bash", "-c", "source activate phame"]
 #    stdin_open: true
 #    tty: true

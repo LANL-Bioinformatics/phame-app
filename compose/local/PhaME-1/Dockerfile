@@ -17,7 +17,7 @@ LABEL website="https://github.com/mshakya/PhaME-1"
 LABEL tags="genomics"
 
 ############################# INSTALLATION #####################################
-#ENTRYPOINT [ "/bin/bash", "-c" ]
+
 RUN apt-get -y update --fix-missing
 RUN apt-get install -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 \
 	libxrender1 git curl make gcc gfortran g++ grep unzip cmake libcurl4-gnutls-dev \
@@ -30,14 +30,14 @@ RUN apt-get clean
 RUN	git clone https://github.com/mshakya/PhaME-1.git
 WORKDIR /PhaME-1
 RUN ./INSTALL.sh
-ENV PATH="/PhaME-1/thirdParty/miniconda/bin:/PhaME-1/src:${PATH}"
+ENV PATH="/PhaME-1/thirdParty/miniconda/envs/phame/bin:/PhaME-1/src:${PATH}"
 
 COPY /web /app
 WORKDIR /app
 #RUN chmod ugo+x docker_run_phame.sh
 RUN pip install Flask==0.10.1 flask-wtf
-#ENTRYPOINT ["python"]
-#CMD ["app.py"]
+ENTRYPOINT ["python"]
+CMD ["app.py"]
 #CMD ["source activate phame && exec python app.py"]
 
 # RUN sh test/TestAll.sh
