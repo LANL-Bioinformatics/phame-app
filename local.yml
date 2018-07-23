@@ -5,6 +5,7 @@ volumes:
   postgres_backup_local: {}
   django_data: {}
 
+
 services:
   django:
     build:
@@ -33,10 +34,10 @@ services:
       - postgres_backup_local:/backups
     env_file:
       - ./.envs/.local/.postgres
-  web:
+  nginx:
     image: nginx
     volumes:
-     - ./mysite.template:/etc/nginx/conf.d/mysite.template
+     - ./compose/local/nginx/conf.d:/etc/nginx/conf.d
     ports:
      - "8080:80"
     environment:
