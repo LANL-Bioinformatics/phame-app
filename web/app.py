@@ -1,8 +1,9 @@
 import os
-from flask import Flask, render_template, redirect, flash, url_for, request, render_template_string
+from flask import Flask, render_template, redirect, flash, url_for, request
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired
+# from flask_bootstrap import Bootstrap
 from werkzeug.utils import secure_filename
 import subprocess
 from forms import LoginForm, InputForm
@@ -11,6 +12,7 @@ import logging
 
 app = Flask(__name__)
 app.config.from_object(Config)
+# bootstrap = Bootstrap(app)
 
 logging.basicConfig(filename='phame.log', level=logging.DEBUG)
 logging.debug(app.config['PROJECT_DIRECTORY'])
@@ -20,20 +22,20 @@ def upload_files(request, form):
     ref_dir = os.path.join(project_dir, 'refdir')
     work_dir = os.path.join(project_dir, 'workdir')
     logging.debug(project_dir)
-    os.makedirs(project_dir, exist_ok=True)
+    os.makedirs(project_dir)
     if form.reference_file.data:
         reference_file = request.files['reference_file']
         filename = secure_filename(reference_file.filename)
         reference_file.save(os.path.join(project_dir, filename))
 
     if form.ref_dir.data:
-        os.makedirs(ref_dir, exist_ok=True)
+        os.makedirs(ref_dir)
         for file_name in request.files.getlist("ref_dir"):
             filename = secure_filename(file_name.filename)
             file_name.save(os.path.join(ref_dir, filename))
 
     if form.work_dir.data:
-        os.makedirs(work_dir, exist_ok=True)
+        os.makedirs(work_dir)
         for file_name in request.files.getlist("work_dir"):
             filename = secure_filename(file_name.filename)
             file_name.save(os.path.join(work_dir, filename))
@@ -72,6 +74,7 @@ def display(project):
 
 @app.route('/input', methods=['GET', 'POST'])
 def input():
+
     form = InputForm()
     if request.method == 'POST':
         if 'reference_file' not in request.files:
