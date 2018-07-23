@@ -27,8 +27,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -yq install \
 RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/*
 
-RUN adduser django && groupadd django \
-    && usermod -aG django django
+RUN groupadd django \
+    && useradd -ms -g django django
 
 # Requirements are installed here to ensure they will be cached.
 COPY ./requirements /requirements
