@@ -18,27 +18,33 @@ logging.basicConfig(filename='phame.log', level=logging.DEBUG)
 logging.debug(app.config['PROJECT_DIRECTORY'])
 
 def upload_files(request, form):
+    success = False
     project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], form.project.data)
     ref_dir = os.path.join(project_dir, 'refdir')
     work_dir = os.path.join(project_dir, 'workdir')
     logging.debug(project_dir)
+    if os.path.exists(project_dir):
+        return success
     os.makedirs(project_dir)
     if form.reference_file.data:
         reference_file = request.files['reference_file']
         filename = secure_filename(reference_file.filename)
         reference_file.save(os.path.join(project_dir, filename))
+        success = True
 
     if form.ref_dir.data:
         os.makedirs(ref_dir)
         for file_name in request.files.getlist("ref_dir"):
             filename = secure_filename(file_name.filename)
             file_name.save(os.path.join(ref_dir, filename))
-
+        success = True
     if form.work_dir.data:
         os.makedirs(work_dir)
         for file_name in request.files.getlist("work_dir"):
             filename = secure_filename(file_name.filename)
             file_name.save(os.path.join(work_dir, filename))
+        success = True
+    return success
 
 
 @app.route('/run/<project>')
@@ -77,10 +83,9 @@ def input():
 
     form = InputForm()
     if request.method == 'POST':
-        if 'reference_file' not in request.files:
-            flash('No reference file')
-            return redirect(request.url)
-        upload_files(request, form)
+        if not upload_files(request, form):
+            flash('Project directory already exists')
+            return render_template('input.html', title='Phame input', form=form)
 
     if form.validate_on_submit():
         form_dict = request.form.to_dict()

@@ -1,138 +1,161 @@
 {% extends "base.html" %}
+{% block head %}
 
+
+{% endblock %}
 {% block content %}
+
+
     <h1>PhaME</h1>
     <form action="" method="post" enctype="multipart/form-data" novalidate>
+    <script>
+    function myFunction() {
+        var tree_value = document.getElementById("tree").value;
+        var x = document.getElementById("bootstrap");
+        if (x.style.display === "none") {
+            x.style.display = "block";
+        } else {
+            x.style.display = "none";
+        }
+    }
+    </script>
+
         {{ form.hidden_tag() }}
         <p>
             {{ form.ref_dir.label }}
-            {{ form.ref_dir(size=32) }}
+            {{ form.ref_dir() }}
             {% for error in form.ref_dir.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.work_dir.label }}
-            {{ form.work_dir(size=32) }}
+            {{ form.work_dir() }}
             {% for error in form.work_dir.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.reference_file.label }}
-            {{ form.reference_file(size=32) }}
+            {{ form.reference_file() }}
             {% for error in form.reference_file.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.reference.label }}
-            {{ form.reference(size=32) }}
+            {{ form.reference() }}
             {% for error in form.reference.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.project.label }}
-            {{ form.project(size=32) }}
+            {{ form.project() }}
             {% for error in form.project.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.cds_snps.label }}
-            {{ form.cds_snps(size=32) }}
+            {{ form.cds_snps() }}
             {% for error in form.cds_snps.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.buildSNPdb.label }}
-            {{ form.buildSNPdb(size=32) }}
+            {{ form.buildSNPdb() }}
             {% for error in form.buildSNPdb.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.first_time.label }}
-            {{ form.first_time(size=32) }}
+            {{ form.first_time() }}
             {% for error in form.first_time.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
-            {{ form.data.label }}
-            {{ form.data(size=32) }}
+            {{ form.data_type.label }}
+            {{ form.data_type() }}
             {% for error in form.data.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.reads.label }}
-            {{ form.reads(size=32) }}
+            {{ form.reads() }}
             {% for error in form.reads.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.aligner.label }}
-            {{ form.aligner(size=32) }}
+            {{ form.aligner() }}
             {% for error in form.aligner.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
-        <p>
-            {{ form.tree.label }}
-            {{ form.tree(size=32) }}
-            {% for error in form.tree.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
+{#        <p>#}
+{#            {{ form.tree.label }}#}
+{#            {{ form.tree() }}#}
+{#            {% for error in form.tree.errors %}#}
+{#              <span style="color: red;">[{{ error }}]</span>#}
+{#            {% endfor %}#}
+{#        </p>#}
+        <select id="tree" onchange="myFunction()">
+          <option value="No">No Tree
+          <option value="FastTree">FastTree
+          <option value="RAxML">RAxML
+          <option value="both">both
+        </select>
+        <div id="bootstrap">
             {{ form.bootstrap.label }}
-            {{ form.bootstrap(size=32) }}
+            {{ form.bootstrap() }}
             {% for error in form.bootstrap.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
-        </p>
+        </div>
         <p>
             {{ form.N.label }}
-            {{ form.N(size=32) }}
+            {{ form.N() }}
             {% for error in form.N.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.pos_select.label }}
-            {{ form.pos_select(size=32) }}
+            {{ form.pos_select() }}
             {% for error in form.pos_select.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.code.label }}
-            {{ form.code(size=32) }}
+            {{ form.code() }}
             {% for error in form.code.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.clean.label }}
-            {{ form.clean(size=32) }}
+            {{ form.clean() }}
             {% for error in form.clean.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.threads.label }}
-            {{ form.threads(size=32) }}
+            {{ form.threads() }}
             {% for error in form.threads.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.cutoff.label }}
-            {{ form.cutoff(size=32) }}
+            {{ form.cutoff() }}
             {% for error in form.cutoff.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
