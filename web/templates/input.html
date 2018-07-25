@@ -9,13 +9,21 @@
     <h1>PhaME</h1>
     <form action="" method="post" enctype="multipart/form-data" novalidate>
     <script>
-    function myFunction() {
+    function showBootstrap() {
         var tree_value = document.getElementById("tree").value;
-        var x = document.getElementById("bootstrap");
-        if (x.style.display === "none") {
-            x.style.display = "block";
+        var bootstrap = document.getElementById("bootstrap");
+        if (bootstrap.style.display === "none" && (tree_value === 'RAxML' || tree_value === 'both')) {
+            bootstrap.style.display = "block";
         } else {
-            x.style.display = "none";
+            bootstrap.style.display = "none";
+        }
+
+        var bootstrap_value = document.getElementById("bootstrap").value;
+        var bootstrapN = document.getElementById("bootstrapN");
+        if (bootstrapN.style.display === "none" && bootstrap_value === 'yes') {
+            bootstrapN.style.display = "block";
+        } else {
+            bootstrapN.style.display = "none";
         }
     }
     </script>
@@ -105,26 +113,26 @@
 {#              <span style="color: red;">[{{ error }}]</span>#}
 {#            {% endfor %}#}
 {#        </p>#}
-        <select id="tree" onchange="myFunction()">
+        <select id="tree" onchange="showBootstrap()">
           <option value="No">No Tree
           <option value="FastTree">FastTree
           <option value="RAxML">RAxML
           <option value="both">both
         </select>
-        <div id="bootstrap">
+        <div id="bootstrap" style="display: none">
             {{ form.bootstrap.label }}
             {{ form.bootstrap() }}
             {% for error in form.bootstrap.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </div>
-        <p>
+        <div id="bootstrapN" style="display: none">
             {{ form.N.label }}
             {{ form.N() }}
             {% for error in form.N.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
-        </p>
+        </div>
         <p>
             {{ form.pos_select.label }}
             {{ form.pos_select() }}
