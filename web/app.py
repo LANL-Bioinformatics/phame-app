@@ -26,23 +26,32 @@ def upload_files(request, form):
     if os.path.exists(project_dir):
         return success
     os.makedirs(project_dir)
-    if form.reference_file.data:
+    if 'reference_file' in request.files:
+        os.makedirs(ref_dir)
         reference_file = request.files['reference_file']
         filename = secure_filename(reference_file.filename)
-        reference_file.save(os.path.join(project_dir, filename))
+        reference_file.save(os.path.join(ref_dir, filename))
         success = True
 
-    if form.ref_dir.data:
-        os.makedirs(ref_dir)
+    if 'ref_dir' in request.files:
+        if not os.path.exists(ref_dir):
+            os.makedirs(ref_dir)
         for file_name in request.files.getlist("ref_dir"):
             filename = secure_filename(file_name.filename)
             file_name.save(os.path.join(ref_dir, filename))
         success = True
-    if form.work_dir.data:
+    if 'work_dir' in request.files:
         os.makedirs(work_dir)
         for file_name in request.files.getlist("work_dir"):
             filename = secure_filename(file_name.filename)
+            filename = filename.split('.')[:1] + '.contig'
             file_name.save(os.path.join(work_dir, filename))
+        success = True
+
+    if 'reads_file' in request.files:
+        reads_file = request.files['reads_file']
+        filename = secure_filename(reads_file)
+        reads_file.save(os.path.join(ref_dir, filename))
         success = True
     return success
 
@@ -88,12 +97,16 @@ def input():
             return render_template('input.html', title='Phame input', form=form)
 
     if form.validate_on_submit():
+        if ('1' in form.data_type.data or '2' in form.data_type.data) and 'reference_file' not in request.files:
+            flash('You must upload a reference genome if select Contigs or Reads from Data')
+            return render_template('input.html', title='Phame input', form=form)
         form_dict = request.form.to_dict()
         project = form_dict['project']
         form_dict.pop('csrf_token')
         form_dict['ref_dir'] = '../{0}/refdir/'.format(project)
         form_dict['work_dir'] = '../{0}/workdir'.format(project)
-        form_dict['reference_file'] = form.reference_file.data.filename
+        if 'reference_file' in request.files:
+            form_dict['reference_file'] = form.reference_file.data.filename
         content = render_template('phame.tmpl', form=form_dict)
         with open(os.path.join(app.config['PROJECT_DIRECTORY'], project, 'config.ctl'), 'w') as conf:
             conf.write(content)

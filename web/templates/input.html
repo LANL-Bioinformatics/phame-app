@@ -11,24 +11,44 @@
     <script>
     function showBootstrap() {
         var tree_value = document.getElementById("tree").value;
+        console.log(tree_value);
         var bootstrap = document.getElementById("bootstrap");
-        if (bootstrap.style.display === "none" && (tree_value === 'RAxML' || tree_value === 'both')) {
+        if (bootstrap.style.display === "none" && (tree_value === '2' || tree_value === '3')) {
             bootstrap.style.display = "block";
         } else {
             bootstrap.style.display = "none";
         }
-
-        var bootstrap_value = document.getElementById("bootstrap").value;
+    }
+    function showBootstrapN() {
+        var bootstrap_value = document.getElementById("bootstrapshow").value;
+        console.log(bootstrap_value);
         var bootstrapN = document.getElementById("bootstrapN");
-        if (bootstrapN.style.display === "none" && bootstrap_value === 'yes') {
+        if (bootstrapN.style.display === "none" && bootstrap_value === '1') {
             bootstrapN.style.display = "block";
         } else {
             bootstrapN.style.display = "none";
         }
+
     }
+
     </script>
 
         {{ form.hidden_tag() }}
+
+        <p>
+            {{ form.project.label }}
+            {{ form.project() }}
+            {% for error in form.project.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.data_type.label }}
+            {{ form.data_type() }}
+            {% for error in form.data.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
         <p>
             {{ form.ref_dir.label }}
             {{ form.ref_dir() }}
@@ -44,9 +64,16 @@
             {% endfor %}
         </p>
         <p>
-            {{ form.reference_file.label }}
-            {{ form.reference_file() }}
-            {% for error in form.reference_file.errors %}
+            {{ form.reads.label }}
+            {{ form.reads() }}
+            {% for error in form.reads.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.reads_file.label }}
+            {{ form.reads_file() }}
+            {% for error in form.reads_file.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
@@ -58,44 +85,9 @@
             {% endfor %}
         </p>
         <p>
-            {{ form.project.label }}
-            {{ form.project() }}
-            {% for error in form.project.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.cds_snps.label }}
-            {{ form.cds_snps() }}
-            {% for error in form.cds_snps.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.buildSNPdb.label }}
-            {{ form.buildSNPdb() }}
-            {% for error in form.buildSNPdb.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.first_time.label }}
-            {{ form.first_time() }}
-            {% for error in form.first_time.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.data_type.label }}
-            {{ form.data_type() }}
-            {% for error in form.data.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.reads.label }}
-            {{ form.reads() }}
-            {% for error in form.reads.errors %}
+            {{ form.reference_file.label }}
+            {{ form.reference_file() }}
+            {% for error in form.reference_file.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
@@ -106,44 +98,54 @@
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
-{#        <p>#}
-{#            {{ form.tree.label }}#}
-{#            {{ form.tree() }}#}
-{#            {% for error in form.tree.errors %}#}
-{#              <span style="color: red;">[{{ error }}]</span>#}
-{#            {% endfor %}#}
-{#        </p>#}
-        <select id="tree" onchange="showBootstrap()">
-          <option value="No">No Tree
-          <option value="FastTree">FastTree
-          <option value="RAxML">RAxML
-          <option value="both">both
-        </select>
-        <div id="bootstrap" style="display: none">
+        <p>
+            {{ form.cutoff.label }}
+            {{ form.cutoff() }}
+            {% for error in form.cutoff.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+
+        <p>
+            {{ form.cds_snps.label }}
+            {{ form.cds_snps() }}
+            {% for error in form.cds_snps.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.tree.label }}
+            {{ form.tree() }}
+            {% for error in form.tree.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
             {{ form.bootstrap.label }}
             {{ form.bootstrap() }}
             {% for error in form.bootstrap.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
-        </div>
-        <div id="bootstrapN" style="display: none">
+        </p>
+
+        <p>
             {{ form.N.label }}
             {{ form.N() }}
             {% for error in form.N.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
-        </div>
+        </p>
         <p>
-            {{ form.pos_select.label }}
-            {{ form.pos_select() }}
-            {% for error in form.pos_select.errors %}
+            {{ form.do_select.label }}
+            {{ form.do_select() }}
+            {% for error in form.do_select.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
-            {{ form.code.label }}
-            {{ form.code() }}
-            {% for error in form.code.errors %}
+            {{ form.pos_select.label }}
+            {{ form.pos_select() }}
+            {% for error in form.pos_select.errors %}
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
@@ -161,14 +163,35 @@
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
-        <p>
-            {{ form.cutoff.label }}
-            {{ form.cutoff() }}
-            {% for error in form.cutoff.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-
         <p>{{ form.submit() }}</p>
+
+
+{#        <p>#}
+{#          {{ form.tree.label }}#}
+{#            <select id="tree" onchange="showBootstrap()">#}
+{#              <option value="0">No tree</option>#}
+{#              <option value="1">FastTree</option>#}
+{#              <option value="2">RAxML</option>#}
+{#              <option value="3">Both</option>#}
+{#            </select>#}
+{#        </p>#}
+{#        </div>#}
+{#        <div id="bootstrap" style="display: none">#}
+{#            <select id="bootstrapshow" onchange="showBootstrapN()">#}
+{#              <option value="0">No#}
+{#              <option value="1">Yes#}
+{#            </select>#}
+{#        </div>#}
+{#        <div id="bootstrapN" style="display: none">#}
+{#        <p>#}
+{#            {{ form.N.label }}#}
+{#            {{ form.N() }}#}
+{#            {% for error in form.N.errors %}#}
+{#              <span style="color: red;">[{{ error }}]</span>#}
+{#            {% endfor %}#}
+{#        </p>#}
+{#        </div>#}
+
     </form>
+
 {% endblock %}
