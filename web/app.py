@@ -17,21 +17,16 @@ app.config.from_object(Config)
 logging.basicConfig(filename='phame.log', level=logging.DEBUG)
 logging.debug(app.config['PROJECT_DIRECTORY'])
 
-def upload_files(request, form):
+def upload_files(request, project_dir, ref_dir, work_dir, form):
     success = False
-    project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], form.project.data)
-    ref_dir = os.path.join(project_dir, 'refdir')
-    work_dir = os.path.join(project_dir, 'workdir')
-    logging.debug(project_dir)
-    if os.path.exists(project_dir):
-        return success
+
+
     os.makedirs(project_dir)
     if 'reference_file' in request.files:
         os.makedirs(ref_dir)
         reference_file = request.files['reference_file']
         filename = secure_filename(reference_file.filename)
         reference_file.save(os.path.join(ref_dir, filename))
-        success = True
 
     if 'ref_dir' in request.files:
         if not os.path.exists(ref_dir):
@@ -39,21 +34,19 @@ def upload_files(request, form):
         for file_name in request.files.getlist("ref_dir"):
             filename = secure_filename(file_name.filename)
             file_name.save(os.path.join(ref_dir, filename))
-        success = True
+        form.reference_file.choices = [(a.filename, a.filename) for a in request.files.getlist("ref_dir")]
     if 'work_dir' in request.files:
         os.makedirs(work_dir)
         for file_name in request.files.getlist("work_dir"):
             filename = secure_filename(file_name.filename)
             filename = filename.split('.')[:1] + '.contig'
             file_name.save(os.path.join(work_dir, filename))
-        success = True
 
     if 'reads_file' in request.files:
         reads_file = request.files['reads_file']
         filename = secure_filename(reads_file)
         reads_file.save(os.path.join(ref_dir, filename))
-        success = True
-    return success
+    return ref_dir, work_dir
 
 
 @app.route('/run/<project>')
@@ -91,26 +84,43 @@ def display(project):
 def input():
 
     form = InputForm()
+    form.reference_file.choices = []
     if request.method == 'POST':
-        if not upload_files(request, form):
+        project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], form.project.data)
+        ref_dir = os.path.join(project_dir, 'refdir')
+        work_dir = os.path.join(project_dir, 'workdir')
+        logging.debug(project_dir)
+        if os.path.exists(project_dir):
             flash('Project directory already exists')
             return render_template('input.html', title='Phame input', form=form)
+        upload_files(request, project_dir, ref_dir, work_dir, form)
 
-    if form.validate_on_submit():
-        if ('1' in form.data_type.data or '2' in form.data_type.data) and 'reference_file' not in request.files:
-            flash('You must upload a reference genome if select Contigs or Reads from Data')
-            return render_template('input.html', title='Phame input', form=form)
-        form_dict = request.form.to_dict()
-        project = form_dict['project']
-        form_dict.pop('csrf_token')
-        form_dict['ref_dir'] = '../{0}/refdir/'.format(project)
-        form_dict['work_dir'] = '../{0}/workdir'.format(project)
-        if 'reference_file' in request.files:
-            form_dict['reference_file'] = form.reference_file.data.filename
-        content = render_template('phame.tmpl', form=form_dict)
-        with open(os.path.join(app.config['PROJECT_DIRECTORY'], project, 'config.ctl'), 'w') as conf:
-            conf.write(content)
-        return redirect(url_for('run_phame', project=project))
+        if form.validate_on_submit():
+            # Perform validation based on requirements of PhaME
+            if ('1' in form.data_type.data or '2' in form.data_type.data) and 'reference_file' not in request.files:
+                flash('You must upload a reference genome if you select Contigs or Reads from Data')
+                return render_template('input.html', title='Phame input', form=form)
+            # Ensure each fasta file has a corresponding mapping file
+            if form.cds_snps.data == '1' or form.reference.data == '0' or form.reference.data == '2':
+                for fname in os.listdir(ref_dir):
+                    if fname.endswith('.fa') or fname.endswith('.fasta') or fname.endswith('.fna'):
+                        if not os.path.exists(os.path.join(ref_dir, '{0}.{1}'.format(fname.split('.')[0],'gff'))):
+                            flash('Each full genome file must have a corresponding .gff file if CDS SNPs is selected or'
+                                  ' if random or ANI is selected from Reference')
+                            return render_template('input.html', title='Phame input', form=form)
+
+            # Create config file
+            form_dict = request.form.to_dict()
+            project = form_dict['project']
+            form_dict.pop('csrf_token')
+            form_dict['ref_dir'] = '../{0}/refdir/'.format(project)
+            form_dict['work_dir'] = '../{0}/workdir'.format(project)
+            if len(form.reference_file.data) > 0:
+                form_dict['reference_file'] = form.reference_file.data[0]
+            content = render_template('phame.tmpl', form=form_dict)
+            with open(os.path.join(app.config['PROJECT_DIRECTORY'], project, 'config.ctl'), 'w') as conf:
+                conf.write(content)
+            return redirect(url_for('run_phame', project=project))
     return render_template('input.html', title='Phame input', form=form)
 
 
