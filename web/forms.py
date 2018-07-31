@@ -18,12 +18,12 @@ class MultiCheckboxField(SelectMultipleField):
 class InputForm(FlaskForm):
     boolean_choices = [('0', 'no'), ('1', 'yes')]
     project = StringField(u'Project Name', default='t4')
-    data_type = MultiCheckboxField(u'Data', choices=[('0', 'F'), ('1', 'C'), ('2', 'R')], default='0')
+    data_type = MultiCheckboxField(u'Data', choices=[('0', 'Full'), ('1', 'Contig'), ('2', 'Read')], default='0')
     ref_dir = MultipleFileField(u'Full Genomes', description='.gff/.fasta')
-    work_dir = MultipleFileField(u'Contigs')
+    work_dir = MultipleFileField(u'Upload Contigs')
     reads = SelectField(choices=[('0', 'single reads'), ('1', 'paired reads'), ('2', 'both')], default='2')
     reads_file = MultipleFileField('Upload Reads')
-    aligner = SelectField(choices=[('bowtie', 'bowtie'), ('FastTree', 'FastTree'), ('minimap2', 'minimap2')], default='bowtie')
+    aligner = SelectField(choices=[('bowtie', 'bowtie'), ('minimap2', 'minimap2')], default='bowtie')
     reference = SelectField(choices=[('0', 'random'), ('1', 'given'), ('2', 'ANI')], default='1')
     reference_file = SelectMultipleField(u'Reference Genome')
     cds_snps = SelectField(u'CDS SNPS',choices=boolean_choices, default='1')
