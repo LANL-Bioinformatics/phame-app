@@ -1,5 +1,6 @@
 import os
 import shutil
+import glob
 from flask import Flask, render_template, redirect, flash, url_for, request
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
@@ -10,6 +11,7 @@ import subprocess
 from forms import LoginForm, InputForm
 from config import Config
 import logging
+import pandas as pd
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -67,7 +69,7 @@ def project_setup(form):
     project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], form.project.data)
     ref_dir = os.path.join(project_dir, 'refdir')
     work_dir = os.path.join(project_dir, 'workdir')
-    logging.debug(project_dir)
+    logging.debug('created project directory: {0}'.format(project_dir))
     # project name must be unique
     if os.path.exists(project_dir):
         flash('Project directory already exists')
@@ -129,12 +131,24 @@ def display(project):
     :param project: project name
     :return: renders tree output
     """
+    project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], project)
+    results_dir = os.path.join(project_dir, 'workdir', 'results')
+    refdir = os.path.join(app.config['PROJECT_DIRECTORY'], project, 'refdir')
     tree_file = '{0}_all.fasttree'.format(project)
-    source = os.path.join(app.config['PROJECT_DIRECTORY'], project, 'workdir', 'results', tree_file)
+    summary_stats_file = '{0}_summaryStatistics.txt'.format(project)
+    stats_df = pd.read_table(os.path.join(results_dir, summary_stats_file))
+    count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or fname.endswith('.fasta'))])
+    lengths_df = stats_df.iloc[:count-1].drop(1, axis=1)
+    lengths_df.columns = ['name', 'total length']
+    ref_stats = stats_df.iloc[count:].drop(2, axis=2)
+
+    source = os.path.join(results_dir, tree_file)
     target = os.path.join(os.path.dirname(__file__), 'static', tree_file)
     if not os.path.exists(target):
         os.symlink(source, target)
-    return render_template('tree_output.html', tree= tree_file)
+
+
+    return render_template('tree_output.html', tree= tree_file, lengths=lengths_df.to_dict('records'))
 
 
 @app.route('/input', methods=['GET', 'POST'])

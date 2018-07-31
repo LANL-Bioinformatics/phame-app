@@ -1,6 +1,92 @@
 {% extends "base.html" %}
 {% block head %}
 
+<script>
+    function outputUpdate(cutoff) {
+          document.querySelector('#selected-cutoff').value = cutoff;
+      }
+
+    function referenceFileUpdate() {
+        console.log("updated file list");
+        var genome_files = document.getElementById("ref_dir");
+        console.log(genome_files);
+        for (i=0; i< genome_files.files.length; i++) {
+          console.log(genome_files.files[i]);
+          reference_file.options.add(new Option(genome_files.files[i].name, genome_files.files[i].name));
+        }
+      }
+
+    function showBootstrap() {
+        var tree_value = document.getElementById("tree").value;
+        console.log(tree_value);
+        var bootstrap = document.getElementById("bootstrapshow");
+        if (bootstrap.style.display === "none" && (tree_value === '2' || tree_value === '3')) {
+            bootstrap.style.display = "block";
+        } else {
+            bootstrap.style.display = "none";
+        }
+    }
+
+    function showBootstrapN() {
+        var bootstrap_value = document.getElementById("bootstrap").value;
+        console.log(bootstrap_value);
+        var bootstrapN = document.getElementById("bootstrapN");
+        if (bootstrapN.style.display === "none" && bootstrap_value === '1') {
+            bootstrapN.style.display = "block";
+        } else {
+            bootstrapN.style.display = "none";
+        }
+    }
+
+    function showReadfileInput() {
+        var data_type_value = document.getElementById("data_type-2").checked;
+        console.log(data_type_value);
+        var reads_file = document.getElementById("reads_file");
+        var aligner_div = document.getElementById("aligner_div");
+        var reads_combo_div = document.getElementById("reads_combo_div");
+        if (reads_file.style.display === "none" && data_type_value) {
+            reads_file.style.display = "block";
+            aligner_div.style.display = "block";
+            reads_combo_div.style.display = "block";
+        } else if (reads_file.style.display === "block" && !data_type_value) {
+            reads_file.style.display = "none";
+            aligner_div.style.display = "none";
+            reads_combo_div.style.display = "none";
+        }
+
+        var data_type_value1 = document.getElementById("data_type-1").checked;
+        console.log(data_type_value1);
+        var contigs_file = document.getElementById("contigs_file");
+        if (contigs_file.style.display === "none" && data_type_value1) {
+            contigs_file.style.display = "block";
+        } else if (contigs_file.style.display === "block" && !data_type_value1) {
+            contigs_file.style.display = "none";
+        }
+    }
+
+    function showPOS() {
+        var do_select_value = document.getElementById("do_select").value;
+        console.log(do_select_value);
+        var show_pos = document.getElementById("pos");
+        if (show_pos.style.display === "none" && do_select_value === '1') {
+            show_pos.style.display = "block";
+        } else {
+            show_pos.style.display = "none";
+        }
+
+    }
+
+    function showReferenceFile() {
+        var ref_value = document.getElementById("reference").value;
+        console.log(ref_value);
+        var ref_file = document.getElementById("ref_file_div");
+        if (ref_file.style.display === "none" && ref_value === '1') {
+            ref_file.style.display = "block";
+        } else {
+            ref_file.style.display = "none";
+        }
+    }
+    </script>
 
 {% endblock %}
 {% block content %}
@@ -21,92 +107,7 @@
     {% if error %}
     <p class=error><strong>Error:</strong> {{ error }}
   {% endif %}
-    <script>
-      function outputUpdate(cutoff) {
-          document.querySelector('#selected-cutoff').value = cutoff;
-      }
-      function referenceFileUpdate() {
-        console.log("updated file list");
-        var genome_files = document.getElementById("ref_dir");
-        console.log(genome_files);
-        for (i=0; i< genome_files.files.length; i++) {
-          console.log(genome_files.files[i]);
-          reference_file.options.add(new Option(genome_files.files[i].name, genome_files.files[i].name));
-        }
 
-      }
-    </script>
-    <script>
-    function showBootstrap() {
-        var tree_value = document.getElementById("tree").value;
-        console.log(tree_value);
-        var bootstrap = document.getElementById("bootstrapshow");
-        if (bootstrap.style.display === "none" && (tree_value === '2' || tree_value === '3')) {
-            bootstrap.style.display = "block";
-        } else {
-            bootstrap.style.display = "none";
-        }
-    }
-    function showBootstrapN() {
-        var bootstrap_value = document.getElementById("bootstrap").value;
-        console.log(bootstrap_value);
-        var bootstrapN = document.getElementById("bootstrapN");
-        if (bootstrapN.style.display === "none" && bootstrap_value === '1') {
-            bootstrapN.style.display = "block";
-        } else {
-            bootstrapN.style.display = "none";
-        }
-
-    }
-
-    function showReadfileInput() {
-        var data_type_value = document.getElementById("data_type-2").checked;
-        console.log(data_type_value);
-        var reads_file = document.getElementById("reads_file");
-        var aligner_div = document.getElementById("aligner_div");
-        if (reads_file.style.display === "none" && data_type_value) {
-            reads_file.style.display = "block";
-            aligner_div.style.display = "block";
-        } else if (reads_file.style.display === "block" && !data_type_value) {
-            reads_file.style.display = "none";
-            aligner_div.style.display = "none";
-        }
-
-        var data_type_value1 = document.getElementById("data_type-1").checked;
-        console.log(data_type_value1);
-        var contigs_file = document.getElementById("contigs_file");
-        if (contigs_file.style.display === "none" && data_type_value1) {
-            contigs_file.style.display = "block";
-        } else if (contigs_file.style.display === "block" && !data_type_value1) {
-            contigs_file.style.display = "none";
-        }
-
-
-    }
-
-    function showPOS() {
-        var do_select_value = document.getElementById("do_select").value;
-        console.log(do_select_value);
-        var show_pos = document.getElementById("pos");
-        if (show_pos.style.display === "none" && do_select_value === '1') {
-            show_pos.style.display = "block";
-        } else {
-            show_pos.style.display = "none";
-        }
-
-    }
-    function showReferenceFile() {
-        var ref_value = document.getElementById("reference").value;
-        console.log(ref_value);
-        var ref_file = document.getElementById("ref_file_div");
-        if (ref_file.style.display === "none" && ref_value === '1') {
-            ref_file.style.display = "block";
-        } else {
-            ref_file.style.display = "none";
-        }
-
-    }
-    </script>
 
         {{ form.hidden_tag() }}
 
@@ -141,6 +142,7 @@
             {% endfor %}
         </p>
     </div>
+    <div id="reads_combo_div" style="display: none;">
         <p>
             {{ form.reads.label }}
             {{ form.reads(title='Select Single-ended, paired-ended or both', data_toggle="tooltip") }}
@@ -148,6 +150,7 @@
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
+    </div>
         <div id="reads_file" style="display: none;">
           <p>
               {{ form.reads_file.label }}
