@@ -34,12 +34,12 @@ services:
       - postgres_backup_local:/backups
     env_file:
       - ./.envs/.local/.postgres
-#  nginx:
-#    image: nginx
-#    volumes:
-#     - ./compose/local/nginx/conf.d:/etc/nginx/conf.d
-#    ports:
-#     - "8080:80"
+  nginx:
+    image: nginx
+    volumes:
+     - ./compose/local/nginx/conf.d:/etc/nginx/conf.d
+    ports:
+     - "8080:80"
 
 
   phame:
