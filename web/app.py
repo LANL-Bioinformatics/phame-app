@@ -1,4 +1,5 @@
 import os
+import shutil
 from flask import Flask, render_template, redirect, flash, url_for, request
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
@@ -51,6 +52,11 @@ def upload_files(request, project_dir, ref_dir, work_dir, form):
         filename = secure_filename(reads_file)
         reads_file.save(os.path.join(ref_dir, filename))
 
+def remove_uploaded_files(project_dir):
+    try:
+        shutil.rmtree(project_dir)
+    except IOError as e:
+        logging.error('Could not remove directory {0}: {1}'.format(project_dir, str(e)))
 
 def project_setup(form):
     """
@@ -67,7 +73,7 @@ def project_setup(form):
         flash('Project directory already exists')
         return render_template('input.html', title='Phame input', form=form)
     upload_files(request, project_dir, ref_dir, work_dir, form)
-    return ref_dir
+    return project_dir, ref_dir
 
 
 def create_config_file(form):
@@ -141,21 +147,23 @@ def input():
     form = InputForm()
     form.reference_file.choices = []
     if request.method == 'POST':
-        ref_dir = project_setup(form)
+        project_dir, ref_dir = project_setup(form)
 
         if form.validate_on_submit():
             # Perform validation based on requirements of PhaME
-            if ('1' in form.data_type.data or '2' in form.data_type.data) and 'reference_file' not in request.files:
-                flash('You must upload a reference genome if you select Contigs or Reads from Data')
-                return render_template('input.html', title='Phame input', form=form)
+            if ('1' in form.data_type.data or '2' in form.data_type.data) and len(form.reference_file.data) == 0:
+                error = 'You must upload a reference genome if you select Contigs or Reads from Data'
+                remove_uploaded_files(project_dir)
+                return render_template('input.html', title='Phame input', form=form, error=error)
             # Ensure each fasta file has a corresponding mapping file
             if form.reference.data == '0' or form.reference.data == '2':
                 for fname in os.listdir(ref_dir):
                     if fname.endswith('.fa') or fname.endswith('.fasta') or fname.endswith('.fna'):
                         if not os.path.exists(os.path.join(ref_dir, '{0}.{1}'.format(fname.split('.')[0],'gff'))):
-                            flash('Each full genome file must have a corresponding .gff file'
-                                  ' if random or ANI is selected from Reference')
-                            return render_template('input.html', title='Phame input', form=form)
+                            remove_uploaded_files(project_dir)
+                            error = 'Each full genome file must have a corresponding .gff file if random or ANI is ' \
+                                    'selected from Reference'
+                            return render_template('input.html', title='Phame input', form=form, error=error)
 
             # Create config file
             create_config_file(form)

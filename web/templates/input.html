@@ -7,7 +7,20 @@
 
 
     <h1>PhaME</h1>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul class=flashes>
+        {% for message in messages %}
+          <li>{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
     <form action="" method="post" enctype="multipart/form-data" novalidate>
+    {% if error %}
+    <p class=error><strong>Error:</strong> {{ error }}
+  {% endif %}
     <script>
       function outputUpdate(cutoff) {
           document.querySelector('#selected-cutoff').value = cutoff;
@@ -50,10 +63,13 @@
         var data_type_value = document.getElementById("data_type-2").checked;
         console.log(data_type_value);
         var reads_file = document.getElementById("reads_file");
+        var aligner_div = document.getElementById("aligner_div");
         if (reads_file.style.display === "none" && data_type_value) {
             reads_file.style.display = "block";
+            aligner_div.style.display = "block";
         } else if (reads_file.style.display === "block" && !data_type_value) {
             reads_file.style.display = "none";
+            aligner_div.style.display = "none";
         }
 
         var data_type_value1 = document.getElementById("data_type-1").checked;
@@ -157,6 +173,7 @@
             {% endfor %}
         </p>
     </div>
+    <div id="aligner_div" style="display: none;">
         <p>
             {{ form.aligner.label }}
             {{ form.aligner(title='Choose an aligner', data_toggle="tooltip") }}
@@ -164,6 +181,7 @@
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
+    </div>
         <p>
             {{ form.cutoff.label }}
             {{ form.cutoff(min=0, max=1, oninput="outputUpdate(value)", title='Linear alignment (LA) coverage against reference - ignores SNPs from organism that have lower cutoff.', data_toggle="tooltip") }}
