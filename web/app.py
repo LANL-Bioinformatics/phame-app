@@ -136,11 +136,11 @@ def display(project):
     refdir = os.path.join(app.config['PROJECT_DIRECTORY'], project, 'refdir')
     tree_file = '{0}_all.fasttree'.format(project)
     summary_stats_file = '{0}_summaryStatistics.txt'.format(project)
-    stats_df = pd.read_table(os.path.join(results_dir, summary_stats_file))
+    stats_df = pd.read_table(os.path.join(results_dir, summary_stats_file), header=None)
     count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or fname.endswith('.fasta'))])
     lengths_df = stats_df.iloc[:count-1].drop(1, axis=1)
     lengths_df.columns = ['name', 'total length']
-    ref_stats = stats_df.iloc[count:].drop(2, axis=2)
+    ref_stats = stats_df.iloc[count:].drop(2, axis=1)
 
     source = os.path.join(results_dir, tree_file)
     target = os.path.join(os.path.dirname(__file__), 'static', tree_file)
@@ -148,7 +148,9 @@ def display(project):
         os.symlink(source, target)
 
 
-    return render_template('tree_output.html', tree= tree_file, lengths=lengths_df.to_dict('records'))
+    return render_template('tree_output.html', tree= tree_file,
+                           tables=[lengths_df.to_html(classes='lengths'), ref_stats.to_html(classes='ref_stats')],
+                           titles=['na', 'sequence lengths', 'stats'])
 
 
 @app.route('/input', methods=['GET', 'POST'])
