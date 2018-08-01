@@ -145,8 +145,6 @@ def display(project):
     results_dir = os.path.join(project_dir, 'workdir', 'results')
     refdir = os.path.join(app.config['PROJECT_DIRECTORY'], project, 'refdir')
     target_dir = os.path.join(os.path.dirname(__file__), 'static')
-    tree_file_source = '{0}_all.fasttree'.format(project)
-    tree_file_target = 'trees/{0}_all.fasttree'.format(project)
     summary_stats_file = '{0}_summaryStatistics.txt'.format(project)
     output_tables_list, titles_list = [], []
     if os.path.exists(os.path.join(results_dir, summary_stats_file)):
@@ -168,24 +166,35 @@ def display(project):
         output_tables_list.append(coords_df.to_html(classes='coords'))
         titles_list.append('coordinates')
 
-    source = os.path.join(results_dir, tree_file_source)
-    if not os.path.exists(source):
-        # error = {'msg': 'File does not exists {0}'.format(source)}
-        # return render_template('error.html', error=error)
+
+    # tree_file_source = '{0}_all.fasttree'.format(project)
+    # tree_file_target = 'trees/{0}_all.fasttree'.format(project)
+    # source = os.path.join(results_dir, tree_file_source)
+    tree_file_list = [fname for fname in os.listdir(results_dir) if fname.endswith('.fasttree')]
+    logging.debug('results dir: {0}/*.fastree'.format(results_dir))
+    if len(tree_file_list) == 0:
         return render_template('table_output.html',
                         tables=output_tables_list,
                         titles=titles_list)
+
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
-    target = os.path.join(target_dir, tree_file_target)
-    if not os.path.exists(target):
-        os.symlink(source, target)
-    if not os.path.exists(target):
-        error = {'msg': 'File does not exists {0}'.format(target)}
-        return render_template('error.html', error=error)
+
+    tree_files = []
+    for tree in tree_file_list:
+        tree_split = tree.split('/')[-1]
+        target = os.path.join(target_dir, 'trees', tree_split)
+        tree_files.append('trees/{0}'.format(tree_split))
+        logging.debug('fasttree file: trees/{0}'.format(tree_split))
+        source = os.path.join(results_dir, tree_split)
+        if not os.path.exists(target):
+            os.symlink(source, target)
+        if not os.path.exists(target):
+            error = {'msg': 'File does not exists {0}'.format(target)}
+            return render_template('error.html', error=error)
 
 
-    return render_template('tree_output.html', tree= tree_file_target,
+    return render_template('tree_output.html', tree_files= tree_files,
                            tables=output_tables_list,
                            titles=titles_list)
 
