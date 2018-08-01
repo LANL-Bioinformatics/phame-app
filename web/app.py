@@ -140,7 +140,11 @@ def display(project):
     count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or fname.endswith('.fasta'))])
     lengths_df = stats_df.iloc[:count-1].drop(1, axis=1)
     lengths_df.columns = ['name', 'total length']
+    lengths_df = lengths_df.reset_index()
+    lengths_df = lengths_df.drop('index', axis=1)
     ref_stats = stats_df.iloc[count:].drop(2, axis=1)
+    coords_df = pd.read_table(os.path.join(results_dir, 'CDScoords.txt'), header=None)
+    coords_df.columns = ['sequence name', 'begin', 'end', 'type']
 
     source = os.path.join(results_dir, tree_file)
     target = os.path.join(os.path.dirname(__file__), 'static', tree_file)
@@ -149,8 +153,9 @@ def display(project):
 
 
     return render_template('tree_output.html', tree= tree_file,
-                           tables=[lengths_df.to_html(classes='lengths'), ref_stats.to_html(classes='ref_stats')],
-                           titles=['na', 'sequence lengths', 'stats'])
+                           tables=[lengths_df.to_html(classes='lengths'), ref_stats.to_html(classes='ref_stats'),
+                                   coords_df.to_html(classes='coords')],
+                           titles=['na', 'sequence lengths', 'stats', 'coordinates'])
 
 
 @app.route('/input', methods=['GET', 'POST'])
