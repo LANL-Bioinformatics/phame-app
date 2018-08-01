@@ -108,6 +108,9 @@ def run_phame(project):
         stdout, stderr = p1.communicate()
         logging.debug(stdout)
         logging.error(stderr)
+        if len(stderr) > 0:
+            error = {'msg':stderr}
+            return render_template('error.html', error=error)
 
     except subprocess.CalledProcessError as e:
         logging.error(str(e))
@@ -142,20 +145,30 @@ def display(project):
     lengths_df = lengths_df.set_index('sequence name')
     ref_stats = stats_df.iloc[count:].drop(2, axis=1)
     ref_stats = ref_stats.set_index(0)
-    coords_df = pd.read_table(os.path.join(results_dir, 'CDScoords.txt'), header=None)
-    coords_df.columns = ['sequence name', 'begin', 'end', 'type']
-    coords_df = coords_df.set_index('sequence name')
+    output_tables_list = [lengths_df.to_html(classes='lengths'), ref_stats.to_html(classes='ref_stats')]
+    titles_list = ['na', 'sequence lengths', 'stats']
+    if os.path.exists(os.path.join(results_dir, 'CDScoords.txt')):
+        coords_df = pd.read_table(os.path.join(results_dir, 'CDScoords.txt'), header=None)
+        coords_df.columns = ['sequence name', 'begin', 'end', 'type']
+        coords_df = coords_df.set_index('sequence name')
+        output_tables_list.append(coords_df.to_html(classes='coords'))
+        titles_list.append('coordinates')
 
     source = os.path.join(results_dir, tree_file)
+    if not os.path.exists(source):
+        error = {'msg': 'File does not exists {0}'.format(source)}
+        return render_template('error.html', error=error)
     target = os.path.join(os.path.dirname(__file__), 'static', tree_file)
     if not os.path.exists(target):
         os.symlink(source, target)
+    if not os.path.exists(target):
+        error = {'msg': 'File does not exists {0}'.format(target)}
+        return render_template('error.html', error=error)
 
 
     return render_template('tree_output.html', tree= tree_file,
-                           tables=[lengths_df.to_html(classes='lengths'), ref_stats.to_html(classes='ref_stats'),
-                                   coords_df.to_html(classes='coords')],
-                           titles=['na', 'sequence lengths', 'stats', 'coordinates'])
+                           tables=output_tables_list,
+                           titles=titles_list)
 
 
 @app.route('/input', methods=['GET', 'POST'])
