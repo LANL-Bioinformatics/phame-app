@@ -91,7 +91,7 @@
 
             var decorator = 'ird:';
 
-            var loc = "{{ url_for('static', filename='basic_vis.xml') }}";
+            var loc = "{{ url_for('static', filename=tree) }}";
 
             jQuery.get(loc,
                     function (data) {
@@ -140,5 +140,5 @@
       <div id='controls0' class='ui-widget-content'></div>
    </p>
 </div>
-  
+
 {% endblock %}
