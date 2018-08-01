@@ -64,16 +64,15 @@ def project_setup(form):
     """
     Create directories and handle file uploads
     :param form:
-    :return: reference directory path
+    :return: project and reference directory paths
     """
     project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], form.project.data)
     ref_dir = os.path.join(project_dir, 'refdir')
     work_dir = os.path.join(project_dir, 'workdir')
-    logging.debug('created project directory: {0}'.format(project_dir))
+    logging.debug('project directory: {0}'.format(project_dir))
     # project name must be unique
     if os.path.exists(project_dir):
-        error = 'Project directory already exists'
-        return render_template('input.html', title='Phame input', form=form, error=error)
+        return None, None
     upload_files(request, project_dir, ref_dir, work_dir, form)
     return project_dir, ref_dir
 
@@ -170,7 +169,9 @@ def input():
     form.reference_file.choices = []
     if request.method == 'POST':
         project_dir, ref_dir = project_setup(form)
-
+        if project_dir is None:
+            error = 'Project directory already exists'
+            return render_template('input.html', title='Phame input', form=form, error=error)
         if form.validate_on_submit():
             # Perform validation based on requirements of PhaME
             if ('1' in form.data_type.data or '2' in form.data_type.data) and len(form.reference_file.data) == 0:
