@@ -125,6 +125,14 @@ def index():
     return render_template('index.html', title='Home', user=user)
 
 
+@app.route('/projects')
+def projects_list():
+    # projects = [{'project':project,'path':os.path.join(app.config['PROJECT_DIRECTORY'], project)} for project in os.listdir(app.config['PROJECT_DIRECTORY'])]
+    projects = [project for project in os.listdir(app.config['PROJECT_DIRECTORY'])]
+    # projects = {'projects': projects_list}
+    return render_template('projects.html', projects=projects)
+
+
 @app.route('/display/<project>', methods=['POST', 'GET'])
 def display(project):
     """
@@ -136,17 +144,23 @@ def display(project):
     project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], project)
     results_dir = os.path.join(project_dir, 'workdir', 'results')
     refdir = os.path.join(app.config['PROJECT_DIRECTORY'], project, 'refdir')
-    tree_file = '{0}_all.fasttree'.format(project)
+    target_dir = os.path.join(os.path.dirname(__file__), 'static')
+    tree_file_source = '{0}_all.fasttree'.format(project)
+    tree_file_target = 'trees/{0}_all.fasttree'.format(project)
     summary_stats_file = '{0}_summaryStatistics.txt'.format(project)
-    stats_df = pd.read_table(os.path.join(results_dir, summary_stats_file), header=None)
-    count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or fname.endswith('.fasta'))])
-    lengths_df = stats_df.iloc[:count-1].drop(1, axis=1)
-    lengths_df.columns = ['sequence name', 'total length']
-    lengths_df = lengths_df.set_index('sequence name')
-    ref_stats = stats_df.iloc[count:].drop(2, axis=1)
-    ref_stats = ref_stats.set_index(0)
-    output_tables_list = [lengths_df.to_html(classes='lengths'), ref_stats.to_html(classes='ref_stats')]
-    titles_list = ['na', 'sequence lengths', 'stats']
+    output_tables_list, titles_list = [], []
+    if os.path.exists(os.path.join(results_dir, summary_stats_file)):
+        stats_df = pd.read_table(os.path.join(results_dir, summary_stats_file), header=None)
+        count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or fname.endswith('.fasta'))])
+        lengths_df = stats_df.iloc[:count-1].drop(1, axis=1)
+        lengths_df.columns = ['sequence name', 'total length']
+        lengths_df = lengths_df.set_index('sequence name')
+        ref_stats = stats_df.iloc[count:].drop(2, axis=1)
+        ref_stats = ref_stats.set_index(0)
+        ref_stats.columns = ['']
+        del ref_stats.index.name
+        output_tables_list = [lengths_df.to_html(classes='lengths'), ref_stats.to_html(classes='ref_stats')]
+        titles_list = ['na', 'sequence lengths', 'stats']
     if os.path.exists(os.path.join(results_dir, 'CDScoords.txt')):
         coords_df = pd.read_table(os.path.join(results_dir, 'CDScoords.txt'), header=None)
         coords_df.columns = ['sequence name', 'begin', 'end', 'type']
@@ -154,11 +168,16 @@ def display(project):
         output_tables_list.append(coords_df.to_html(classes='coords'))
         titles_list.append('coordinates')
 
-    source = os.path.join(results_dir, tree_file)
+    source = os.path.join(results_dir, tree_file_source)
     if not os.path.exists(source):
-        error = {'msg': 'File does not exists {0}'.format(source)}
-        return render_template('error.html', error=error)
-    target = os.path.join(os.path.dirname(__file__), 'static', tree_file)
+        # error = {'msg': 'File does not exists {0}'.format(source)}
+        # return render_template('error.html', error=error)
+        return render_template('table_output.html',
+                        tables=output_tables_list,
+                        titles=titles_list)
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+    target = os.path.join(target_dir, tree_file_target)
     if not os.path.exists(target):
         os.symlink(source, target)
     if not os.path.exists(target):
@@ -166,7 +185,7 @@ def display(project):
         return render_template('error.html', error=error)
 
 
-    return render_template('tree_output.html', tree= tree_file,
+    return render_template('tree_output.html', tree= tree_file_target,
                            tables=output_tables_list,
                            titles=titles_list)
 
