@@ -72,8 +72,8 @@ def project_setup(form):
     logging.debug('created project directory: {0}'.format(project_dir))
     # project name must be unique
     if os.path.exists(project_dir):
-        flash('Project directory already exists')
-        return render_template('input.html', title='Phame input', form=form)
+        error = 'Project directory already exists'
+        return render_template('input.html', title='Phame input', form=form, error=error)
     upload_files(request, project_dir, ref_dir, work_dir, form)
     return project_dir, ref_dir
 
@@ -139,12 +139,13 @@ def display(project):
     stats_df = pd.read_table(os.path.join(results_dir, summary_stats_file), header=None)
     count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or fname.endswith('.fasta'))])
     lengths_df = stats_df.iloc[:count-1].drop(1, axis=1)
-    lengths_df.columns = ['name', 'total length']
-    lengths_df = lengths_df.reset_index()
-    lengths_df = lengths_df.drop('index', axis=1)
+    lengths_df.columns = ['sequence name', 'total length']
+    lengths_df = lengths_df.set_index('sequence name')
     ref_stats = stats_df.iloc[count:].drop(2, axis=1)
+    ref_stats = ref_stats.set_index(0)
     coords_df = pd.read_table(os.path.join(results_dir, 'CDScoords.txt'), header=None)
     coords_df.columns = ['sequence name', 'begin', 'end', 'type']
+    coords_df = coords_df.set_index('sequence name')
 
     source = os.path.join(results_dir, tree_file)
     target = os.path.join(os.path.dirname(__file__), 'static', tree_file)

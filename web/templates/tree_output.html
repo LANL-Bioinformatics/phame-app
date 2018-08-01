@@ -10,6 +10,7 @@
 
     <!-- CSS for this page's HTML: -->
     <link rel="stylesheet" href="http://www.phyloxml.org/css/forester.css">
+  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/phame-output.css') }}">
   <!-- D3.js, jQuery, and jQuery UI:-->
     <script src="http://d3js.org/d3.v3.min.js"></script>
 
@@ -124,6 +125,13 @@
 {% endblock %}
 {% block content %}
 
+  <div>
+  {% for table in tables %}
+    <h2>{{titles[loop.index]}}</h2>
+    {{ table|safe }}
+  {% endfor %}
+  </div>
+
 <div>
     <h2>PhaME FastTree Visualization</h2>
 
@@ -132,11 +140,4 @@
       <div id='controls0' class='ui-widget-content'></div>
    </p>
 </div>
-  <div>
-  {% for table in tables %}
-    <h2>{{titles[loop.index]}}</h2>
-    {{ table|safe }}
-  {% endfor %}
-  </div>
-
 {% endblock %}
