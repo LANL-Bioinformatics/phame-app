@@ -124,6 +124,12 @@
 {% endblock %}
 {% block content %}
 
+  <div>
+  {% for table in tables %}
+    <h2>{{titles[loop.index]}}</h2>
+    {{ table|safe }}
+  {% endfor %}
+  </div>
 <div>
     <h2>PhaME FastTree Visualization</h2>
 
@@ -132,11 +138,5 @@
       <div id='controls0' class='ui-widget-content'></div>
    </p>
 </div>
-  <div>
-  {% for table in tables %}
-    <h2>{{titles[loop.index]}}</h2>
-    {{ table|safe }}
-  {% endfor %}
-  </div>
 
 {% endblock %}
