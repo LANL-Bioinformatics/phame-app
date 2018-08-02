@@ -17,7 +17,7 @@ class MultiCheckboxField(SelectMultipleField):
 
 class InputForm(FlaskForm):
     boolean_choices = [('0', 'no'), ('1', 'yes')]
-    project = StringField(u'Project Name', default='t4')
+    project = StringField(u'Project Name', description='Choose a unique project name')
     data_type = MultiCheckboxField(u'Data', choices=[('0', 'Full'), ('1', 'Contig'), ('2', 'Read')], default='0')
     ref_dir = MultipleFileField(u'Full Genomes', description='.gff/.fasta')
     work_dir = MultipleFileField(u'Upload Contigs')

@@ -13,7 +13,7 @@
       {% endif %}
     {% block head %}{% endblock %}
     </head>
-    <body onload="load()">
+    <body>
         <div>
           PhaME:
           <a href="{{ url_for('index') }}">Home</a>
@@ -31,6 +31,7 @@
         </ul>
         {% endif %}
         {% endwith %}
+
         {% block content %}{% endblock %}
     </body>
 </html>

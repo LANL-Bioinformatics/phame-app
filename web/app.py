@@ -1,7 +1,8 @@
 import os
+import zipfile
 import shutil
 import glob
-from flask import Flask, render_template, redirect, flash, url_for, request
+from flask import Flask, render_template, redirect, flash, url_for, request, send_file
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired
@@ -19,6 +20,14 @@ app.config.from_object(Config)
 
 logging.basicConfig(filename='phame.log', level=logging.DEBUG)
 logging.debug(app.config['PROJECT_DIRECTORY'])
+
+def zip_output_files(project):
+    zip_name = os.path.join(app.config['PROJECT_DIRECTORY'], project, '{0}.zip'.format(project))
+    with zipfile.ZipFile(zip_name,  'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(os.path.join(app.config['PROJECT_DIRECTORY'], project, 'workdir', 'results')):
+            for file in files:
+                zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(app.config['PROJECT_DIRECTORY'], project, '..')))
+    return zip_name
 
 def upload_files(request, project_dir, ref_dir, work_dir, form):
     """
@@ -167,24 +176,16 @@ def display(project):
         titles_list.append('coordinates')
 
 
-    # tree_file_source = '{0}_all.fasttree'.format(project)
-    # tree_file_target = 'trees/{0}_all.fasttree'.format(project)
-    # source = os.path.join(results_dir, tree_file_source)
-    tree_file_list = [fname for fname in os.listdir(results_dir) if fname.endswith('.fasttree')]
-    logging.debug('results dir: {0}/*.fastree'.format(results_dir))
-    if len(tree_file_list) == 0:
-        return render_template('table_output.html',
-                        tables=output_tables_list,
-                        titles=titles_list)
-
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
+    tree_file_list = [fname for fname in os.listdir(results_dir) if fname.endswith('.fasttree')]
 
     tree_files = []
     for tree in tree_file_list:
         tree_split = tree.split('/')[-1]
         target = os.path.join(target_dir, 'trees', tree_split)
-        tree_files.append('trees/{0}'.format(tree_split))
+        # tree_files.append('trees/{0}'.format(tree_split))
+        tree_files.append(tree_split)
         logging.debug('fasttree file: trees/{0}'.format(tree_split))
         source = os.path.join(results_dir, tree_split)
         if not os.path.exists(target):
@@ -193,10 +194,23 @@ def display(project):
             error = {'msg': 'File does not exists {0}'.format(target)}
             return render_template('error.html', error=error)
 
+    logging.debug('results dir: {0}/*.fastree'.format(results_dir))
 
-    return render_template('tree_output.html', tree_files= tree_files,
-                           tables=output_tables_list,
-                           titles=titles_list)
+    return render_template('table_output.html',
+                    tables=output_tables_list,
+                    titles=titles_list, tree_files=tree_files, project=project)
+
+
+
+@app.route('/display/<project>/<tree>')
+def display_tree(project, tree):
+    return render_template('tree_output.html', tree= tree, project=project)
+
+
+@app.route('/download/<project>')
+def download(project):
+    zip_name = zip_output_files(project)
+    return send_file(zip_name, mimetype='zip', attachment_filename=zip_name, as_attachment=True)
 
 
 @app.route('/input', methods=['GET', 'POST'])

@@ -35,8 +35,8 @@
 
     <script>
 
-        function load({{ tree }}) {
-
+        function load( tree_file ) {
+            console.log('loading tree files');
             var options = {};
             options.alignPhylogram = true;
             options.backgroundColorDefault = '#ffffff';
@@ -90,8 +90,7 @@
             settings.rootOffset = 140;
 
             var decorator = 'ird:';
-            console.log({{ tree }});
-            var loc = "{{ url_for('static', filename=tree) }}";
+            var loc = tree_file;
 
             jQuery.get(loc,
                     function (data) {
@@ -124,24 +123,18 @@
     </script>
 {% endblock %}
 {% block content %}
-
-  <div>
-  {% for table in tables %}
-    <h2>{{titles[loop.index]}}</h2>
-    {{ table|safe }}
-  {% endfor %}
-  </div>
+<div><a href="{{ url_for('display', project=project) }}">back to {{ project }}</a></div>
 
 <div>
     <h2>PhaME FastTree Visualization</h2>
-
-  {% for tree in tree_files %}
-    <p>
-        <div id='phylogram{{  loop.index }}'>
-    <p>phylogram{{ loop.index }} {{ tree }}</p></div>
+  {% set url = url_for('static',filename="trees/") %}
+        <div id='phylogram1'></div>
         <div id='controls0' class='ui-widget-content'></div>
-     </p>
-  {% endfor %}
+
+      <script>document.addEventListener('DOMContentLoaded', function() {
+        load("{{ url }}{{tree}}");
+      }, false);
+      </script>
 </div>
 
 {% endblock %}
