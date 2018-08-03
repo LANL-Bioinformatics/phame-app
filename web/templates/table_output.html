@@ -10,14 +10,22 @@
 
 
   <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/phame-output.css') }}">
+  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/phame-loading.css') }}">
 
 
     <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
     <script src="https://code.jquery.com/ui/1.12.0/jquery-ui.js"></script>
-
-
+    <script>
+        function preloader(){
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("content").style.display = "block";
+            }//preloader
+            window.onload = preloader;
+    </script>
 {% endblock %}
 {% block content %}
+<div id="loading"></div>
+<div id="content">
 
   <div>
   {% for table in tables %}
@@ -32,5 +40,5 @@
   {% endfor %}
   </div>
   <div><a href="{{ url_for('download', project=project) }}">download output files for {{ project }}</a></div>
-
+</div>
 {% endblock %}

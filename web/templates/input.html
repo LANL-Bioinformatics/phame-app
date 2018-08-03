@@ -86,12 +86,15 @@
             ref_file.style.display = "none";
         }
     }
+
+    function showAlert() {
+      alert("Project submitted. Your results will be displayed momentarily")
+    }
+
     </script>
 
 {% endblock %}
 {% block content %}
-
-
     <h1>PhaME</h1>
 
     {% with messages = get_flashed_messages() %}
@@ -289,5 +292,4 @@
 {#        </div>#}
 
     </form>
-
 {% endblock %}
