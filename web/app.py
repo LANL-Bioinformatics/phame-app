@@ -1,6 +1,7 @@
 import os
 import zipfile
 import shutil
+import datetime
 import glob
 from flask import Flask, render_template, redirect, flash, url_for, request, send_file
 from flask_wtf import FlaskForm
@@ -9,15 +10,23 @@ from wtforms.validators import DataRequired
 # from flask_bootstrap import Bootstrap
 from werkzeug.utils import secure_filename
 import subprocess
-from forms import LoginForm, InputForm
+from forms import LoginForm, InputForm, SignupForm
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from flask_login import LoginManager
+# from database import db_session
 from config import Config
 import logging
 import pandas as pd
 
 app = Flask(__name__)
 app.config.from_object(Config)
+db = SQLAlchemy(app)
+migrate = Migrate(app, db) # this
+login = LoginManager(app)
 # bootstrap = Bootstrap(app)
 
+from models import *
 logging.basicConfig(filename='phame.log', level=logging.DEBUG)
 logging.debug(app.config['PROJECT_DIRECTORY'])
 
@@ -260,6 +269,18 @@ def login():
         return redirect(url_for('login'))
     return render_template('login.html', title='Sign In', form=form)
 
+# @app.route('/register', methods=['GET', 'POST'])
+# def signup():
+#     form = SignupForm()
+#     if form.validate_on_submit():
+#         signup = Signups(name=form.name.data, email=form.email.data, date_signed_up=datetime.datetime.now())
+#         db_session.add(signup)
+#         db_session.commit()
+#         return redirect(url_for('success'))
+#     return render_template('signup.html', form=form)
 
+@app.route("/success")
+def success():
+    return "Thank you for signing up!"
 if __name__ == '__main__':
     app.run(debug=True,host='0.0.0.0')

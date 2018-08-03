@@ -35,6 +35,9 @@ services:
       - postgres_backup_local:/backups
     env_file:
       - ./.envs/.local/.postgres
+    ports:
+      - "5432:5432"
+
   nginx:
     image: nginx
     volumes:
@@ -49,6 +52,10 @@ services:
       dockerfile: ./compose/local/PhaME-1/Dockerfile
     image: phame_api01_phame-1
     hostname: phame_host
+    env_file:
+      - ./.envs/.local/.postgres
+    depends_on:
+      - postgres
     ports:
       - 5000:5000
     volumes:
