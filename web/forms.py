@@ -26,7 +26,8 @@ class InputForm(FlaskForm):
     aligner = SelectField(choices=[('bowtie', 'bowtie'), ('minimap2', 'minimap2')], default='bowtie')
     reference = SelectField(choices=[('0', 'random'), ('1', 'given'), ('2', 'ANI')], default='1')
     reference_file = SelectMultipleField(u'Reference Genome')
-    cds_snps = SelectField(u'CDS SNPS',choices=boolean_choices, default='1')
+    snp_choices = [('0', 'CDS'), ('1', 'both')]
+    cds_snps = SelectField(u'SNPs',choices=snp_choices, default='1')
     buildSNPdb = SelectField(choices=[('0', 'only align to reference'), ('1', 'build SNP database')], default='0')
     first_time = SelectField(choices=[('0', 'yes'), ('1', 'update existing SNP alignment')], default='1')
     tree = SelectField(u'Tree', choices=[('0', 'no tree'), ('1', 'FastTree'), ('2', 'RAxML'), ('3', 'both')], default='1')
