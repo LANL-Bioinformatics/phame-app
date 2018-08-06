@@ -4,39 +4,36 @@ import shutil
 import datetime
 import glob
 from flask import Flask, render_template, redirect, flash, url_for, request, send_file
-from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired
-# from flask_bootstrap import Bootstrap
+
 from werkzeug.utils import secure_filename
 import subprocess
-from forms import LoginForm, InputForm, SignupForm
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_login import LoginManager
-# from database import db_session
+from forms import LoginForm, InputForm, SignupForm, RegistrationForm
+from flask_login import LoginManager, current_user, login_user, logout_user, login_required
+from database import db_session
 from config import Config
 import logging
 import pandas as pd
-
 app = Flask(__name__)
 app.config.from_object(Config)
-db = SQLAlchemy(app)
-migrate = Migrate(app, db) # this
 login = LoginManager(app)
-# bootstrap = Bootstrap(app)
+login.login_view = 'login'
+try:
+    from models import User
+except:
+    pass
 
-from models import *
 logging.basicConfig(filename='phame.log', level=logging.DEBUG)
 logging.debug(app.config['PROJECT_DIRECTORY'])
 
+
 def zip_output_files(project):
-    zip_name = os.path.join(app.config['PROJECT_DIRECTORY'], project, '{0}.zip'.format(project))
+    zip_name = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, '{0}.zip'.format(project))
     with zipfile.ZipFile(zip_name,  'w', zipfile.ZIP_DEFLATED) as zipf:
-        for root, dirs, files in os.walk(os.path.join(app.config['PROJECT_DIRECTORY'], project, 'workdir', 'results')):
+        for root, dirs, files in os.walk(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'workdir', 'results')):
             for file in files:
-                zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(app.config['PROJECT_DIRECTORY'], project, '..')))
+                zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, '..')))
     return zip_name
+
 
 def upload_files(request, project_dir, ref_dir, work_dir, form):
     """
@@ -72,11 +69,13 @@ def upload_files(request, project_dir, ref_dir, work_dir, form):
         filename = secure_filename(reads_file)
         reads_file.save(os.path.join(ref_dir, filename))
 
+
 def remove_uploaded_files(project_dir):
     try:
         shutil.rmtree(project_dir)
     except IOError as e:
         logging.error('Could not remove directory {0}: {1}'.format(project_dir, str(e)))
+
 
 def project_setup(form):
     """
@@ -84,7 +83,8 @@ def project_setup(form):
     :param form:
     :return: project and reference directory paths
     """
-    project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], form.project.data)
+    # project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user, form.project.data)
+    project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, form.project.data)
     ref_dir = os.path.join(project_dir, 'refdir')
     work_dir = os.path.join(project_dir, 'workdir')
     logging.debug('project directory: {0}'.format(project_dir))
@@ -109,7 +109,7 @@ def create_config_file(form):
     if len(form.reference_file.data) > 0:
         form_dict['reference_file'] = form.reference_file.data[0]
     content = render_template('phame.tmpl', form=form_dict)
-    with open(os.path.join(app.config['PROJECT_DIRECTORY'], project, 'config.ctl'), 'w') as conf:
+    with open(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'config.ctl'), 'w') as conf:
         conf.write(content)
 
 
@@ -121,7 +121,7 @@ def run_phame(project):
     :return: redirects to display view
     """
     try:
-        p1 = subprocess.Popen('./docker_run_phame.sh {0}'.format(project), shell=True, stdin=subprocess.PIPE,
+        p1 = subprocess.Popen('./docker_run_phame.sh {0}/{1}'.format(current_user.username, project), shell=True, stdin=subprocess.PIPE,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p1.communicate()
         logging.debug(stdout)
@@ -139,14 +139,13 @@ def run_phame(project):
 @app.route('/')
 @app.route('/index')
 def index():
-    user = {'username': 'Migun'}
-    return render_template('index.html', title='Home', user=user)
+    return render_template('index.html', title='Home')
 
 
 @app.route('/projects')
 def projects_list():
     # projects = [{'project':project,'path':os.path.join(app.config['PROJECT_DIRECTORY'], project)} for project in os.listdir(app.config['PROJECT_DIRECTORY'])]
-    projects = [project for project in os.listdir(app.config['PROJECT_DIRECTORY'])]
+    projects = [project for project in os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username))]
     # projects = {'projects': projects_list}
     return render_template('projects.html', projects=projects)
 
@@ -159,9 +158,9 @@ def display(project):
     :param project: project name
     :return: renders tree output
     """
-    project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], project)
+    project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project)
     results_dir = os.path.join(project_dir, 'workdir', 'results')
-    refdir = os.path.join(app.config['PROJECT_DIRECTORY'], project, 'refdir')
+    refdir = os.path.join(project_dir, 'refdir')
     target_dir = os.path.join(os.path.dirname(__file__), 'static')
     summary_stats_file = '{0}_summaryStatistics.txt'.format(project)
     output_tables_list, titles_list = [], []
@@ -259,28 +258,50 @@ def input():
     return render_template('input.html', title='Phame input', form=form)
 
 
+@login.user_loader
+def load_user(id):
+    return User.query.get(int(id))
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
     form = LoginForm()
     if form.validate_on_submit():
-        flash('Login requested for user {}', 'remember_me={}'.format(
-            form.username.data, form.remember_me.data
-        ))
-        return redirect(url_for('login'))
+        user = User.query.filter_by(username=form.username.data).first()
+        if user is None or not user.check_password(form.password.data):
+            flash('Invalid username or password')
+            return redirect(url_for('login'))
+        login_user(user, remember=form.remember_me.data)
+        return redirect(url_for('index'))
     return render_template('login.html', title='Sign In', form=form)
 
-# @app.route('/register', methods=['GET', 'POST'])
-# def signup():
-#     form = SignupForm()
-#     if form.validate_on_submit():
-#         signup = Signups(name=form.name.data, email=form.email.data, date_signed_up=datetime.datetime.now())
-#         db_session.add(signup)
-#         db_session.commit()
-#         return redirect(url_for('success'))
-#     return render_template('signup.html', form=form)
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = User(username=form.username.data, email=form.email.data)
+        user.set_password(form.password.data)
+        db_session.add(user)
+        db_session.commit()
+        flash('Congratulations, you are now a registered user!')
+        return redirect(url_for('login'))
+    return render_template('register.html', title='Register', form=form)
+
 
 @app.route("/success")
 def success():
     return "Thank you for signing up!"
+
 if __name__ == '__main__':
     app.run(debug=True,host='0.0.0.0')
