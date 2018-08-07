@@ -1,0 +1,9 @@
+Flask==1.0.2
+flask-wtf
+uwsgi
+pandas==0.23.1
+psycopg2
+flask-login
+flask-migrate
+flask-sqlalchemy
+pytest
