@@ -42,6 +42,8 @@ services:
      - ./compose/local/nginx/conf.d:/etc/nginx/conf.d
     ports:
      - "8080:80"
+    depends_on:
+      - phame
 
 
   phame:
