@@ -6,6 +6,7 @@ import glob
 from flask import Flask, render_template, redirect, flash, url_for, request, send_file
 
 from werkzeug.utils import secure_filename
+from werkzeug.urls import url_parse
 import subprocess
 from forms import LoginForm, InputForm, SignupForm, RegistrationForm
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required
@@ -222,6 +223,7 @@ def download(project):
 
 
 @app.route('/input', methods=['GET', 'POST'])
+@login_required
 def input():
     """
     Takes flask form, uploads files, checks parameters to make sure they are correct for PhaME, creates PhaME config
@@ -274,7 +276,10 @@ def login():
             flash('Invalid username or password')
             return redirect(url_for('login'))
         login_user(user, remember=form.remember_me.data)
-        return redirect(url_for('index'))
+        next_page = request.args.get('next')
+        if not next_page or url_parse(next_page).netloc != '':
+            next_page = url_for('input')
+        return redirect(url_for(next_page))
     return render_template('login.html', title='Sign In', form=form)
 
 
