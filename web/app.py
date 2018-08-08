@@ -144,10 +144,9 @@ def index():
 
 
 @app.route('/projects')
+@login_required
 def projects_list():
-    # projects = [{'project':project,'path':os.path.join(app.config['PROJECT_DIRECTORY'], project)} for project in os.listdir(app.config['PROJECT_DIRECTORY'])]
     projects = [project for project in os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username))]
-    # projects = {'projects': projects_list}
     return render_template('projects.html', projects=projects)
 
 
