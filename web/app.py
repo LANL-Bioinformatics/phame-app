@@ -28,6 +28,11 @@ logging.debug(app.config['PROJECT_DIRECTORY'])
 
 
 def zip_output_files(project):
+    """
+    Create a zip file of all files in user's results directory
+    :param project: name of project
+    :return: zip_name: name of zip file
+    """
     zip_name = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, '{0}.zip'.format(project))
     with zipfile.ZipFile(zip_name,  'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'workdir', 'results')):
@@ -72,6 +77,11 @@ def upload_files(request, project_dir, ref_dir, work_dir, form):
 
 
 def remove_uploaded_files(project_dir):
+    """
+    Removes uploaded files if there is a problem creating the project
+    :param project_dir: user's project directory
+    :return:
+    """
     try:
         shutil.rmtree(project_dir)
     except IOError as e:
@@ -113,6 +123,21 @@ def create_config_file(form):
     with open(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'config.ctl'), 'w') as conf:
         conf.write(content)
 
+def check_files(form):
+    """
+    Check to make sure that for each data type the corresponding files have been uploaded as well
+    :param form:
+    :return: error: String containing file types that need to be uploaded
+    """
+    error = ''
+    if '0' in form.data_type.data and 'ref_dir' not in request.files:
+        error += 'Please select full genome files...'
+    if '1' in form.data_type.data and 'work_dir' not in request.files:
+        error += 'Please select contig files...'
+    if '2' in form.data_type.data and 'reads_file' not in request.files:
+        error += 'Please select reads file...'
+    return error
+
 
 @app.route('/run/<project>')
 def run_phame(project):
@@ -148,6 +173,10 @@ def index():
 @app.route('/projects')
 @login_required
 def projects():
+    """
+    Displays links to user's projects
+    :return:
+    """
     projects = [project for project in os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username))]
     return render_template('projects.html', projects=projects)
 
@@ -155,10 +184,11 @@ def projects():
 @app.route('/display/<project>', methods=['POST', 'GET'])
 def display(project):
     """
-    Displays tree output using archeopteryx.js library
+    Displays output from PhaME, including summary statistics, sequence lengths and
+    tree output using archeopteryx.js library
     Creates a symlink between PhaME output tree file and static directory in flask directory
     :param project: project name
-    :return: renders tree output
+    :return: renders PhaME output page
     """
     project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project)
     results_dir = os.path.join(project_dir, 'workdir', 'results')
@@ -216,11 +246,22 @@ def display(project):
 
 @app.route('/display/<project>/<tree>')
 def display_tree(project, tree):
+    """
+    Creates phylogeny tree using archeopteryx.js
+    :param project: Name of project
+    :param tree: Name of tree file (.fasttree)
+    :return:
+    """
     return render_template('tree_output.html', tree= tree, project=project)
 
 
 @app.route('/download/<project>')
 def download(project):
+    """
+    Calls function to zip project output files and downloads the zipfile when link is clicked
+    :param project:
+    :return:
+    """
     zip_name = zip_output_files(project)
     return send_file(zip_name, mimetype='zip', attachment_filename=zip_name, as_attachment=True)
 
@@ -235,15 +276,19 @@ def input():
     """
     if current_user.username == 'public':
         return redirect(url_for('projects'))
+
     form = InputForm()
     form.reference_file.choices = []
     if request.method == 'POST':
-        project_dir, ref_dir = project_setup(form)
-        if project_dir is None:
-            error = 'Project directory already exists'
-            return render_template('input.html', title='Phame input', form=form, error=error)
         if form.validate_on_submit():
             # Perform validation based on requirements of PhaME
+            files_error = check_files(form)
+            if len(files_error) > 0:
+                return render_template('input.html', title='Phame input', form=form, error=files_error)
+            project_dir, ref_dir = project_setup(form)
+            if project_dir is None:
+                error = 'Project directory already exists'
+                return render_template('input.html', title='Phame input', form=form, error=error)
             if ('1' in form.data_type.data or '2' in form.data_type.data) and len(form.reference_file.data) == 0:
                 error = 'You must upload a reference genome if you select Contigs or Reads from Data'
                 remove_uploaded_files(project_dir)
@@ -272,7 +317,12 @@ def load_user(id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-
+    """
+    Login for PhaME
+    If user is logged in as 'public', they are redirected to the 'projects' page where they
+    can view 'public' projects
+    :return:
+    """
     if current_user.is_authenticated:
         return redirect(url_for('projects')) if current_user.username == 'public' else redirect(url_for('index'))
     form = LoginForm()
@@ -298,6 +348,10 @@ def logout():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    """
+    Registration for PhaME
+    :return:
+    """
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     form = RegistrationForm()
