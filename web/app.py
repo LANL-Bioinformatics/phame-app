@@ -169,6 +169,8 @@ def display(project):
         count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or fname.endswith('.fasta'))])
         lengths_df = stats_df.iloc[:count-1].drop(1, axis=1)
         lengths_df.columns = ['sequence name', 'total length']
+        lengths_df['total length'] = lengths_df['total length'].astype(int)
+        lengths_df['sequence name'][0] = lengths_df['sequence name'][0] + '*'
         lengths_df = lengths_df.set_index('sequence name')
         ref_stats = stats_df.iloc[count:].drop(2, axis=1)
         ref_stats = ref_stats.set_index(0)
