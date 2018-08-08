@@ -128,6 +128,8 @@ def run_phame(project):
         logging.debug(stdout)
         logging.error(stderr)
         if len(stderr) > 0:
+            logging.error(stderr)
+            logging.error('current user: {0}, project: {1}'.format(current_user.username, project))
             error = {'msg':stderr}
             return render_template('error.html', error=error)
 
