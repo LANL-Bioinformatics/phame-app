@@ -145,7 +145,7 @@ def index():
 
 @app.route('/projects')
 @login_required
-def projects_list():
+def projects():
     projects = [project for project in os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username))]
     return render_template('projects.html', projects=projects)
 
@@ -229,6 +229,8 @@ def input():
     file
     :return:
     """
+    if current_user.username == 'public':
+        return redirect(url_for('projects'))
     form = InputForm()
     form.reference_file.choices = []
     if request.method == 'POST':
@@ -266,8 +268,9 @@ def load_user(id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+
     if current_user.is_authenticated:
-        return redirect(url_for('index'))
+        return redirect(url_for('projects')) if current_user.username == 'public' else redirect(url_for('index'))
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
@@ -275,9 +278,10 @@ def login():
             flash('Invalid username or password')
             return redirect(url_for('login'))
         login_user(user, remember=form.remember_me.data)
-        next_page = request.args.get('next')
+        next_page = url_for('projects') if current_user.username == 'public' else request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
-            next_page = url_for('input').split('/')[-1]
+            # url_for returns /input
+            next_page = url_for('projects') if current_user.username == 'public' else url_for('input').split('/')[-1]
         return redirect(url_for(next_page.split('/')[-1]))
     return render_template('login.html', title='Sign In', form=form)
 
