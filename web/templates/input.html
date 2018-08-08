@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block head %}
 
+  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/phame-loading.css') }}">
 <script>
     function outputUpdate(cutoff) {
           document.querySelector('#selected-cutoff').value = cutoff;
@@ -91,10 +92,25 @@
       alert("Project submitted. Your results will be displayed momentarily")
     }
 
+    function showLoading() {
+        var loading_div = document.getElementById("loading");
+        var content_div = document.getElementById("content");
+        var project_name = document.getElementById("project").value;
+        loading_div.style.display = 'block';
+        content_div.style.display = 'none';
+        document.getElementById("project-name").innerHTML = 'running ' + project_name + '...';
+    }
     </script>
 
 {% endblock %}
+
 {% block content %}
+<div id="loading">
+  <div id="project-name"></div>
+  <div id="show-img"></div>
+</div>
+
+<div id="content">
     <h1>PhaME</h1>
 
     {% with messages = get_flashed_messages() %}
@@ -262,7 +278,7 @@
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
-        <p>{{ form.submit() }}</p>
+        <p>{{ form.submit(onclick="showLoading()") }}</p>
 
 
 {#        <p>#}
@@ -292,4 +308,6 @@
 {#        </div>#}
 
     </form>
+</div>
 {% endblock %}
+
