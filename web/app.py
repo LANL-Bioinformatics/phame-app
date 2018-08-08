@@ -71,9 +71,9 @@ def upload_files(request, project_dir, ref_dir, work_dir, form):
             file_name.save(os.path.join(work_dir, filename))
 
     if 'reads_file' in request.files:
-        reads_file = request.files['reads_file']
-        filename = secure_filename(reads_file)
-        reads_file.save(os.path.join(ref_dir, filename))
+        for reads_file in request.files.getlist('reads_file'):
+            filename = secure_filename(reads_file.filename)
+            reads_file.save(os.path.join(ref_dir, filename))
 
 
 def remove_uploaded_files(project_dir):
