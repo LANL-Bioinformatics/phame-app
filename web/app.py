@@ -67,7 +67,7 @@ def upload_files(request, project_dir, ref_dir, work_dir, form):
         os.makedirs(work_dir)
         for file_name in request.files.getlist("work_dir"):
             filename = secure_filename(file_name.filename)
-            filename = filename.split('.')[:1] + '.contig'
+            filename = os.path.splitext(filename)[0] + '.contig'
             file_name.save(os.path.join(work_dir, filename))
 
     if 'reads_file' in request.files:
@@ -280,15 +280,16 @@ def input():
     form = InputForm()
     form.reference_file.choices = []
     if request.method == 'POST':
+        project_dir, ref_dir = project_setup(form)
+        if project_dir is None:
+            error = 'Project directory already exists'
+            return render_template('input.html', title='Phame input', form=form, error=error)
         if form.validate_on_submit():
             # Perform validation based on requirements of PhaME
             files_error = check_files(form)
             if len(files_error) > 0:
                 return render_template('input.html', title='Phame input', form=form, error=files_error)
-            project_dir, ref_dir = project_setup(form)
-            if project_dir is None:
-                error = 'Project directory already exists'
-                return render_template('input.html', title='Phame input', form=form, error=error)
+
             if ('1' in form.data_type.data or '2' in form.data_type.data) and len(form.reference_file.data) == 0:
                 error = 'You must upload a reference genome if you select Contigs or Reads from Data'
                 remove_uploaded_files(project_dir)
