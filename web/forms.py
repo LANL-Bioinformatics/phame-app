@@ -1,7 +1,7 @@
 import os
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, FileField, MultipleFileField, IntegerField, \
-    FloatField, SelectField, StringField, widgets, SelectMultipleField
+    FloatField, SelectField, StringField, widgets, SelectMultipleField, validators
 from wtforms.fields.html5 import DecimalRangeField
 from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
 from models import User
@@ -35,17 +35,17 @@ class InputForm(FlaskForm):
     aligner = SelectField(choices=[('bowtie', 'bowtie'), ('minimap2', 'minimap2')], default='bowtie')
     reference = SelectField(choices=[('0', 'random'), ('1', 'given'), ('2', 'ANI')], default='1')
     reference_file = SelectMultipleField(u'Reference Genome')
-    snp_choices = [('0', 'CDS'), ('1', 'both')]
-    cds_snps = SelectField(u'SNPs',choices=snp_choices, default='1')
+    snp_choices = [('0', 'No'), ('1', 'Yes')]
+    cds_snps = SelectField(u'Generate SNPs from coding regions',choices=snp_choices, default='0')
     buildSNPdb = SelectField(choices=[('0', 'only align to reference'), ('1', 'build SNP database')], default='0')
     first_time = SelectField(choices=[('0', 'yes'), ('1', 'update existing SNP alignment')], default='1')
     tree = SelectField(u'Tree', choices=[('0', 'no tree'), ('1', 'FastTree'), ('2', 'RAxML'), ('3', 'both')], default='1')
     bootstrap = SelectField(choices=boolean_choices, default='0')
     N = IntegerField('Number of bootstraps', default=100)
-    do_select = SelectField(u'Selection Analysis',choices = boolean_choices, default='0')
-    pos_select = SelectField(u'Algorithm',choices=[('0','PAML'), ('1','HyPhy'), ('1','both')], default='0')
-    clean = SelectField(choices=boolean_choices, default='0')
-    threads = IntegerField(default=2)
+    do_select = SelectField(u'Perform selection analysis',choices = boolean_choices, default='0')
+    pos_select = SelectField(u'Select analysis algorithm',choices=[('0','PAML'), ('1','HyPhy'), ('1','both')], default='0')
+    clean = SelectField(u'Remove intermediate files', choices=boolean_choices, default='0')
+    threads = IntegerField('Number of threads', [validators.NumberRange(message='Range should be between 1 and 4.', min=1, max=4)], default=2)
     cutoff = DecimalRangeField(default=0.1)
     submit = SubmitField('Submit')
 

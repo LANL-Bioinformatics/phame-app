@@ -6,16 +6,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/edge.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/project.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery.mobile.1.4.3.min.css') }}">
-      {% if title %}
-      <title>{{ title }} PhaME</title>
-      {% else %}
-      <title>PhaME</title>
-      {% endif %}
+
     {% block head %}{% endblock %}
     </head>
     <body>
         <div>
-          PhaME:
+          <img src={{ url_for('static', filename="images/phame_logo.png") }} style="width:40px;height:40px;" >
           <a href="{{ url_for('index') }}">Home</a>
           <a href="{{ url_for('login') }}">Login</a>
           <a href="{{ url_for('input') }}">Input</a>

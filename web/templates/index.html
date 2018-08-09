@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Hi, {{ current_user.username }}!</h1>
+    <h1>PhaME -- Phylogenetic Analysis and Molecular Evolution</h1>
+    <p>*Beta version*</p>
+    <p>PhaME is a whole-genome SNP-based tool that calculates core genome and SNPs, parse them to coding or non-coding
+      regions, identify synonymous and non-synonymous SNPs, reconstruct phylogeny, and perform molecular evolutionary analysis to identify genes under selection from finished genomes, contigs, and/or raw FASTQ reads.</p>
 
+  <img src={{ url_for('static', filename="images/phame_flowchart.png") }} style="width:576px;height:445px;">
+  <p><a href="https://github.com/LANL-Bioinformatics/PhaME" ><img src={{ url_for('static', filename="images/Octocat.png") }} alt="Github" style="width:40px;height:40px;">Download and Updates</a></p>
+  <h3>System Specifications</h3>
+  <p>CPU: 4, Mem: 32 GB</p>
 {% endblock %}
