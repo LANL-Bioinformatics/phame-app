@@ -2,6 +2,7 @@
 {% block head %}
 
   <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/phame-loading.css') }}">
+  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/phame-input.css') }}">
 <script>
     function outputUpdate(cutoff) {
           document.querySelector('#selected-cutoff').value = cutoff;
@@ -129,155 +130,157 @@
 
 
         {{ form.hidden_tag() }}
-
-        <p>
-            {{ form.project.label }}
-            {{ form.project(title='Project name must be unique', data_toggle="tooltip") }}
-            {% for error in form.project.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-
-        </p>
-        <p>
-            {{ form.data_type.label }}
-            {{ form.data_type(title='Choose from complete(F), only Contig (C) or only Reads (R)', data_toggle="tooltip", oninput="showReadfileInput()") }}
-            {% for error in form.data.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.ref_dir.label }}
-            {{ form.ref_dir(title='Full genome files (.fasta/gff)', data_toggle="tooltip", oninput="referenceFileUpdate()") }}
-            {% for error in form.ref_dir.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-    <div id="contigs_file" style="display: none;">
-        <p>
-            {{ form.work_dir.label }}
-            {{ form.work_dir(title='Contigs files', data_toggle="tooltip") }}
-            {% for error in form.work_dir.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-    </div>
-    <div id="reads_combo_div" style="display: none;">
-        <p>
-            {{ form.reads.label }}
-            {{ form.reads(title='Select Single-ended, paired-ended or both', data_toggle="tooltip") }}
-            {% for error in form.reads.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-    </div>
-        <div id="reads_file" style="display: none;">
-          <p>
-              {{ form.reads_file.label }}
-              {{ form.reads_file(title='Upload Reads file', data_toggle="tooltip") }}
-              {% for error in form.reads_file.errors %}
+        <div class="flex-container-col">
+          <div class="flex-container-row">
+            <div class="flex-label">{{ form.project.label }}</div>
+            <div class="flex-field">{{ form.project(title='Project name must be unique', data_toggle="tooltip") }}</div>
+              {% for error in form.project.errors %}
                 <span style="color: red;">[{{ error }}]</span>
               {% endfor %}
-          </p>
+
+          </div>
+          <div class="flex-container-row">
+              <div class="flex-label">{{ form.data_type.label }}</div>
+              <div class="flex-field">{{ form.data_type(title='Choose from complete(F), only Contig (C) or only Reads (R)', data_toggle="tooltip", oninput="showReadfileInput()") }}</div>
+              {% for error in form.data.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+          </div>
+          <div class="flex-container-row">
+              <div class="flex-label">{{ form.ref_dir.label }}</div>
+              <div class="flex-field">{{ form.ref_dir(title='Full genome files (.fasta/gff)', data_toggle="tooltip", oninput="referenceFileUpdate()") }}</div>
+              {% for error in form.ref_dir.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+          </div>
+          <div id="contigs_file" style="display: none;">
+              <div class="flex-container-row">
+                  <div class="flex-label">{{ form.work_dir.label }}</div>
+                  <div class="flex-field">{{ form.work_dir(title='Contigs files', data_toggle="tooltip") }}</div>
+                  {% for error in form.work_dir.errors %}
+                    <span style="color: red;">[{{ error }}]</span>
+                  {% endfor %}
+              </div>
+          </div>
+          <div id="reads_combo_div" style="display: none;">
+              <div class="flex-container-row">
+                  <div class="flex-label">{{ form.reads.label }}</div>
+                  <div class="flex-field">{{ form.reads(title='Select Single-ended, paired-ended or both', data_toggle="tooltip") }}</div>
+                  {% for error in form.reads.errors %}
+                    <span style="color: red;">[{{ error }}]</span>
+                  {% endfor %}
+              </div>
+          </div>
+          <div id="reads_file" style="display: none;">
+            <div class="flex-container-row">
+                <div class="flex-label">{{ form.reads_file.label }}</div>
+                <div class="flex-field">{{ form.reads_file(title='Upload Reads file', data_toggle="tooltip") }}</div>
+                {% for error in form.reads_file.errors %}
+                  <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+          </div>
+          <div class="flex-container-row">
+              <div class="flex-label">{{ form.reference.label }}</div>
+              <div class="flex-field">{{ form.reference(title='Choose whether to use a random reference file, reference calculated from ANI or use a file of your choosing', data_toggle="tooltip", onchange="showReferenceFile()") }}</div>
+              {% for error in form.reference.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+          </div>
+          <div id="ref_file_div" style="display: block">
+              <div class="flex-container-row">
+                  <div class="flex-label">{{ form.reference_file.label }}</div>
+                  <div class="flex-field">{{ form.reference_file(title='Select a reference file', data_toggle="tooltip") }}</div>
+                  {% for error in form.reference_file.errors %}
+                    <span style="color: red;">[{{ error }}]</span>
+                  {% endfor %}
+              </div>
+          </div>
+          <div id="aligner_div" style="display: none;">
+              <div class="flex-container-row">
+                  <div class="flex-label">{{ form.aligner.label }}</div>
+                  <div class="flex-field">{{ form.aligner(title='Choose an aligner', data_toggle="tooltip") }}</div>
+                  {% for error in form.aligner.errors %}
+                    <span style="color: red;">[{{ error }}]</span>
+                  {% endfor %}
+              </div>
+          </div>
+          <div class="flex-container-row">
+              <div class="flex-label">{{ form.cutoff.label }}</div>
+              <div class="flex-field">{{ form.cutoff(min=0, max=1, oninput="outputUpdate(value)",
+                title='Linear alignment (LA) coverage against reference - ignores SNPs from organism that have lower cutoff.', data_toggle="tooltip") }}
+              <output for="cutoff" id="selected-cutoff">{{ form.cutoff.data }}</output></div>
+
+              {% for error in form.cutoff.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+          </div>
+
+          <div class="flex-container-row">
+              <div class="flex-label">{{ form.cds_snps.label }}</div>
+              <div class="flex-field">{{ form.cds_snps(title='divides SNPs into coding and non-coding sequences, gff file is required', data_toggle="tooltip") }}</div>
+              {% for error in form.cds_snps.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+          </div>
+          <div class="flex-container-row">
+              <div class="flex-label">{{ form.tree.label }}</div>
+              <div class="flex-field">{{ form.tree(title='Choose an aligner', data_toggle="tooltip", onchange="showBootstrap()") }}</div>
+              {% for error in form.tree.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+          </div>
+        <div id="bootstrapshow" style="display:none;">
+          <div class="flex-container-row">
+              <div class="flex-label">{{ form.bootstrap.label }}</div>
+              <div class="flex-field">{{ form.bootstrap(title='Do you want to create bootstrap trees?', data_toggle="tooltip", onchange="showBootstrapN()") }}</div>
+              {% for error in form.bootstrap.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+          </div>
         </div>
-        <p>
-            {{ form.reference.label }}
-            {{ form.reference(title='Choose whether to use a random reference file, reference calculated from ANI or use a file of your choosing', data_toggle="tooltip", onchange="showReferenceFile()") }}
-            {% for error in form.reference.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-    <div id="ref_file_div" style="display: block">
-        <p>
-            {{ form.reference_file.label }}
-            {{ form.reference_file(title='Select a reference file', data_toggle="tooltip") }}
-            {% for error in form.reference_file.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-    </div>
-    <div id="aligner_div" style="display: none;">
-        <p>
-            {{ form.aligner.label }}
-            {{ form.aligner(title='Choose an aligner', data_toggle="tooltip") }}
-            {% for error in form.aligner.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-    </div>
-        <p>
-            {{ form.cutoff.label }}
-            {{ form.cutoff(min=0, max=1, oninput="outputUpdate(value)", title='Linear alignment (LA) coverage against reference - ignores SNPs from organism that have lower cutoff.', data_toggle="tooltip") }}
-            <output for="cutoff" id="selected-cutoff">{{ form.cutoff.data }}</output>
-
-            {% for error in form.cutoff.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-
-        <p>
-            {{ form.cds_snps.label }}
-            {{ form.cds_snps(title='divides SNPs into coding and non-coding sequences, gff file is required', data_toggle="tooltip") }}
-            {% for error in form.cds_snps.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.tree.label }}
-            {{ form.tree(title='Choose an aligner', data_toggle="tooltip", onchange="showBootstrap()") }}
-            {% for error in form.tree.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-      <div id="bootstrapshow" style="display:none;">
-        <p>
-            {{ form.bootstrap.label }}
-            {{ form.bootstrap(title='Do you want to create bootstrap trees?', data_toggle="tooltip", onchange="showBootstrapN()") }}
-            {% for error in form.bootstrap.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
+      <div id="bootstrapN" style="display:none;">
+          <div class="flex-container-row">
+              <div class="flex-label">{{ form.N.label }}</div>
+              <div class="flex-field">{{ form.N(title='Specify the number of bootstrap trees to generate', data_toggle="tooltip") }}</div>
+              {% for error in form.N.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+          </div>
       </div>
-    <div id="bootstrapN" style="display:none;">
-        <p>
-            {{ form.N.label }}
-            {{ form.N(title='Specify the number of bootstrap trees to generate', data_toggle="tooltip") }}
-            {% for error in form.N.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-    </div>
-        <p>
-            {{ form.do_select.label }}
-            {{ form.do_select(title='Do you want to do molecular evolution analysis?'
-              'Turning this option ON will significantly slow the runtime. If this option is turned ON, you must '
-              'provide the gff file for the corresponding reference genome.', data_toggle="tooltip", onchange="showPOS()") }}
-            {% for error in form.do_select.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <div id="pos" style="display:none;">
-          <p>
-              {{ form.pos_select.label }}
-              {{ form.pos_select(title='Select Molecular Evolution analysis algorithm to use', data_toggle="tooltip") }}
-              {% for error in form.pos_select.errors %}
+          <div class="flex-container-row">
+              <div class="flex-label">{{ form.do_select.label }}</div>
+              <div class="flex-field">{{ form.do_select(title='Do you want to do molecular evolution analysis?'
+                'Turning this option ON will significantly slow the runtime. If this option is turned ON, you must '
+                'provide the gff file for the corresponding reference genome.', data_toggle="tooltip", onchange="showPOS()") }}</div>
+              {% for error in form.do_select.errors %}
                 <span style="color: red;">[{{ error }}]</span>
               {% endfor %}
-          </p>
-        </div>
-        <p>
-            {{ form.clean.label }}
-            {{ form.clean(title='Turning this option ON will remove intermediate files', data_toggle="tooltip") }}
-            {% for error in form.clean.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.threads.label }}
-            {{ form.threads(title='Specify the number of threads to run analysis ON', data_toggle="tooltip") }}
-            {% for error in form.threads.errors %}
-              <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
+          </div>
+          <div id="pos" style="display:none;">
+            <div class="flex-container-row">
+                <div class="flex-label">{{ form.pos_select.label }}</div>
+                <div class="flex-field">{{ form.pos_select(title='Select Molecular Evolution analysis algorithm to use', data_toggle="tooltip") }}</div>
+                {% for error in form.pos_select.errors %}
+                  <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+          </div>
+          <div class="flex-container-row">
+              <div class="flex-label">{{ form.clean.label }}</div>
+              <div class="flex-field">{{ form.clean(title='Turning this option ON will remove intermediate files', data_toggle="tooltip") }}</div>
+              {% for error in form.clean.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+          </div>
+          <div class="flex-container-row">
+              <div class="flex-label">{{ form.threads.label }}</div>
+              <div class="flex-field">{{ form.threads(title='Specify the number of threads to run analysis ON', data_toggle="tooltip") }}</div>
+              {% for error in form.threads.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+          </div>
+      </div>
         <p>{{ form.submit(onclick="showLoading()") }}</p>
 
 

@@ -33,12 +33,15 @@
     {{ table|safe }}
   {% endfor %}
   </div>
+<div>
+
+</div>
   <div>
   <h2>PhaME FastTree Visualization</h2>
   {% for tree in tree_files %}
     <li><a href="{{ project }}/{{ tree }}">{{ tree }}</a></li>
   {% endfor %}
   </div>
-  <div><a href="{{ url_for('download', project=project) }}">download output files for {{ project }}</a></div>
+  <div><a href="{{ url_for('download', project=project) }}" target="_blank">download output files for {{ project }}</a></div>
 </div>
 {% endblock %}
