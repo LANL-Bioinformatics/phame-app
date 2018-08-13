@@ -45,6 +45,8 @@ services:
     depends_on:
       - phame
 
+  redis:
+      image: "redis:alpine"
 
   phame:
     build:
@@ -61,8 +63,4 @@ services:
     volumes:
       - .:/phame_api01
       - phame_data:/app/static/trees
-#      - django_data:/app/phame_api01/media
-#    command: source /PhaME-1/thirdParty/miniconda/bin/activate phame
-#    entrypoint: [ "/bin/bash", "-c", "source activate phame"]
-#    stdin_open: true
-#    tty: true
+

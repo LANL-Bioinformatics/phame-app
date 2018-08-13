@@ -3,7 +3,7 @@ import zipfile
 import shutil
 import datetime
 import glob
-from flask import Flask, render_template, redirect, flash, url_for, request, send_file
+from flask import Flask, render_template, redirect, flash, url_for, request, send_file, jsonify
 
 from werkzeug.utils import secure_filename
 from werkzeug.urls import url_parse
@@ -14,6 +14,8 @@ from database import db_session
 from config import Config
 import logging
 import pandas as pd
+from celery import Celery
+
 app = Flask(__name__)
 app.config.from_object(Config)
 login = LoginManager(app)
@@ -25,6 +27,14 @@ except:
 
 logging.basicConfig(filename='phame.log', level=logging.DEBUG)
 logging.debug(app.config['PROJECT_DIRECTORY'])
+
+# Celery configuration
+app.config['CELERY_BROKER_URL'] = 'redis://redis:6379/0'
+app.config['CELERY_RESULT_BACKEND'] = 'redis://redis:6379/0'
+
+# Initialize Celery
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
 
 
 def zip_output_files(project):
@@ -138,17 +148,36 @@ def check_files(form):
         error += 'Please select reads file...'
     return error
 
+def monitor_phame(p1, project):
+    stdout, stderr = p1.communicate()
+    logging.debug(stdout)
+    logging.error(stderr)
+    if len(stderr) > 0:
+        logging.error(stderr)
+        logging.error('current user: {0}, project: {1}'.format(current_user.username, project))
+    return stdout, stderr
 
-@app.route('/run/<project>')
+
+@app.route('/runphame/<project>', methods=['POST', 'GET'])
+def runphame(project):
+    task = run_phame(project).apply_async()
+    return jsonify({}), 202, {'Location': url_for('taskstatus',
+                                                  task_id=task.id)}
+
+@celery.task()
 def run_phame(project):
     """
     Calls shell script that runs PhaME
     :param project: name of project
     :return: redirects to display view
     """
+    error = None
     try:
-        p1 = subprocess.Popen('./docker_run_phame.sh {0}/{1}'.format(current_user.username, project), shell=True, stdin=subprocess.PIPE,
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p1 = subprocess.Popen('./docker_run_phame.sh {0}/{1}'.format(current_user.username, project), shell=True,
+                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
+
         stdout, stderr = p1.communicate()
         logging.debug(stdout)
         logging.error(stderr)
@@ -156,13 +185,47 @@ def run_phame(project):
             logging.error(stderr)
             logging.error('current user: {0}, project: {1}'.format(current_user.username, project))
             error = {'msg':stderr}
+
             return render_template('error.html', error=error)
 
     except subprocess.CalledProcessError as e:
         logging.error(str(e))
+        error = str(e)
         return "An error occurred while trying to run PhaME: {0}".format(str(e))
 
+    # return p1, error
     return redirect(url_for('display', project = project))
+
+
+@app.route('/status/<task_id>')
+def taskstatus(task_id):
+    task = run_phame.AsyncResult(task_id)
+    if task.state == 'PENDING':
+        response = {
+            'state': task.state,
+            'current': 0,
+            'total': 1,
+            'status': 'Pending...'
+        }
+    elif task.state != 'FAILURE':
+        response = {
+            'state': task.state,
+            'current': task.info.get('current', 0),
+            'total': task.info.get('total', 1),
+            'status': task.info.get('status', '')
+        }
+        if 'result' in task.info:
+            response['result'] = task.info['result']
+    else:
+        # something went wrong in the background job
+        response = {
+            'state': task.state,
+            'current': 1,
+            'total': 1,
+            'status': str(task.info),  # this is the exception raised
+        }
+    return jsonify(response)
+
 
 @app.route('/')
 @app.route('/index')
@@ -191,25 +254,32 @@ def display(project):
     :return: renders PhaME output page
     """
     project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project)
-    results_dir = os.path.join(project_dir, 'workdir', 'results')
+    workdir = os.path.join(project_dir, 'workdir')
+    results_dir = os.path.join(workdir, 'results')
     refdir = os.path.join(project_dir, 'refdir')
     target_dir = os.path.join(os.path.dirname(__file__), 'static')
     summary_stats_file = '{0}_summaryStatistics.txt'.format(project)
+
+    reads_file_count = len(
+        [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
+    contigs_file_count = len(
+        [fname for fname in os.listdir(workdir) if fname.endswith('.contig')])
+    full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or fname.endswith('.fasta'))])
+
     output_tables_list, titles_list = [], []
-    if os.path.exists(os.path.join(results_dir, summary_stats_file)):
-        stats_df = pd.read_table(os.path.join(results_dir, summary_stats_file), header=None)
-        count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or fname.endswith('.fasta'))])
-        lengths_df = stats_df.iloc[:count-1].drop(1, axis=1)
-        lengths_df.columns = ['sequence name', 'total length']
-        lengths_df['total length'] = lengths_df['total length'].astype(int)
-        lengths_df['sequence name'][0] = lengths_df['sequence name'][0] + '*'
-        lengths_df = lengths_df.set_index('sequence name')
-        ref_stats = stats_df.iloc[count:].drop(2, axis=1)
-        ref_stats = ref_stats.set_index(0)
-        ref_stats.columns = ['']
-        del ref_stats.index.name
-        output_tables_list = [lengths_df.to_html(classes='lengths'), ref_stats.to_html(classes='ref_stats')]
-        titles_list = ['na', 'sequence lengths', 'stats']
+
+    stats_df = pd.read_table(os.path.join(results_dir, summary_stats_file), header=None)
+    lengths_df = stats_df.iloc[:full_genome_file_count-1].drop(1, axis=1)
+    lengths_df.columns = ['sequence name', 'total length']
+    lengths_df['total length'] = lengths_df['total length'].astype(int)
+    lengths_df['sequence name'][0] = lengths_df['sequence name'][0] + '*'
+    lengths_df = lengths_df.set_index('sequence name')
+    ref_stats = stats_df.iloc[full_genome_file_count:].drop(2, axis=1)
+    ref_stats = ref_stats.set_index(0)
+    ref_stats.columns = ['']
+    del ref_stats.index.name
+    output_tables_list = [lengths_df.to_html(classes='lengths'), ref_stats.to_html(classes='ref_stats')]
+    titles_list = ['na', 'sequence lengths', 'Core Genome Size']
     if os.path.exists(os.path.join(results_dir, 'CDScoords.txt')):
         coords_df = pd.read_table(os.path.join(results_dir, 'CDScoords.txt'), header=None)
         coords_df.columns = ['sequence name', 'begin', 'end', 'type']
@@ -217,7 +287,17 @@ def display(project):
         output_tables_list.append(coords_df.to_html(classes='coords'))
         titles_list.append('coordinates')
 
-
+    run_summary_df = pd.DataFrame({'number of genomes analyzed': reads_file_count + contigs_file_count +
+                                                                 full_genome_file_count,
+                                   'number of contigs': contigs_file_count,
+                                   'number of reads': reads_file_count,
+                                   'number of full genomes': full_genome_file_count,
+                                   'reference genome used': ref_stats.loc['Reference used:'],
+                                   'project name': project
+                                   }
+                                  )
+    titles_list.insert(0, 'Run Summary')
+    output_tables_list.insert(0, run_summary_df.to_html(classes='summary'))
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
     tree_file_list = [fname for fname in os.listdir(results_dir) if fname.endswith('.fasttree')]
@@ -306,8 +386,14 @@ def input():
 
             # Create config file
             create_config_file(form)
-
-            return redirect(url_for('run_phame', project=form.project.data))
+            # p, error = run_phame(form.project.data).apply_async()
+            # msg = None
+            # while not msg:
+            #     msg = p.communicate()
+            # if error:
+            #     return render_template('error.html', error=error)
+            return redirect(url_for('runphame', project=form.project.data))
+            # return redirect(url_for('run_phame', project=form.project.data))
     return render_template('input.html', title='Phame input', form=form)
 
 
