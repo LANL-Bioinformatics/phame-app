@@ -3,6 +3,7 @@ import zipfile
 import shutil
 import datetime
 import glob
+import time
 from flask import Flask, render_template, redirect, flash, url_for, request, send_file, jsonify
 
 from werkzeug.utils import secure_filename
@@ -36,6 +37,17 @@ app.config['CELERY_RESULT_BACKEND'] = 'redis://redis:6379/0'
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
 
+
+def timeit(method):
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+        name = kw.get('log_name', method.__name__.upper())
+        kw['log_time'][name] = te-ts
+
+        return result
+    return timed
 
 def zip_output_files(project):
     """
@@ -160,12 +172,15 @@ def monitor_phame(p1, project):
 
 @app.route('/runphame/<project>', methods=['POST', 'GET'])
 def runphame(project):
-    task = run_phame(project).apply_async()
-    return jsonify({}), 202, {'Location': url_for('taskstatus',
-                                                  task_id=task.id)}
+    log_time_data = {}
+    task = run_phame(project, log_time=log_time_data)
+    return redirect(url_for('display', project=project, log_time=log_time_data['RUN_PHAME']))
+    # return jsonify({}), 202, {'Location': url_for('taskstatus',
+    #                                               task_id=task.id)}
 
+@timeit
 @celery.task()
-def run_phame(project):
+def run_phame(project, **kwargs):
     """
     Calls shell script that runs PhaME
     :param project: name of project
@@ -193,8 +208,8 @@ def run_phame(project):
         error = str(e)
         return "An error occurred while trying to run PhaME: {0}".format(str(e))
 
-    # return p1, error
-    return redirect(url_for('display', project = project))
+    return p1, error
+    # return redirect(url_for('display', project = project))
 
 
 @app.route('/status/<task_id>')
@@ -244,8 +259,8 @@ def projects():
     return render_template('projects.html', projects=projects)
 
 
-@app.route('/display/<project>', methods=['POST', 'GET'])
-def display(project):
+@app.route('/display/<project>/<log_time>', methods=['POST', 'GET'])
+def display(project, log_time):
     """
     Displays output from PhaME, including summary statistics, sequence lengths and
     tree output using archeopteryx.js library
@@ -278,8 +293,8 @@ def display(project):
     ref_stats = ref_stats.set_index(0)
     ref_stats.columns = ['']
     del ref_stats.index.name
-    output_tables_list = [lengths_df.to_html(classes='lengths'), ref_stats.to_html(classes='ref_stats')]
-    titles_list = ['na', 'sequence lengths', 'Core Genome Size']
+    output_tables_list = [lengths_df.to_html(classes='lengths'), '*reference used', '-', ref_stats[2:].to_html(classes='ref_stats')]
+    titles_list = ['sequence lengths', '', '', 'Core Genome Size']
     if os.path.exists(os.path.join(results_dir, 'CDScoords.txt')):
         coords_df = pd.read_table(os.path.join(results_dir, 'CDScoords.txt'), header=None)
         coords_df.columns = ['sequence name', 'begin', 'end', 'type']
@@ -293,10 +308,12 @@ def display(project):
                                    'number of reads': reads_file_count,
                                    'number of full genomes': full_genome_file_count,
                                    'reference genome used': ref_stats.loc['Reference used:'],
-                                   'project name': project
+                                   'project name': project,
+                                   'run time': log_time
                                    }
                                   )
     titles_list.insert(0, 'Run Summary')
+    titles_list.insert(0, 'na')
     output_tables_list.insert(0, run_summary_df.to_html(classes='summary'))
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
