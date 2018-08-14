@@ -259,8 +259,9 @@ def projects():
     return render_template('projects.html', projects=projects)
 
 
+@app.route('/display/<project>', methods=['POST', 'GET'])
 @app.route('/display/<project>/<log_time>', methods=['POST', 'GET'])
-def display(project, log_time):
+def display(project, log_time=None):
     """
     Displays output from PhaME, including summary statistics, sequence lengths and
     tree output using archeopteryx.js library
@@ -302,6 +303,7 @@ def display(project, log_time):
         output_tables_list.append(coords_df.to_html(classes='coords'))
         titles_list.append('coordinates')
 
+    run_time = '' if not log_time else log_time[:6]
     run_summary_df = pd.DataFrame({'number of genomes analyzed': reads_file_count + contigs_file_count +
                                                                  full_genome_file_count,
                                    'number of contigs': contigs_file_count,
@@ -309,7 +311,7 @@ def display(project, log_time):
                                    'number of full genomes': full_genome_file_count,
                                    'reference genome used': ref_stats.loc['Reference used:'],
                                    'project name': project,
-                                   'run time': log_time
+                                   'run time (s)': run_time
                                    }
                                   )
     titles_list.insert(0, 'Run Summary')
