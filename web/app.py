@@ -196,7 +196,7 @@ def run_phame(project, **kwargs):
         stdout, stderr = p1.communicate()
         logging.debug(stdout)
         logging.error(stderr)
-        if len(stderr) > 0:
+        if len(stderr) > 0 or os.path.exists(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'workdir', 'results', '{0}.error'.format(project))):
             logging.error(stderr)
             logging.error('current user: {0}, project: {1}'.format(current_user.username, project))
             error = {'msg':stderr}
