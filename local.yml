@@ -26,7 +26,7 @@ services:
     ports:
      - "8080:80"
     depends_on:
-      - web
+      - phame_api
 
 #  phame:
 #    build:
@@ -43,7 +43,7 @@ services:
 #      - .:/phame_api01
 #      - phame_data:/app/static/trees
 
-  web:
+  phame_api:
     build:
       context: ./api
       dockerfile: Dockerfile

@@ -46,6 +46,19 @@ def check_task(task_id):
     else:
         return str(res.result)
 
+@app.route('/runphame/<project>', methods=['POST', 'GET'])
+def runphame(project):
+    log_time_data = {}
+    task = celery.send_task('tasks.run_phame', args = [project, current_user.username], log_time=log_time_data)
+    response = "<a href='{url}'>check status of {id} </a>".format(id=task.id,
+                                                                  url=url_for('check_task', task_id=task.id,
+                                                                              external=True))
+    return response
+
+    # return redirect(url_for('display', project=project, log_time=log_time_data['RUN_PHAME']))
+    # return jsonify({}), 202, {'Location': url_for('taskstatus',
+    #                                               task_id=task.id)}
+
 @login.user_loader
 def load_user(id):
     return User.query.get(int(id))
