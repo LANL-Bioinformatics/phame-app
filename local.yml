@@ -8,23 +8,6 @@ volumes:
 
 
 services:
-  django:
-    build:
-      context: .
-      dockerfile: ./compose/local/django/Dockerfile
-    image: phame_api01_local_django
-    depends_on:
-      - postgres
-    volumes:
-      - .:/app
-#      - django_data:/app/phame_api01/media
-    env_file:
-      - ./.envs/.local/.django
-      - ./.envs/.local/.postgres
-    ports:
-      - "8000:8000"
-    command: /start
-
   postgres:
     build:
       context: .
@@ -43,24 +26,50 @@ services:
     ports:
      - "8080:80"
     depends_on:
-      - phame
+      - web
 
-  redis:
-      image: "redis:alpine"
+#  phame:
+#    build:
+#      context: .
+#      dockerfile: ./compose/local/PhaME-1/Dockerfile
+#    env_file:
+#      - ./.envs/.local/.postgres
+#    depends_on:
+##      - postgres
+#      - redis
+#    ports:
+#      - 5000:5000
+#    volumes:
+#      - .:/phame_api01
+#      - phame_data:/app/static/trees
 
-  phame:
+  web:
     build:
-      context: .
-      dockerfile: ./compose/local/PhaME-1/Dockerfile
-    image: phame_api01_phame-1
-    hostname: phame_host
+      context: ./api
+      dockerfile: Dockerfile
+    restart: always
     env_file:
       - ./.envs/.local/.postgres
-    depends_on:
-      - postgres
     ports:
-      - 5000:5000
-    volumes:
-      - .:/phame_api01
-      - phame_data:/app/static/trees
-
+     - 5000:5000
+    depends_on:
+      - redis
+      - postgres
+  worker:
+    build:
+      context: celery-queue
+      dockerfile: Dockerfile
+    depends_on:
+      - redis
+  monitor:
+    build:
+      context: celery-queue
+      dockerfile: Dockerfile
+    ports:
+     - "5555:5555"
+    entrypoint: flower
+    command:  -A tasks --port=5555 --broker=redis://redis:6379/0
+    depends_on:
+      - redis
+  redis:
+    image: redis
