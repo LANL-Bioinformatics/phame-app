@@ -4,13 +4,10 @@ billiard==3.5.0.3
 celery==4.2.0rc4
 click==6.7
 Flask==1.0.2
-flask-wtf
-uwsgi
-pandas==0.23.1
-psycopg2
 flask-login
 flask-migrate
 flask-sqlalchemy
+flask-wtf
 itsdangerous==0.24
 Jinja2==2.10
 kombu==4.2.0
@@ -18,8 +15,8 @@ MarkupSafe==1.0
 pandas==0.23.1
 psycopg2
 pytz==2018.3
-python==3.6.1
 redis==2.10.6
 tornado==5.0.2
 vine==1.1.4
 Werkzeug==0.14.1
+requests
