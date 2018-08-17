@@ -7,8 +7,8 @@ import time
 import logging
 
 
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://redis:6379'),
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379')
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379'),
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379')
 
 celery = Celery('tasks', broker=CELERY_BROKER_URL, backend=CELERY_RESULT_BACKEND)
 basedir = os.path.dirname(os.path.dirname(__file__))
@@ -30,11 +30,11 @@ def timeit(method):
 
 @celery.task(name='tasks.add')
 def add(x, y):
+    logging.debug('tasks.add called')
     time.sleep(5)
     return x + y
 
 
-@timeit
 @celery.task(name='tasks.run_phame')
 def run_phame(project, username, **kwargs):
     """
@@ -44,6 +44,7 @@ def run_phame(project, username, **kwargs):
     """
     error = None
     try:
+        logging.debug('run_phame called!!!!!!!!!!!!!!')
         p1 = subprocess.Popen('./docker_run_phame.sh {0}/{1}'.format(username, project), shell=True,
                           stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 

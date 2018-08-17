@@ -17,6 +17,7 @@ import logging
 import pandas as pd
 from worker import celery
 import celery.states as states
+import phame_api01.celery_queue.tasks
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -49,7 +50,10 @@ def check_task(task_id):
 @app.route('/runphame/<project>', methods=['POST', 'GET'])
 def runphame(project):
     log_time_data = {}
+    logging.debug('creating celery task run_phame')
     task = celery.send_task('tasks.run_phame', args = [project, current_user.username], log_time=log_time_data)
+    logging.debug('sent celery task run_phame')
+    logging.debug('task id: {0}'.format(task.id))
     response = "<a href='{url}'>check status of {id} </a>".format(id=task.id,
                                                                   url=url_for('check_task', task_id=task.id,
                                                                               external=True))

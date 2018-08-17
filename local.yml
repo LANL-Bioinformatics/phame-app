@@ -26,24 +26,24 @@ services:
     ports:
      - "8080:80"
     depends_on:
-      - phame_api
+      - web
 
-#  phame:
-#    build:
-#      context: .
-#      dockerfile: ./compose/local/PhaME-1/Dockerfile
-#    env_file:
-#      - ./.envs/.local/.postgres
-#    depends_on:
-##      - postgres
-#      - redis
-#    ports:
-#      - 5000:5000
-#    volumes:
-#      - .:/phame_api01
-#      - phame_data:/app/static/trees
+  phame:
+    build:
+      context: .
+      dockerfile: ./compose/local/PhaME-1/Dockerfile
+    env_file:
+      - ./.envs/.local/.postgres
+    depends_on:
+#      - postgres
+      - redis
+    ports:
+      - 5000:5000
+    volumes:
+      - .:/phame_api01
+      - phame_data:/app/static/trees
 
-  phame_api:
+  web:
     build:
       context: ./api
       dockerfile: Dockerfile
@@ -55,6 +55,9 @@ services:
     depends_on:
       - redis
       - postgres
+    volumes:
+      - .:/phame_api01
+
   worker:
     build:
       context: celery-queue

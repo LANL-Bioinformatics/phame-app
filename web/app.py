@@ -15,7 +15,8 @@ from database import db_session
 from config import Config
 import logging
 import pandas as pd
-from celery import Celery
+from worker import celery
+import celery.states as states
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -29,14 +30,38 @@ except:
 logging.basicConfig(filename='phame.log', level=logging.DEBUG)
 logging.debug(app.config['PROJECT_DIRECTORY'])
 
-# Celery configuration
-app.config['CELERY_BROKER_URL'] = 'redis://redis_db:6379/0'
-app.config['CELERY_RESULT_BACKEND'] = 'redis://redis_db:6379/0'
+@app.route('/add/<int:param1>/<int:param2>')
+def add(param1, param2):
+    task = celery.send_task('tasks.add', args=[param1, param2], kwargs={})
+    response = "<a href='{url}'>check status of {id} </a>".format(id=task.id,
+                                                                  url=url_for('check_task', task_id=task.id, external=True))
+    return response
 
-# Initialize Celery
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
-celery.conf.update(app.config)
 
+@app.route('/check/<string:task_id>')
+def check_task(task_id):
+    res = celery.AsyncResult(task_id)
+    if res.state == states.PENDING:
+        return res.state
+    else:
+        return str(res.result)
+
+@app.route('/runphame/<project>', methods=['POST', 'GET'])
+def runphame(project):
+    log_time_data = {}
+    task = celery.send_task('tasks.run_phame', args = [project, current_user.username], log_time=log_time_data)
+    response = "<a href='{url}'>check status of {id} </a>".format(id=task.id,
+                                                                  url=url_for('check_task', task_id=task.id,
+                                                                              external=True))
+    return response
+
+    # return redirect(url_for('display', project=project, log_time=log_time_data['RUN_PHAME']))
+    # return jsonify({}), 202, {'Location': url_for('taskstatus',
+    #                                               task_id=task.id)}
+
+@login.user_loader
+def load_user(id):
+    return User.query.get(int(id))
 
 def timeit(method):
     def timed(*args, **kw):
@@ -160,96 +185,140 @@ def check_files(form):
         error += 'Please select reads file...'
     return error
 
-def monitor_phame(p1, project):
-    stdout, stderr = p1.communicate()
-    logging.debug(stdout)
-    logging.error(stderr)
-    if len(stderr) > 0:
-        logging.error(stderr)
-        logging.error('current user: {0}, project: {1}'.format(current_user.username, project))
-    return stdout, stderr
-
-@app.route('/error/<error>', methods=['POST'])
-def error(error):
-    render_template('error.html', error=error)
-
-@app.route('/runphame/<project>', methods=['POST', 'GET'])
-def runphame(project):
-    log_time_data = {}
-    task = run_phame(project, log_time=log_time_data)
-    return redirect(url_for('display', project=project, log_time=log_time_data['RUN_PHAME']))
-    # return jsonify({}), 202, {'Location': url_for('taskstatus',
-    #                                               task_id=task.id)}
-
-@timeit
-@celery.task()
-def run_phame(project, **kwargs):
-    """
-    Calls shell script that runs PhaME
-    :param project: name of project
-    :return: redirects to display view
-    """
-    error = None
-    try:
-        p1 = subprocess.Popen('./docker_run_phame.sh {0}/{1}'.format(current_user.username, project), shell=True,
-                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-
-
-        stdout, stderr = p1.communicate()
-        logging.debug(stdout)
-        logging.error(stderr)
-        if len(stderr) > 0 or os.path.exists(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'workdir', 'results', '{0}.error'.format(project))):
-            logging.error(stderr)
-            logging.error('current user: {0}, project: {1}'.format(current_user.username, project))
-            error = {'msg':stderr}
-
-            return redirect(url_for('error', error=error))
-
-    except subprocess.CalledProcessError as e:
-        logging.error(str(e))
-        error = str(e)
-        return "An error occurred while trying to run PhaME: {0}".format(str(e))
-
-    return {'current': 100, 'total': 100, 'status': 'Task completed!',
-            'result': 42}
-    # return redirect(url_for('display', project = project))
-
-
-@app.route('/status/<task_id>')
-def taskstatus(task_id):
-    task = run_phame.AsyncResult(task_id)
-    if task.state == 'PENDING':
-        response = {
-            'state': task.state,
-            'current': 0,
-            'total': 1,
-            'status': 'Pending...'
-        }
-    elif task.state != 'FAILURE':
-        response = {
-            'state': task.state,
-            'current': task.info.get('current', 0),
-            'total': task.info.get('total', 1),
-            'status': task.info.get('status', '')
-        }
-        if 'result' in task.info:
-            response['result'] = task.info['result']
-    else:
-        # something went wrong in the background job
-        response = {
-            'state': task.state,
-            'current': 1,
-            'total': 1,
-            'status': str(task.info),  # this is the exception raised
-        }
-    return jsonify(response)
-
 
 @app.route('/')
 @app.route('/index')
 def index():
     return render_template('index.html', title='Home')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """
+    Login for PhaME
+    If user is logged in as 'public', they are redirected to the 'projects' page where they
+    can view 'public' projects
+    :return:
+    """
+    if current_user.is_authenticated:
+        return redirect(url_for('projects')) if current_user.username == 'public' else redirect(url_for('index'))
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user is None or not user.check_password(form.password.data):
+            flash('Invalid username or password')
+            return redirect(url_for('login'))
+        login_user(user, remember=form.remember_me.data)
+        next_page = url_for('projects') if current_user.username == 'public' else request.args.get('next')
+        if not next_page or url_parse(next_page).netloc != '':
+            # url_for returns /input
+            next_page = url_for('projects') if current_user.username == 'public' else url_for('input').split('/')[-1]
+        return redirect(url_for(next_page.split('/')[-1]))
+    return render_template('login.html', title='Sign In', form=form)
+
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """
+    Registration for PhaME
+    :return:
+    """
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = User(username=form.username.data, email=form.email.data)
+        user.set_password(form.password.data)
+        db_session.add(user)
+        db_session.commit()
+        flash('Congratulations, you are now a registered user!')
+        os.mkdir(os.path.join(app.config['PROJECT_DIRECTORY'], user.username))
+        return redirect(url_for('login'))
+    return render_template('register.html', title='Register', form=form)
+
+
+@app.route("/success")
+def success():
+    return "Thank you for signing up!"
+
+@app.route('/input', methods=['GET', 'POST'])
+@login_required
+def input():
+    """
+    Takes flask form, uploads files, checks parameters to make sure they are correct for PhaME, creates PhaME config
+    file
+    :return:
+    """
+    if current_user.username == 'public':
+        return redirect(url_for('projects'))
+
+    form = InputForm()
+    form.reference_file.choices = []
+    if request.method == 'POST':
+        project_dir, ref_dir = project_setup(form)
+        if project_dir is None:
+            error = 'Project directory already exists'
+            return render_template('input.html', title='Phame input', form=form, error=error)
+        if form.validate_on_submit():
+            # Perform validation based on requirements of PhaME
+            files_error = check_files(form)
+            if len(files_error) > 0:
+                return render_template('input.html', title='Phame input', form=form, error=files_error)
+
+            if ('1' in form.data_type.data or '2' in form.data_type.data) and len(form.reference_file.data) == 0:
+                error = 'You must upload a reference genome if you select Contigs or Reads from Data'
+                remove_uploaded_files(project_dir)
+                return render_template('input.html', title='Phame input', form=form, error=error)
+            # Ensure each fasta file has a corresponding mapping file
+            if form.reference.data == '0' or form.reference.data == '2':
+                for fname in os.listdir(ref_dir):
+                    if fname.endswith('.fa') or fname.endswith('.fasta') or fname.endswith('.fna'):
+                        if not os.path.exists(os.path.join(ref_dir, '{0}.{1}'.format(fname.split('.')[0],'gff'))):
+                            remove_uploaded_files(project_dir)
+                            error = 'Each full genome file must have a corresponding .gff file if random or ANI is ' \
+                                    'selected from Reference'
+                            return render_template('input.html', title='Phame input', form=form, error=error)
+
+            # Create config file
+            create_config_file(form)
+            # p, error = run_phame(form.project.data).apply_async()
+            # msg = None
+            # while not msg:
+            #     msg = p.communicate()
+            # if error:
+            #     return render_template('error.html', error=error)
+            return redirect(url_for('runphame', project=form.project.data))
+            # return redirect(url_for('run_phame', project=form.project.data))
+    return render_template('input.html', title='Phame input', form=form)
+
+
+
+@app.route('/display/<project>/<tree>')
+def display_tree(project, tree):
+    """
+    Creates phylogeny tree using archeopteryx.js
+    :param project: Name of project
+    :param tree: Name of tree file (.fasttree)
+    :return:
+    """
+    return render_template('tree_output.html', tree= tree, project=project)
+
+
+@app.route('/download/<project>')
+def download(project):
+    """
+    Calls function to zip project output files and downloads the zipfile when link is clicked
+    :param project:
+    :return:
+    """
+    zip_name = zip_output_files(project)
+    return send_file(zip_name, mimetype='zip', attachment_filename=zip_name, as_attachment=True)
+
 
 
 @app.route('/projects')
@@ -347,138 +416,6 @@ def display(project, log_time=None):
 
 
 
-@app.route('/display/<project>/<tree>')
-def display_tree(project, tree):
-    """
-    Creates phylogeny tree using archeopteryx.js
-    :param project: Name of project
-    :param tree: Name of tree file (.fasttree)
-    :return:
-    """
-    return render_template('tree_output.html', tree= tree, project=project)
-
-
-@app.route('/download/<project>')
-def download(project):
-    """
-    Calls function to zip project output files and downloads the zipfile when link is clicked
-    :param project:
-    :return:
-    """
-    zip_name = zip_output_files(project)
-    return send_file(zip_name, mimetype='zip', attachment_filename=zip_name, as_attachment=True)
-
-
-@app.route('/input', methods=['GET', 'POST'])
-@login_required
-def input():
-    """
-    Takes flask form, uploads files, checks parameters to make sure they are correct for PhaME, creates PhaME config
-    file
-    :return:
-    """
-    if current_user.username == 'public':
-        return redirect(url_for('projects'))
-
-    form = InputForm()
-    form.reference_file.choices = []
-    if request.method == 'POST':
-        project_dir, ref_dir = project_setup(form)
-        if project_dir is None:
-            error = 'Project directory already exists'
-            return render_template('input.html', title='Phame input', form=form, error=error)
-        if form.validate_on_submit():
-            # Perform validation based on requirements of PhaME
-            files_error = check_files(form)
-            if len(files_error) > 0:
-                return render_template('input.html', title='Phame input', form=form, error=files_error)
-
-            if ('1' in form.data_type.data or '2' in form.data_type.data) and len(form.reference_file.data) == 0:
-                error = 'You must upload a reference genome if you select Contigs or Reads from Data'
-                remove_uploaded_files(project_dir)
-                return render_template('input.html', title='Phame input', form=form, error=error)
-            # Ensure each fasta file has a corresponding mapping file
-            if form.reference.data == '0' or form.reference.data == '2':
-                for fname in os.listdir(ref_dir):
-                    if fname.endswith('.fa') or fname.endswith('.fasta') or fname.endswith('.fna'):
-                        if not os.path.exists(os.path.join(ref_dir, '{0}.{1}'.format(fname.split('.')[0],'gff'))):
-                            remove_uploaded_files(project_dir)
-                            error = 'Each full genome file must have a corresponding .gff file if random or ANI is ' \
-                                    'selected from Reference'
-                            return render_template('input.html', title='Phame input', form=form, error=error)
-
-            # Create config file
-            create_config_file(form)
-            # p, error = run_phame(form.project.data).apply_async()
-            # msg = None
-            # while not msg:
-            #     msg = p.communicate()
-            # if error:
-            #     return render_template('error.html', error=error)
-            return redirect(url_for('runphame', project=form.project.data))
-            # return redirect(url_for('run_phame', project=form.project.data))
-    return render_template('input.html', title='Phame input', form=form)
-
-
-@login.user_loader
-def load_user(id):
-    return User.query.get(int(id))
-
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    """
-    Login for PhaME
-    If user is logged in as 'public', they are redirected to the 'projects' page where they
-    can view 'public' projects
-    :return:
-    """
-    if current_user.is_authenticated:
-        return redirect(url_for('projects')) if current_user.username == 'public' else redirect(url_for('index'))
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user is None or not user.check_password(form.password.data):
-            flash('Invalid username or password')
-            return redirect(url_for('login'))
-        login_user(user, remember=form.remember_me.data)
-        next_page = url_for('projects') if current_user.username == 'public' else request.args.get('next')
-        if not next_page or url_parse(next_page).netloc != '':
-            # url_for returns /input
-            next_page = url_for('projects') if current_user.username == 'public' else url_for('input').split('/')[-1]
-        return redirect(url_for(next_page.split('/')[-1]))
-    return render_template('login.html', title='Sign In', form=form)
-
-
-@app.route('/logout')
-def logout():
-    logout_user()
-    return redirect(url_for('login'))
-
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    """
-    Registration for PhaME
-    :return:
-    """
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    form = RegistrationForm()
-    if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data)
-        user.set_password(form.password.data)
-        db_session.add(user)
-        db_session.commit()
-        flash('Congratulations, you are now a registered user!')
-        os.mkdir(os.path.join(app.config['PROJECT_DIRECTORY'], user.username))
-        return redirect(url_for('login'))
-    return render_template('register.html', title='Register', form=form)
-
-
-@app.route("/success")
-def success():
-    return "Thank you for signing up!"
-
-if __name__ == '__main__':
-    app.run(debug=True,host='0.0.0.0')
+#
+# if __name__ == '__main__':
+#     app.run(debug=True,host='0.0.0.0')
