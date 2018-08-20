@@ -55,12 +55,15 @@ services:
       - postgres
 
   # celery worker that makes api call
-  worker:
-    build:
-      context: celery-queue
-      dockerfile: Dockerfile
-    depends_on:
-      - redis
+#  worker:
+#    build:
+#      context: celery-queue
+#      dockerfile: Dockerfile
+#    volumes:
+#      - phame_data:/phame_api/media
+#      -./PhaME-1
+#    depends_on:
+#      - redis
   monitor:
     build:
       context: celery-queue

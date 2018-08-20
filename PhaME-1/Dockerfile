@@ -14,5 +14,11 @@ EXPOSE 5001
 COPY /web /app
 WORKDIR /app
 RUN pip install -r requirements.txt
-CMD ["python", "app.py"]
+#CMD ["python", "app.py"]
 #############################ENVIRONMENT#####################################
+ENV CELERY_BROKER_URL redis://redis:6379/0
+ENV CELERY_RESULT_BACKEND redis://redis:6379/0
+ENV C_FORCE_ROOT true
+
+
+ENTRYPOINT celery -A tasks worker --loglevel=info
