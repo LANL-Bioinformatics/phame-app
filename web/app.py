@@ -16,7 +16,6 @@ app = Flask(__name__)
 logging.basicConfig(filename='phame.log', level=logging.DEBUG)
 
 
-
 @app.route('/runphame/<project>/<username>', methods=['POST', 'GET'])
 def runphame(project, username):
     try:

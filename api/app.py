@@ -27,7 +27,7 @@ try:
 except:
     pass
 
-logging.basicConfig(filename='phame.log', level=logging.DEBUG)
+logging.basicConfig(filename='api.log', level=logging.DEBUG)
 logging.debug(app.config['PROJECT_DIRECTORY'])
 
 @app.route('/add/<int:param1>/<int:param2>')
@@ -50,10 +50,19 @@ def check_task(task_id):
 def runphame(project):
     log_time_data = {}
     task = celery.send_task('tasks.run_phame', args = [project, current_user.username], log_time=log_time_data)
-    response = "<a href='{url}'>check status of {id} </a>".format(id=task.id,
-                                                                  url=url_for('check_task', task_id=task.id,
-                                                                              external=True))
-    return response
+    logging.debug('task id: {0}'.format(task.id))
+    # logging.debug('check task {0}'.format(check_task(task.id)))
+    finished = False
+    while not finished:
+        response = check_task(task_id=task.id)
+        logging.debug('response: {0}'.format(response))
+        time.sleep(1)
+        if response != states.PENDING:
+            finished = True
+    # response = "<a href='{url}'>check status of {id} </a>".format(id=task.id,
+    #                                                               url=url_for('check_task', task_id=task.id,
+    #                                                                           external=True))
+    return redirect(url_for('display', project=project))
 
     # return redirect(url_for('display', project=project, log_time=log_time_data['RUN_PHAME']))
     # return jsonify({}), 202, {'Location': url_for('taskstatus',

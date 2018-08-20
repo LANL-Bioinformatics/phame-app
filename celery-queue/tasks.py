@@ -18,5 +18,5 @@ def add(x, y):
 
 @celery.task(name='tasks.run_phame')
 def run_phame(project, username):
-    r = requests.get('http://phame:5001/runphame/{0}/{1}'.format(project, username))
+    r = requests.post('http://phame:5001/runphame/{0}/{1}'.format(username, project))
     return r.text
