@@ -52,18 +52,18 @@ def runphame(project):
     task = celery.send_task('tasks.run_phame', args = [current_user.username, project], log_time=log_time_data)
     logging.debug('task id: {0}'.format(task.id))
     logging.debug('check task {0}'.format(check_task(task.id)))
-    # finished = False
-    # while not finished:
-    #     response = check_task(task_id=task.id)
-    #     time.sleep(1)
-    #     if response != states.PENDING:
-    #         logging.debug('response: {0}'.format(response))
-            # finished = True
+    finished = False
+    while not finished:
+        response = check_task(task_id=task.id)
+        time.sleep(1)
+        if response != states.PENDING:
+            logging.debug('response: {0}'.format(response))
+            finished = True
     response = "<a href='{url}'>check status of {id} </a>".format(id=task.id,
                                                                   url=url_for('check_task', task_id=task.id,
                                                                               external=True))
-    # return redirect(url_for('display', project=project))
-    return response
+    return redirect(url_for('display', project=project))
+    # return response
     # return redirect(url_for('display', project=project, log_time=log_time_data['RUN_PHAME']))
     # return jsonify({}), 202, {'Location': url_for('taskstatus',
     #                                               task_id=task.id)}
