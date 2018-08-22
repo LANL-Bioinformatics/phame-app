@@ -1,0 +1,97 @@
+{% extends "output_base.html" %}
+{% block head %}
+<!-- For MS IE/Edge compatibility:-->
+   <!-- For MS IE/Edge compatibility:-->
+    <meta http-equiv="X-UA-Compatible" content="IE=100">
+
+
+    <!-- CSS for jQuery UI: -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.0/themes/base/jquery-ui.css">
+
+
+
+  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/phame-output.css') }}">
+  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/phame-loading.css') }}">
+
+
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.0/jquery-ui.js"></script>
+
+    <script>
+
+        function get_display(project) {
+            console.log('project: '+ project);
+            // send ajax POST request to start background job
+            $.ajax({
+                type: 'POST',
+                url: '/display/' + project,
+                success: function(data, status, request) {
+                  $("#output").load('/display/'+project)
+                },
+                error: function() {
+                    alert('Unexpected error');
+                }
+            });
+        }
+        function update_progress(status_url, project) {
+            console.log('update progress called with: ' + status_url);
+            // send GET request to status URL
+            console.log('project: '+ project);
+            $.ajax({
+                type: 'GET',
+                url: status_url,
+                success: function(data, status, request) {
+                  result = data['Result'];
+                  console.log('status: '+status_url);
+                  console.log('data: '+data['Result']);
+                  console.log('status: '+status);
+                    if (result !== 'PENDING' && result !== 'PROGRESS') {
+                      var loading_div = document.getElementById("loading");
+                      var content_div = document.getElementById("content");
+                      loading_div.style.display = 'none';
+                      content_div.style.display = 'block';
+
+                           get_display(project);
+
+
+                    }
+                    else {
+                        // rerun in 2 seconds
+                        setTimeout(function () {
+                            update_progress(status_url, project);
+                        }, 2000);
+                    }
+                },
+                error: function() {
+                    alert('Unexpected error');
+                }
+            });
+
+        }
+        {#window.onload = showLoading('{{ project }}');#}
+        window.onload = update_progress('{{ status_url }}', '{{ project }}');
+    </script>
+{% endblock %}
+
+{% block content %}
+  <div id="loading">
+    <div id="project-name"></div>
+    <div id="show-img"></div>
+  </div>
+
+  <div id="content">
+
+    <div id="output"></div>
+  </div>
+ <script>
+
+        var loading_div = document.getElementById("loading");
+        var content_div = document.getElementById("content");
+        loading_div.style.display = 'block';
+        content_div.style.display = 'none';
+        document.getElementById("project-name").innerHTML = 'running...';
+
+
+        </script>
+
+{% endblock %}
