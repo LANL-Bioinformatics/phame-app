@@ -42,9 +42,17 @@ def add(param1, param2):
 def check_task(task_id):
     res = celery.AsyncResult(task_id)
     if res.state == states.PENDING:
-        return res.state
+        result= res.state
     else:
-        return str(res.result)
+        result = str(res.result)
+
+    return jsonify({'Result': result})
+
+
+@app.route('/wait/<string:task_id>/<project>', methods=['POST', 'GET'])
+def wait(task_id, project):
+    return render_template('wait.html', status_url = url_for('check_task', task_id=task_id), project=project)
+
 
 @app.route('/runphame/<project>', methods=['POST', 'GET'])
 def runphame(project):
@@ -53,16 +61,16 @@ def runphame(project):
     logging.debug('task id: {0}'.format(task.id))
     logging.debug('check task {0}'.format(check_task(task.id)))
     finished = False
-    while not finished:
-        response = check_task(task_id=task.id)
-        time.sleep(1)
-        if response != states.PENDING:
-            logging.debug('response: {0}'.format(response))
-            finished = True
-    response = "<a href='{url}'>check status of {id} </a>".format(id=task.id,
-                                                                  url=url_for('check_task', task_id=task.id,
-                                                                              external=True))
-    return redirect(url_for('display', project=project))
+    # while not finished:
+    #     response = check_task(task_id=task.id)
+    #     time.sleep(1)
+    #     if response != states.PENDING:
+    #         logging.debug('response: {0}'.format(response))
+    #         finished = True
+    # response = "<a href='{url}'>check status of {id} </a>".format(id=task.id,
+    #                                                               url=url_for('check_task', task_id=task.id,
+    #                                                                           external=True))
+    return redirect(url_for('wait', task_id = task.id, project=project))
     # return response
     # return redirect(url_for('display', project=project, log_time=log_time_data['RUN_PHAME']))
     # return jsonify({}), 202, {'Location': url_for('taskstatus',

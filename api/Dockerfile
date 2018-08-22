@@ -8,16 +8,15 @@ ENV HOST 0.0.0.0
 ENV PORT 5090
 ENV DEBUG true
 
-COPY . /api
 WORKDIR /api
-
+ADD ./requirements.txt /api
 # install requirements
 RUN pip install -r requirements.txt
-
+COPY . /api
 # expose the app port
 EXPOSE 5090
 
-RUN pip install gunicorn
+#RUN pip install gunicorn
 
 # run the app server
 #CMD ["gunicorn", "--bind", "0.0.0.0:5090", "--workers", "3", "app:app"]
