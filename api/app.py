@@ -319,9 +319,10 @@ def download(project):
     zip_name = zip_output_files(project)
     return send_file(zip_name, mimetype='zip', attachment_filename=zip_name, as_attachment=True)
 
-@app.route('/display/<project>/<filename>')
-def display_file(project, filename):
-    return send_from_directory(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username), filename)
+@app.route('/display/<filename>')
+def display_file(filename):
+    return send_file(filename, mimetype='txt', attachment_filename=filename, as_attachment=True)
+    # return send_from_directory(filename)
 
 @app.route('/projects')
 @login_required
@@ -416,7 +417,7 @@ def display(project, log_time=None):
     file_links = []
     for link in file_links_suffixes:
         if os.path.exists(os.path.join(results_dir, '{0}{1}'.format(project, link))):
-            file_links.append(os.path.join(results_dir, '{0}{1}'.format(project, link)))
+            file_links.append('{0}{1}'.format(project, link))
     return render_template('table_output.html',
                     tables=output_tables_list,
                     titles=titles_list, tree_files=tree_files, project=project, file_links=file_links)

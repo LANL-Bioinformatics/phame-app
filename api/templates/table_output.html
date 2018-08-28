@@ -39,12 +39,12 @@
   <div>
   <h2>PhaME FastTree Visualization</h2>
   {% for tree in tree_files %}
-    <li><a href="{{ project }}/{{ tree }}">{{ tree }}</a></li>
+    <li><a href="{{ url_for('display_tree', project=project, tree=tree) }}">{{ tree }}</a></li>
   {% endfor %}
   </div>
 <div>
   {% for link in file_links %}
-  <li><a href="{{ project }}/{{ link }}">{{ link }}</a></li>
+  <li><a href="{{ url_for('display_file', filename=link) }}" target="_blank">{{ link }}</a></li>
   {% endfor %}
 </div>
   <div><a href="{{ url_for('download', project=project) }}" target="_blank">download output files for {{ project }}</a></div>
