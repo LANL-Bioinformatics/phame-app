@@ -4,7 +4,7 @@ import shutil
 import datetime
 import glob
 import time
-from flask import Flask, render_template, redirect, flash, url_for, request, send_file, jsonify
+from flask import Flask, render_template, redirect, flash, url_for, request, send_file, jsonify, send_from_directory
 
 from werkzeug.utils import secure_filename
 from werkzeug.urls import url_parse
@@ -60,21 +60,9 @@ def runphame(project):
     task = celery.send_task('tasks.run_phame', args = [current_user.username, project], log_time=log_time_data)
     logging.debug('task id: {0}'.format(task.id))
     logging.debug('check task {0}'.format(check_task(task.id)))
-    finished = False
-    # while not finished:
-    #     response = check_task(task_id=task.id)
-    #     time.sleep(1)
-    #     if response != states.PENDING:
-    #         logging.debug('response: {0}'.format(response))
-    #         finished = True
-    # response = "<a href='{url}'>check status of {id} </a>".format(id=task.id,
-    #                                                               url=url_for('check_task', task_id=task.id,
-    #                                                                           external=True))
+
     return redirect(url_for('wait', task_id = task.id, project=project))
-    # return response
-    # return redirect(url_for('display', project=project, log_time=log_time_data['RUN_PHAME']))
-    # return jsonify({}), 202, {'Location': url_for('taskstatus',
-    #                                               task_id=task.id)}
+
 
 @login.user_loader
 def load_user(id):
@@ -303,14 +291,9 @@ def input():
 
             # Create config file
             create_config_file(form)
-            # p, error = run_phame(form.project.data).apply_async()
-            # msg = None
-            # while not msg:
-            #     msg = p.communicate()
-            # if error:
-            #     return render_template('error.html', error=error)
+
             return redirect(url_for('runphame', project=form.project.data))
-            # return redirect(url_for('run_phame', project=form.project.data))
+
     return render_template('input.html', title='Phame input', form=form)
 
 
@@ -336,7 +319,9 @@ def download(project):
     zip_name = zip_output_files(project)
     return send_file(zip_name, mimetype='zip', attachment_filename=zip_name, as_attachment=True)
 
-
+@app.route('/display/<project>/<filename>')
+def display_file(project, filename):
+    return send_from_directory(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username), filename)
 
 @app.route('/projects')
 @login_required
@@ -366,13 +351,12 @@ def display(project, log_time=None):
     target_dir = os.path.join(os.path.dirname(__file__), 'static')
     summary_stats_file = '{0}_summaryStatistics.txt'.format(project)
 
+    # create output tables
     reads_file_count = len(
         [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
     contigs_file_count = len(
         [fname for fname in os.listdir(workdir) if fname.endswith('.contig')])
     full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or fname.endswith('.fasta'))])
-
-    output_tables_list, titles_list = [], []
 
     stats_df = pd.read_table(os.path.join(results_dir, summary_stats_file), header=None)
     lengths_df = stats_df.iloc[:full_genome_file_count-1].drop(1, axis=1)
@@ -407,6 +391,8 @@ def display(project, log_time=None):
     titles_list.insert(0, 'Run Summary')
     titles_list.insert(0, 'na')
     output_tables_list.insert(0, run_summary_df.to_html(classes='summary'))
+
+    # Prepare tree files -- create symlinks between tree files in output directory and flask static directory
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
     tree_file_list = [fname for fname in os.listdir(results_dir) if fname.endswith('.fasttree')]
@@ -415,7 +401,6 @@ def display(project, log_time=None):
     for tree in tree_file_list:
         tree_split = tree.split('/')[-1]
         target = os.path.join(target_dir, 'trees', tree_split)
-        # tree_files.append('trees/{0}'.format(tree_split))
         tree_files.append(tree_split)
         logging.debug('fasttree file: trees/{0}'.format(tree_split))
         source = os.path.join(results_dir, tree_split)
@@ -427,9 +412,14 @@ def display(project, log_time=None):
 
     logging.debug('results dir: {0}/*.fastree'.format(results_dir))
 
+    file_links_suffixes = ['_all_snp_alignment.fna', '_cds_snp_alignment.fna', '_int_snp_alignment.fna', '_snp_core_matrix.txt']
+    file_links = []
+    for link in file_links_suffixes:
+        if os.path.exists(os.path.join(results_dir, '{0}{1}'.format(project, link))):
+            file_links.append(os.path.join(results_dir, '{0}{1}'.format(project, link)))
     return render_template('table_output.html',
                     tables=output_tables_list,
-                    titles=titles_list, tree_files=tree_files, project=project)
+                    titles=titles_list, tree_files=tree_files, project=project, file_links=file_links)
 
 
 
