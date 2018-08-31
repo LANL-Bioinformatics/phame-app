@@ -8,3 +8,4 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'postgres:///phame_api01'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    STATIC_FOLDER = '/static/media'
