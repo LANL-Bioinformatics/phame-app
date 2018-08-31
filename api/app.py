@@ -29,6 +29,7 @@ except:
 
 logging.basicConfig(filename='api.log', level=logging.DEBUG)
 logging.debug(app.config['PROJECT_DIRECTORY'])
+logging.debug(app.config['STATIC_FOLDER'])
 
 @app.route('/add/<int:param1>/<int:param2>')
 def add(param1, param2):
@@ -319,10 +320,13 @@ def download(project):
     zip_name = zip_output_files(project)
     return send_file(zip_name, mimetype='zip', attachment_filename=zip_name, as_attachment=True)
 
-@app.route('/display/<filename>')
-def display_file(filename):
-    return send_file(filename, mimetype='txt', attachment_filename=filename, as_attachment=True)
-    # return send_from_directory(filename)
+
+@app.route('/display_file/<project>/<filename>')
+def display_file(filename, project):
+
+    return send_from_directory(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project,
+                                            'workdir', 'results'), filename)
+
 
 @app.route('/projects')
 @login_required
@@ -416,7 +420,12 @@ def display(project, log_time=None):
     file_links_suffixes = ['_all_snp_alignment.fna', '_cds_snp_alignment.fna', '_int_snp_alignment.fna', '_snp_core_matrix.txt']
     file_links = []
     for link in file_links_suffixes:
-        if os.path.exists(os.path.join(results_dir, '{0}{1}'.format(project, link))):
+        link_file = '{0}{1}'.format(project, link)
+        link_file_path = os.path.join(results_dir, link_file)
+        if os.path.exists(link_file_path):
+            file_target = os.path.join(target_dir, 'trees', link_file)
+            if not os.path.exists(file_target):
+                os.symlink(link_file_path, file_target)
             file_links.append('{0}{1}'.format(project, link))
     return render_template('table_output.html',
                     tables=output_tables_list,

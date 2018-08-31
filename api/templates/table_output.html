@@ -44,7 +44,7 @@
   </div>
 <div>
   {% for link in file_links %}
-  <li><a href="{{ url_for('display_file', filename=link) }}" target="_blank">{{ link }}</a></li>
+    <li><a href="{{ url_for('display_file', project=project, filename= link) }}" target="_blank">{{ link }}</a></li>
   {% endfor %}
 </div>
   <div><a href="{{ url_for('download', project=project) }}" target="_blank">download output files for {{ project }}</a></div>
