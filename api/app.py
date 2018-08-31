@@ -323,9 +323,10 @@ def download(project):
 
 @app.route('/display_file/<project>/<filename>')
 def display_file(filename, project):
-
-    return send_from_directory(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project,
-                                            'workdir', 'results'), filename)
+    with open(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project,
+                                            'workdir', 'results', filename), 'r') as fp:
+        content = fp.read()
+    return render_template('content.html', text=content)
 
 
 @app.route('/projects')
