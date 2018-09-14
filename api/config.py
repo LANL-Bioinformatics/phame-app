@@ -9,3 +9,5 @@ class Config(object):
         'postgres:///phame_api01'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     STATIC_FOLDER = '/static/media'
+
+

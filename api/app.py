@@ -58,7 +58,7 @@ def wait(task_id, project):
 @app.route('/runphame/<project>', methods=['POST', 'GET'])
 def runphame(project):
     log_time_data = {}
-    task = celery.send_task('tasks.run_phame', args = [current_user.username, project], log_time=log_time_data)
+    task = celery.send_task('tasks.run_phame', args = [current_user.username, project])
     logging.debug('task id: {0}'.format(task.id))
     logging.debug('check task {0}'.format(check_task(task.id)))
 
@@ -437,3 +437,4 @@ def display(project, log_time=None):
 
 if __name__ == '__main__':
     app.run(debug=True,host='0.0.0.0', port=5090)
+    # app.run(debug=True)

@@ -12,7 +12,7 @@ buildSNPdb  = {{ form.buildSNPdb }} # 0: only align to reference 1: build SNP da
 
 FirstTime   = {{ form.first_time }}  # 1:yes; 2:update existing SNP alignment
 
-data        = {{ form.data }}  # *See below 0:only complete(F); 1:only contig(C); 2:only reads(R);
+data        = {{ form.data_type }}  # *See below 0:only complete(F); 1:only contig(C); 2:only reads(R);
                             # 3:combination F+C; 4:combination F+R; 5:combination C+R;
                             # 6:combination F+C+R; 7:realignment  *See below
 reads       = {{ form.reads }} # 1: single reads; 2: paired reads; 3: both types present;

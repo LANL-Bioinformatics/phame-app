@@ -44,6 +44,7 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
+    hostname: web
     env_file:
       - ./.envs/.local/.postgres
     restart: always
