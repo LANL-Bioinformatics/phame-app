@@ -16,8 +16,8 @@ logger = get_task_logger(__name__)
 def phame_run(self, project, username):
     try:
         logger.info('run_phame called with {0}/{1}'.format(project, username))
-        p1 = subprocess.Popen('./docker_run_phame.sh {0}/{1}'.format(project, username), shell=True,
-                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        cmd = ['./docker_run_phame.sh', '{0}/{1}'.format(project, username) ]
+        p1 = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p1.communicate()
         logger.debug(stdout)
         logger.debug(stderr)
