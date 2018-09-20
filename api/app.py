@@ -1,6 +1,8 @@
 import os
 import zipfile
 import shutil
+from tempfile import mkstemp
+import re
 import datetime
 import glob
 import time
@@ -251,6 +253,68 @@ def register():
 @app.route("/success")
 def success():
     return "Thank you for signing up!"
+
+@app.route('/subset/<project>', methods=['GET', 'POST'])
+@login_required
+def subset(project):
+    form = SubsetForm()
+    project_path = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project)
+    new_project = project+'_subset'
+    new_project_path = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, new_project)
+
+    # Get list of reference genome choices
+    working_list_file = os.path.join(project_path, 'workdir', 'working_list.txt')
+    with open(working_list_file, 'r') as config:
+        lines = config.readlines()
+        reference_genome_files = []
+        for line in lines:
+            reference_genome_files.append((line.strip(), line.strip()))
+        logging.debug('genome choices {0}'.format(reference_genome_files))
+    form.subset_files.choices = reference_genome_files
+
+    if request.method == 'POST':
+        logging.debug('POST')
+        logging.debug('post subset files: {0}'.format(form.subset_files.data))
+        logging.debug('working list file: {0}'.format(working_list_file))
+        if os.path.exists(new_project_path):
+            shutil.rmtree(new_project_path)
+        os.makedirs(os.path.join(new_project_path, 'refdir'))
+        os.makedirs(os.path.join(new_project_path, 'workdir'))
+
+        # Change project name in config file
+        shutil.copy(os.path.join(project_path, 'config.ctl'), os.path.join(new_project_path))
+        fh, abs_path = mkstemp()
+        with os.fdopen(fh, 'w') as tmp, open(os.path.join(new_project_path, 'config.ctl'), 'r')as config:
+            lines = config.readlines()
+            reference_file = ''
+            for line in lines:
+                if re.search(project, line):
+                    tmp.write(re.sub(project, new_project, line))
+                else:
+                    tmp.write(line)
+
+                # get name of reference file
+                if re.search('reffile', line):
+                    m = re.search('=\s*(\w*)', line)
+                    reference_file = m.group(1)
+
+        shutil.move(abs_path, os.path.join(new_project_path, 'config.ctl'))
+
+        # copy subset of reference genome files
+        for file_name in os.listdir(os.path.join(project_path, 'refdir')):
+            if file_name.split('.')[0] in form.subset_files.data:
+                shutil.copy(os.path.join(project_path, 'refdir', file_name), os.path.join(new_project_path, 'refdir'))
+
+        if form.validate_on_submit():
+            if reference_file not in form.subset_files.data:
+                flash('Please include the reference file {0}'.format(reference_file))
+                return redirect(url_for('subset', project=project))
+
+            return redirect(url_for('runphame', project=new_project))
+
+
+    return render_template('subset_input.html', title='Subset Phame input', form=form)
+
 
 @app.route('/input', methods=['GET', 'POST'])
 @login_required

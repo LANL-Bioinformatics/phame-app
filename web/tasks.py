@@ -18,10 +18,14 @@ def phame_run(self, project, username):
         logger.info('run_phame called with {0}/{1}'.format(project, username))
         cmd = ['./docker_run_phame.sh', '{0}/{1}'.format(project, username) ]
         p1 = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        logger.info('process launched')
         stdout, stderr = p1.communicate()
         logger.debug(stdout)
         logger.debug(stderr)
     except subprocess.CalledProcessError as e:
         logger.error(str(e))
         return dumps({'error': str(e)})
+    except celery.exceptions.TaskError as e:
+        logger.error(str(e))
+
     return stdout
