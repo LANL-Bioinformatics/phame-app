@@ -276,6 +276,8 @@ def subset(project):
         logging.debug('POST')
         logging.debug('post subset files: {0}'.format(form.subset_files.data))
         logging.debug('working list file: {0}'.format(working_list_file))
+
+        # Delete subset directory tree and create new directories
         if os.path.exists(new_project_path):
             shutil.rmtree(new_project_path)
         os.makedirs(os.path.join(new_project_path, 'refdir'))
@@ -293,17 +295,22 @@ def subset(project):
                 else:
                     tmp.write(line)
 
-                # get name of reference file
+                # get name of reference file for form validation
                 if re.search('reffile', line):
                     m = re.search('=\s*(\w*)', line)
                     reference_file = m.group(1)
-
         shutil.move(abs_path, os.path.join(new_project_path, 'config.ctl'))
 
-        # copy subset of reference genome files
+        # symlink subset of reference genome files
         for file_name in os.listdir(os.path.join(project_path, 'refdir')):
             if file_name.split('.')[0] in form.subset_files.data:
-                shutil.copy(os.path.join(project_path, 'refdir', file_name), os.path.join(new_project_path, 'refdir'))
+                os.symlink(os.path.join(project_path, 'refdir', file_name), os.path.join(new_project_path, 'refdir', file_name))
+
+        # symlink contig files
+        for file_name in os.listdir(os.path.join(project_path, 'workdir')):
+            if file_name.endswith('.contig'):
+                os.symlink(os.path.join(project_path, 'workdir', file_name),
+                           os.path.join(new_project_path, 'workdir', file_name))
 
         if form.validate_on_submit():
             if reference_file not in form.subset_files.data:
