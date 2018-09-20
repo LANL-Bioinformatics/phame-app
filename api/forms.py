@@ -24,6 +24,10 @@ class MultiCheckboxField(SelectMultipleField):
     option_widget = widgets.CheckboxInput()
 
 
+class SubsetForm(FlaskForm):
+    subset_files = SelectMultipleField(u'Full Genomes')
+    submit = SubmitField('Submit')
+
 class InputForm(FlaskForm):
     boolean_choices = [('0', 'no'), ('1', 'yes')]
     project = StringField(u'Project Name', description='Choose a unique project name')

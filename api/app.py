@@ -11,7 +11,7 @@ from flask import Flask, render_template, redirect, flash, url_for, request, sen
 from werkzeug.utils import secure_filename
 from werkzeug.urls import url_parse
 import subprocess
-from forms import LoginForm, InputForm, SignupForm, RegistrationForm
+from forms import LoginForm, InputForm, SignupForm, RegistrationForm, SubsetForm
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required
 from database import db_session
 from config import Config

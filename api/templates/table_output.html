@@ -43,8 +43,16 @@
   {% endfor %}
   </div>
 <div>
+  <div>
+    <h2>Look at subset of genomes</h2>
+
+      <a href="{{ url_for('subset', project=project) }}">subset</a>
+
+  </div>
+</div>
+<div>
   {% for link in file_links %}
-    <li><a href="{{ url_for('display_file', project=project, filename= link) }}" target="_blank">{{ link }}</a></li>
+    <a href="{{ url_for('display_file', project=project, filename= link) }}" target="_blank">{{ link }}</a>
   {% endfor %}
 </div>
   <div><a href="{{ url_for('download', project=project) }}" target="_blank">download output files for {{ project }}</a></div>
