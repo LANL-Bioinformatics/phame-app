@@ -2,8 +2,8 @@
 
 ############################# Base Docker Image ################################
 
-FROM migun/phame-1
-#FROM quay.io/biocontainers/phame:1.0.1--0
+#FROM migun/phame-1
+FROM quay.io/biocontainers/phame:1.0.1--0
 ############################# MAINTAINER #######################################
 
 ENV PATH="/PhaME-1/thirdParty/miniconda/envs/phame/bin:/app:${PATH}"
