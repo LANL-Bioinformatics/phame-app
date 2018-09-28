@@ -11,9 +11,11 @@ ENV PATH="/PhaME-1/thirdParty/miniconda/envs/phame/bin:/app:${PATH}"
 
 # expose the app port
 EXPOSE 5001
+COPY /requirements/phame_requirements.txt /tmp/requirements.txt
+WORKDIR /tmp
+RUN pip install -r requirements.txt
 COPY /web /app
 WORKDIR /app
-RUN pip install -r requirements.txt
 #CMD ["python", "app.py"]
 #############################ENVIRONMENT#####################################
 ENV CELERY_BROKER_URL redis://redis:6379/0
