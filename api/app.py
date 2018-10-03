@@ -138,6 +138,7 @@ def remove_uploaded_files(project_dir):
     :return:
     """
     try:
+        logging.debug('removing directory {0}'.format(project_dir))
         shutil.rmtree(project_dir)
     except IOError as e:
         logging.error('Could not remove directory {0}: {1}'.format(project_dir, str(e)))
@@ -351,7 +352,7 @@ def input():
                 error = 'You must upload a reference genome if you select Contigs or Reads from Data'
                 remove_uploaded_files(project_dir)
                 return render_template('input.html', title='Phame input', form=form, error=error)
-            # Ensure each fasta file has a corresponding mapping file
+            # Ensure each fasta file has a corresponding mapping file if Reference option selects is 'random' or 'ANI'
             if form.reference.data == '0' or form.reference.data == '2':
                 for fname in os.listdir(ref_dir):
                     if fname.endswith('.fa') or fname.endswith('.fasta') or fname.endswith('.fna'):
@@ -360,11 +361,18 @@ def input():
                             error = 'Each full genome file must have a corresponding .gff file if random or ANI is ' \
                                     'selected from Reference'
                             return render_template('input.html', title='Phame input', form=form, error=error)
+            # Ensure a reference file is selected if the Reference option selected is 'given'
+            if form.reference.data == '1' and len(form.reference_file.data) == 0:
+                error = 'You must select a reference genome if you select "given" in from the Reference menu'
+                remove_uploaded_files(project_dir)
+                return render_template('input.html', title='Phame input', form=form, error=error)
 
             # Create config file
             create_config_file(form)
 
             return redirect(url_for('runphame', project=form.project.data))
+        else:
+            remove_uploaded_files(project_dir)
 
     return render_template('input.html', title='Phame input', form=form)
 
