@@ -5,7 +5,7 @@
   <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/phame-input.css') }}">
 <script>
     function outputUpdate(cutoff) {
-          document.querySelector('#selected-cutoff').value = cutoff;
+          document.querySelector('#selected-cutoff').value = Math.round(cutoff * 100) / 100;
       }
 
     function referenceFileUpdate() {
@@ -16,6 +16,7 @@
           console.log(genome_files.files[i]);
           reference_file.options.add(new Option(genome_files.files[i].name, genome_files.files[i].name));
         }
+        alert("Please select a file from Reference Genome");
       }
 
     function showBootstrap() {
@@ -148,7 +149,7 @@
           </div>
           <div class="flex-container-row">
               <div class="flex-label">{{ form.ref_dir.label }}</div>
-              <div class="flex-field">{{ form.ref_dir(title='Full genome files (.fasta/gff)', data_toggle="tooltip", oninput="referenceFileUpdate()") }}</div>
+              <div class="flex-field">{{ form.ref_dir(title='Reference genome files (.fasta/.fna/.gff)', data_toggle="tooltip", oninput="referenceFileUpdate()") }}</div>
               {% for error in form.ref_dir.errors %}
                 <span style="color: red;">[{{ error }}]</span>
               {% endfor %}
@@ -156,7 +157,7 @@
           <div id="contigs_file" style="display: none;">
               <div class="flex-container-row">
                   <div class="flex-label">{{ form.work_dir.label }}</div>
-                  <div class="flex-field">{{ form.work_dir(title='Contigs files', data_toggle="tooltip") }}</div>
+                  <div class="flex-field">{{ form.work_dir(title='Contigs files (.fasta/.fna/.gff)', data_toggle="tooltip") }}</div>
                   {% for error in form.work_dir.errors %}
                     <span style="color: red;">[{{ error }}]</span>
                   {% endfor %}

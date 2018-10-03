@@ -32,7 +32,7 @@ class InputForm(FlaskForm):
     boolean_choices = [('0', 'no'), ('1', 'yes')]
     project = StringField(u'Project Name', description='Choose a unique project name')
     data_type = MultiCheckboxField(u'Data', choices=[('0', 'Full'), ('1', 'Contig'), ('2', 'Read')], default='0')
-    ref_dir = MultipleFileField(u'Full Genomes', description='.gff/.fasta')
+    ref_dir = MultipleFileField(u'Reference Genomes', description='.gff/.fasta')
     work_dir = MultipleFileField(u'Upload Contigs')
     reads = SelectField(choices=[('0', 'single reads'), ('1', 'paired reads'), ('2', 'both')], default='2')
     reads_file = MultipleFileField('Upload Reads')
@@ -50,7 +50,7 @@ class InputForm(FlaskForm):
     pos_select = SelectField(u'Select analysis algorithm',choices=[('0','PAML'), ('1','HyPhy'), ('1','both')], default='0')
     clean = SelectField(u'Remove intermediate files', choices=boolean_choices, default='0')
     threads = IntegerField('Number of threads', [validators.NumberRange(message='Range should be between 1 and 4.', min=1, max=4)], default=2)
-    cutoff = DecimalRangeField(default=0.1)
+    cutoff = DecimalRangeField(default=0.1, places=2)
     submit = SubmitField('Submit')
 
 

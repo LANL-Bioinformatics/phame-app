@@ -300,6 +300,7 @@ def subset(project):
                 if re.search('reffile', line):
                     m = re.search('=\s*(\w*)', line)
                     reference_file = m.group(1)
+                    logging.debug('reference file {0}'.format(reference_file))
         shutil.move(abs_path, os.path.join(new_project_path, 'config.ctl'))
 
         # symlink subset of reference genome files
@@ -352,15 +353,17 @@ def input():
                 error = 'You must upload a reference genome if you select Contigs or Reads from Data'
                 remove_uploaded_files(project_dir)
                 return render_template('input.html', title='Phame input', form=form, error=error)
-            # Ensure each fasta file has a corresponding mapping file if Reference option selects is 'random' or 'ANI'
-            if form.reference.data == '0' or form.reference.data == '2':
+
+            # Ensure each fasta file has a corresponding mapping file if Generate SNPs or Perform selection analysis are yes
+            if form.cds_snps.data == '1' or form.do_select.data == '1':
                 for fname in os.listdir(ref_dir):
                     if fname.endswith('.fa') or fname.endswith('.fasta') or fname.endswith('.fna'):
                         if not os.path.exists(os.path.join(ref_dir, '{0}.{1}'.format(fname.split('.')[0],'gff'))):
                             remove_uploaded_files(project_dir)
-                            error = 'Each full genome file must have a corresponding .gff file if random or ANI is ' \
-                                    'selected from Reference'
+                            error = 'Each full genome file must have a corresponding .gff file if either '\
+                                    '"Generate SNPs from coding regions" or "Perform selection analysis" is Yes'
                             return render_template('input.html', title='Phame input', form=form, error=error)
+
             # Ensure a reference file is selected if the Reference option selected is 'given'
             if form.reference.data == '1' and len(form.reference_file.data) == 0:
                 error = 'You must select a reference genome if you select "given" in from the Reference menu'
@@ -441,33 +444,39 @@ def display(project, log_time=None):
         [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
     contigs_file_count = len(
         [fname for fname in os.listdir(workdir) if fname.endswith('.contig')])
-    full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or fname.endswith('.fasta'))])
-
+    full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or
+                                                                            fname.endswith('.fasta'))])
+    logging.debug('# reads files {0}, # contig files {1}, # full genomes {2}, len(length_df) {3}'.format(
+        reads_file_count, contigs_file_count, full_genome_file_count, full_genome_file_count*3-1))
     stats_df = pd.read_table(os.path.join(results_dir, summary_stats_file), header=None)
-    lengths_df = stats_df.iloc[:full_genome_file_count-1].drop(1, axis=1)
-    lengths_df.columns = ['sequence name', 'total length']
+
+    lengths_df = stats_df.iloc[0:full_genome_file_count-1].drop(1, axis=1)
+    lengths_df.columns = ['genome name', 'total length']
     lengths_df['total length'] = lengths_df['total length'].astype(int)
-    lengths_df['sequence name'][0] = lengths_df['sequence name'][0] + '*'
-    lengths_df = lengths_df.set_index('sequence name')
+    lengths_df['genome name'][0] = lengths_df['genome name'][0] + '*'
+    lengths_df = lengths_df.set_index('genome name')
+
+    gap_length_df = stats_df[full_genome_file_count:2*full_genome_file_count-1]
+
     ref_stats = stats_df.iloc[full_genome_file_count:].drop(2, axis=1)
     ref_stats = ref_stats.set_index(0)
     ref_stats.columns = ['']
     del ref_stats.index.name
     output_tables_list = [lengths_df.to_html(classes='lengths'), '*reference used', '-', ref_stats[2:].to_html(classes='ref_stats')]
-    titles_list = ['sequence lengths', '', '', 'Core Genome Size']
+    titles_list = ['genome lengths', '', '', 'Core Genome Size']
     if os.path.exists(os.path.join(results_dir, 'CDScoords.txt')):
         coords_df = pd.read_table(os.path.join(results_dir, 'CDScoords.txt'), header=None)
-        coords_df.columns = ['sequence name', 'begin', 'end', 'type']
-        coords_df = coords_df.set_index('sequence name')
+        coords_df.columns = ['genome name', 'begin', 'end', 'type']
+        coords_df = coords_df.set_index('genome name')
         output_tables_list.append(coords_df.to_html(classes='coords'))
         titles_list.append('coordinates')
 
     run_time = '' if not log_time else log_time[:6]
-    run_summary_df = pd.DataFrame({'number of genomes analyzed': reads_file_count + contigs_file_count +
+    run_summary_df = pd.DataFrame({'# of genomes analyzed': reads_file_count + contigs_file_count +
                                                                  full_genome_file_count,
-                                   'number of contigs': contigs_file_count,
-                                   'number of reads': reads_file_count,
-                                   'number of full genomes': full_genome_file_count,
+                                   '# of contigs': contigs_file_count,
+                                   '# of reads': reads_file_count,
+                                   '# of full genomes': full_genome_file_count,
                                    'reference genome used': ref_stats.loc['Reference used:'],
                                    'project name': project,
                                    'run time (s)': run_time
@@ -507,7 +516,7 @@ def display(project, log_time=None):
             if not os.path.exists(file_target):
                 os.symlink(link_file_path, file_target)
             file_links.append('{0}{1}'.format(project, link))
-    return render_template('table_output.html',
+    return render_template('display.html',
                     tables=output_tables_list,
                     titles=titles_list, tree_files=tree_files, project=project, file_links=file_links)
 
