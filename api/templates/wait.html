@@ -33,6 +33,19 @@
                 }
             });
         }
+
+        function send_notification(project) {
+          $.ajax({
+                type: 'POST',
+                url: '/notify/' + project,
+                success: function(data, status, request) {
+                  console.log('email notification sent for ' + project)
+                },
+                error: function() {
+                    alert('Unexpected error');
+                }
+            });
+        }
         function update_progress(status_url, project) {
             console.log('update progress called with: ' + status_url);
             // send GET request to status URL
@@ -51,9 +64,8 @@
                       loading_div.style.display = 'none';
                       content_div.style.display = 'block';
 
-                           get_display(project);
-
-
+                      send_notification(project);
+                      get_display(project);
                     }
                     else {
                         // rerun in 2 seconds

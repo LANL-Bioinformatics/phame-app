@@ -421,6 +421,25 @@ def projects():
     projects = [project for project in os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username))]
     return render_template('projects.html', projects=projects)
 
+def send_email_message(message, project):
+    SENDMAIL = "/usr/sbin/sendmail"  # sendmail location
+
+    p = os.popen("%s -t" % SENDMAIL, "w")
+    p.write("To: {0}\n".format(current_user.username))
+    p.write("Subject: Project {0} has finished\n".format(project))
+    p.write("\n")# blank line separating headers from body
+    p.write("{0}\n".format(message))
+    sts = p.close()
+    return sts
+
+@app.route('/notify/<project>', methods=['GET'])
+def notify(project):
+    try:
+        state = send_email_message('Your project has finished running', project)
+        logging.info(state)
+    except os.error as e:
+        logging.error(str(e))
+
 
 @app.route('/display/<project>', methods=['POST', 'GET'])
 @app.route('/display/<project>/<log_time>', methods=['POST', 'GET'])
@@ -432,6 +451,7 @@ def display(project, log_time=None):
     :param project: project name
     :return: renders PhaME output page
     """
+
     project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project)
     workdir = os.path.join(project_dir, 'workdir')
     results_dir = os.path.join(workdir, 'results')
