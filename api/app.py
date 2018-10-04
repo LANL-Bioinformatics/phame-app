@@ -5,6 +5,7 @@ from tempfile import mkstemp
 import re
 import datetime
 import glob
+import requests
 import time
 from flask import Flask, render_template, redirect, flash, url_for, request, send_file, jsonify, send_from_directory
 
@@ -425,18 +426,36 @@ def send_email_message(message, project):
     SENDMAIL = "/usr/sbin/sendmail"  # sendmail location
 
     p = os.popen("%s -t" % SENDMAIL, "w")
-    p.write("To: {0}\n".format(current_user.username))
+    p.write("To: {0}\n".format('mflynn@lanl.gov'))
     p.write("Subject: Project {0} has finished\n".format(project))
     p.write("\n")# blank line separating headers from body
     p.write("{0}\n".format(message))
     sts = p.close()
     return sts
 
+
+def send_mailgun(message):
+    key = '21ef71d498213b5dc9f52648e049f031-c8e745ec-6fe78acd'
+    sandbox = 'sandbox1d2d8e9caf264c82a25a2dc1380fa0ba.mailgun.org'
+    recipient = current_user.email
+
+    request_url = 'https://api.mailgun.net/v3/{0}/messages'.format(sandbox)
+    request = requests.post(request_url, auth=('api', key), data={
+        'from': 'mail@edgebioinformatics.org',
+        'to': recipient,
+        'subject': 'Hello',
+        'text': 'Hello from Mailgun'
+    })
+
+    logging.info('Status: {0}'.format(request.status_code))
+    return request.status_code
+
+
 @app.route('/notify/<project>', methods=['GET'])
 def notify(project):
     try:
-        state = send_email_message('Your project has finished running', project)
-        logging.info(state)
+        state = send_mailgun('Your project {0} has finished running'.format(project))
+        logging.info('message sent to {0} for project {1} status code {2}'.format(current_user.email, project, state))
     except os.error as e:
         logging.error(str(e))
 
