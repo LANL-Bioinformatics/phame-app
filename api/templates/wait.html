@@ -35,11 +35,12 @@
         }
 
         function send_notification(project) {
+          console.log('email project: '+ project);
           $.ajax({
                 type: 'GET',
                 url: '/notify/' + project,
                 success: function(data, status, request) {
-                  console.log('email notification sent for ' + project)
+                  console.log('email notification sent for ' + project);
                 },
                 error: function() {
                     alert('Unexpected error');
