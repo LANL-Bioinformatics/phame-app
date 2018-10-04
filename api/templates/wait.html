@@ -36,7 +36,7 @@
 
         function send_notification(project) {
           $.ajax({
-                type: 'POST',
+                type: 'GET',
                 url: '/notify/' + project,
                 success: function(data, status, request) {
                   console.log('email notification sent for ' + project)
