@@ -434,17 +434,17 @@ def send_email_message(message, project):
     return sts
 
 
-def send_mailgun(message):
+def send_mailgun(message, project):
     key = '21ef71d498213b5dc9f52648e049f031-c8e745ec-6fe78acd'
     sandbox = 'sandbox1d2d8e9caf264c82a25a2dc1380fa0ba.mailgun.org'
     recipient = current_user.email
-
+    logging.info('current_user.email: {0}'.format(recipient))
     request_url = 'https://api.mailgun.net/v3/{0}/messages'.format(sandbox)
     request = requests.post(request_url, auth=('api', key), data={
         'from': 'mail@edgebioinformatics.org',
         'to': recipient,
-        'subject': 'Hello',
-        'text': 'Hello from Mailgun'
+        'subject': 'Project {0}'.format(project),
+        'text': message
     })
 
     logging.info('Status: {0}'.format(request.status_code))
@@ -455,11 +455,11 @@ def send_mailgun(message):
 def notify(project):
     state = None
     try:
-        state = send_mailgun('Your project {0} has finished running'.format(project))
+        state = send_mailgun('Your project {0} has finished running'.format(project), project)
         logging.info('message sent to {0} for project {1} status code {2}'.format(current_user.email, project, state))
     except os.error as e:
         logging.error(str(e))
-    return state
+    return redirect(url_for('display', project=project))
 
 @app.route('/display/<project>', methods=['POST', 'GET'])
 @app.route('/display/<project>/<log_time>', methods=['POST', 'GET'])
