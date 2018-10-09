@@ -453,12 +453,13 @@ def send_mailgun(message):
 
 @app.route('/notify/<project>', methods=['GET'])
 def notify(project):
+    state = None
     try:
         state = send_mailgun('Your project {0} has finished running'.format(project))
         logging.info('message sent to {0} for project {1} status code {2}'.format(current_user.email, project, state))
     except os.error as e:
         logging.error(str(e))
-
+    return state
 
 @app.route('/display/<project>', methods=['POST', 'GET'])
 @app.route('/display/<project>/<log_time>', methods=['POST', 'GET'])
