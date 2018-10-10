@@ -11,15 +11,18 @@
       alert("Please select a file from Reference Genome");
     }
     function referenceFileUpdate() {
-        console.log("updated file list");
-        var genome_files = document.getElementById("ref_dir");
-        console.log(genome_files);
-        for (i=0; i< genome_files.files.length; i++) {
-          console.log(genome_files.files[i]);
-          reference_file.options.add(new Option(genome_files.files[i].name, genome_files.files[i].name));
-        }
+      console.log("updated file list");
+      var genome_files = document.getElementById("ref_dir");
+      var ref_value = document.getElementById("reference").value;
+      console.log(genome_files);
+      for (i = 0; i < genome_files.files.length; i++) {
+        console.log(genome_files.files[i]);
+        reference_file.options.add(new Option(genome_files.files[i].name, genome_files.files[i].name));
+      }
+      if (ref_value === '1') {
         showRefFileAlert();
       }
+    }
 
     function showBootstrap() {
         var tree_value = document.getElementById("tree").value;

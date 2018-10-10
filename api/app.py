@@ -437,11 +437,12 @@ def send_email_message(message, project):
 def send_mailgun(message, project):
     key = '***REMOVED***'
     sandbox = 'sandbox1d2d8e9caf264c82a25a2dc1380fa0ba.mailgun.org'
+    email_domain = 'mail.edgebioinformatics.org'
     recipient = current_user.email
     logging.info('current_user.email: {0}'.format(recipient))
-    request_url = 'https://api.mailgun.net/v3/{0}/messages'.format(sandbox)
+    request_url = 'https://api.mailgun.net/v3/{0}/messages'.format(email_domain)
     request = requests.post(request_url, auth=('api', key), data={
-        'from': 'mail@edgebioinformatics.org',
+        'from': 'donotreply@edgebioinformatics.org',
         'to': recipient,
         'subject': 'Project {0}'.format(project),
         'text': message
@@ -548,10 +549,13 @@ def display(project, log_time=None):
                     output_tables_list.append(coverage_df.to_html(classes='coverage'))
                     titles_list.append('Genome Coverage')
                 elif output_file == '{0}_snp_pairwiseMatrix.txt'.format(project):
-                    snp_df = pd.read_table(os.path.join(results_dir, output_file))
+                    snp_df = pd.read_table(os.path.join(results_dir, output_file), sep='\t')
+                    snp_df.rename(index=str, columns={'Unnamed: 0':''}, inplace=True)
+                    snp_df.drop(snp_df.columns[-1], axis=1, inplace=True)
                     output_tables_list.append(snp_df.to_html(classes='snp_pairwiseMatrix'))
                     logging.debug('index {0}'.format(snp_df.index))
                     logging.debug('columns {0}'.format(snp_df.columns))
+                    logging.debug('df {0}'.format(snp_df))
                     titles_list.append('SNP pairwise Matrix')
                 elif output_file == '{0}_genome_lengths.txt'.format(project):
                     genome_df = pd.read_table(os.path.join(results_dir, output_file))
@@ -588,14 +592,14 @@ def display(project, log_time=None):
         #         if not os.path.exists(file_target):
         #             os.symlink(link_file_path, file_target)
         #         file_links.append('{0}{1}'.format(project, link))
-        for output_table, title in zip(output_tables_list, titles_list):
-            logging.debug('title {0}'.format(title))
-            logging.debug('table {0}'.format(output_table))
+        # for output_table, title in zip(output_tables_list, titles_list):
+        #     logging.debug('title {0}'.format(title))
+        #     logging.debug('table {0}'.format(output_table))
         return render_template('display.html',
                         tables=output_tables_list,
                         titles=titles_list, tree_files=tree_files, project=project)
 
-    except os.EX_OSERR as e:
+    except Exception as e:
         logging.exception(str(e))
         return render_template('display.html',
                                tables=[],

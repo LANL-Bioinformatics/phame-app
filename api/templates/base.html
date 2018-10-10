@@ -5,19 +5,24 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/edge-output.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/edge.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/project.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/phame-base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery.mobile.1.4.3.min.css') }}">
 
     {% block head %}{% endblock %}
     </head>
     <body>
-        <div>
+        <div class="grid-container">
+          <div class="grid-item1">
           <img src={{ url_for('static', filename="images/phame_logo.png") }} style="width:40px;height:40px;" >
           <a href="{{ url_for('index') }}">Home</a>
           <a href="{{ url_for('login') }}">Login</a>
           <a href="{{ url_for('logout') }}">Logout</a>
           <a href="{{ url_for('input') }}">Input</a>
           <a href="{{ url_for('projects') }}">Projects</a>
+            </div>
+          <div class="grid-item2">{{ current_user.username }}</div>
         </div>
+
         <hr>
         {% with messages = get_flashed_messages() %}
         {% if messages %}
