@@ -7,7 +7,9 @@
     function outputUpdate(cutoff) {
           document.querySelector('#selected-cutoff').value = Math.round(cutoff * 100) / 100;
       }
-
+    function showRefFileAlert() {
+      alert("Please select a file from Reference Genome");
+    }
     function referenceFileUpdate() {
         console.log("updated file list");
         var genome_files = document.getElementById("ref_dir");
@@ -16,7 +18,7 @@
           console.log(genome_files.files[i]);
           reference_file.options.add(new Option(genome_files.files[i].name, genome_files.files[i].name));
         }
-        alert("Please select a file from Reference Genome");
+        showRefFileAlert();
       }
 
     function showBootstrap() {
