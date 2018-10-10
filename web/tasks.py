@@ -26,8 +26,8 @@ def log_subprocess_output(pipe):
 @celery.task(name='tasks.run_phame', bind=True)
 def phame_run(self, project, username):
     try:
-        logger.info("run_phame called '/usr/local/bin/runPhaME /phame_api/media/{0}/{1}/config.ctl".format(project, username))
-        cmd = ['runPhaME', '/phame_api/media/{0}/{1}/config.ctl'.format(project, username)]
+        logger.info("run_phame called '/usr/local/bin/phame /phame_api/media/{0}/{1}/config.ctl".format(project, username))
+        cmd = ['phame', '/phame_api/media/{0}/{1}/config.ctl'.format(project, username)]
         p1 = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         logger.info('process launched')
 

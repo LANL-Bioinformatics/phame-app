@@ -37,23 +37,23 @@
 
 </div>
   <div>
-  <h2>PhaME FastTree Visualization</h2>
+  <h2>Tree Visualization using archeopteryx.js</h2>
   {% for tree in tree_files %}
     <li><a href="{{ url_for('display_tree', project=project, tree=tree) }}">{{ tree }}</a></li>
   {% endfor %}
   </div>
 <div>
+  <br>
   <div>
-    <h2>Look at subset of genomes</h2>
+    <h2>Zoom in analysis</h2>
 
       <a href="{{ url_for('subset', project=project) }}">subset</a>
 
   </div>
 </div>
-<div>
-  {% for link in file_links %}
-    <a href="{{ url_for('display_file', project=project, filename= link) }}" target="_blank">{{ link }}</a>
-  {% endfor %}
+<br>
+
+<h2>Download</h2>
 </div>
   <div><a href="{{ url_for('download', project=project) }}" target="_blank">download output files for {{ project }}</a></div>
 </div>

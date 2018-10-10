@@ -461,6 +461,34 @@ def notify(project):
         logging.error(str(e))
     return redirect(url_for('display', project=project))
 
+class Switcher(object):
+    def table_to_df_name(self, argument):
+        switcher = {
+            'summaryStatistics': 'df_summaryStatistics',
+            'coverage': 'df_coverage',
+            'snp_pairwiseMatrix': 'df_snp_pairwiseMatrix',
+            'genome_lengths': 'df_genome_lengths'
+        }
+        return switcher.get(argument, 'Invalid table')
+
+    def table_name_to_df(self, argument):
+        method_name = 'df_' + str(argument)
+        method = getattr(self, method_name, lambda : "Invalid dataframe")
+        return method
+
+    def df_summaryStatistics(self, project, results_dir):
+        return pd.read_table(os.path.join(results_dir, '{0}_summaryStatistics.txt'.format(project)), header=None)
+
+    def df_coverage(self, project, results_dir):
+        return pd.read_table(os.path.join(results_dir, '{0}_coverage.txt'.format(project)), header=None)
+
+    def df_snp_pairwise(self, project, results_dir):
+        return pd.read_table(os.path.join(results_dir, '{0}_snp_pairwiseMatrix.txt'.format(project)), header=None)
+
+    def df_genome_lengths(self, project, results_dir):
+        return pd.read_table(os.path.join(results_dir, '{0}_genome_lengths.txt'.format(project)), header=None)
+
+
 @app.route('/display/<project>', methods=['POST', 'GET'])
 @app.route('/display/<project>/<log_time>', methods=['POST', 'GET'])
 def display(project, log_time=None):
@@ -477,7 +505,6 @@ def display(project, log_time=None):
     results_dir = os.path.join(workdir, 'results')
     refdir = os.path.join(project_dir, 'refdir')
     target_dir = os.path.join(os.path.dirname(__file__), 'static')
-    summary_stats_file = '{0}_summaryStatistics.txt'.format(project)
 
     # create output tables
     reads_file_count = len(
@@ -488,77 +515,91 @@ def display(project, log_time=None):
                                                                             fname.endswith('.fasta'))])
     logging.debug('# reads files {0}, # contig files {1}, # full genomes {2}, len(length_df) {3}'.format(
         reads_file_count, contigs_file_count, full_genome_file_count, full_genome_file_count*3-1))
-    stats_df = pd.read_table(os.path.join(results_dir, summary_stats_file), header=None)
 
-    lengths_df = stats_df.iloc[0:full_genome_file_count-1].drop(1, axis=1)
-    lengths_df.columns = ['genome name', 'total length']
-    lengths_df['total length'] = lengths_df['total length'].astype(int)
-    lengths_df['genome name'][0] = lengths_df['genome name'][0] + '*'
-    lengths_df = lengths_df.set_index('genome name')
+    output_files_list = ['{0}_summaryStatistics.txt'.format(project), '{0}_coverage.txt'.format(project),
+                         '{0}_snp_pairwiseMatrix.txt'.format(project), '{0}_genome_lengths.txt'.format(project)]
 
-    gap_length_df = stats_df[full_genome_file_count:2*full_genome_file_count-1]
+    output_tables_list = []
+    titles_list = []
+    try:
+        for output_file in output_files_list:
+            if os.path.exists(os.path.join(results_dir, output_file)):
+                if output_file == '{0}_summaryStatistics.txt'.format(project):
+                    run_time = '' if not log_time else log_time[:6]
+                    stats_df = pd.read_table(os.path.join(results_dir, output_file), header=None, index_col=0)
+                    del stats_df.index.name
+                    stats_df.columns = ['']
+                    run_summary_df = pd.DataFrame({'# of genomes analyzed': reads_file_count + contigs_file_count +
+                                                                            full_genome_file_count,
+                                                   '# of contigs': contigs_file_count,
+                                                   '# of reads': reads_file_count,
+                                                   '# of full genomes': full_genome_file_count,
+                                                   'reference genome used': stats_df.loc['Reference used'],
+                                                   'project name': project,
+                                                   'run time (s)': run_time
+                                                   }
+                                                  )
+                    output_tables_list.append(run_summary_df.to_html(classes='run_summary'))
+                    output_tables_list.append(stats_df.to_html(classes='stats'))
+                    titles_list.append('Run Summary')
+                    titles_list.append('Summary Statistics')
+                elif output_file == '{0}_coverage.txt'.format(project):
+                    coverage_df = pd.read_table(os.path.join(results_dir, output_file))
+                    output_tables_list.append(coverage_df.to_html(classes='coverage'))
+                    titles_list.append('Genome Coverage')
+                elif output_file == '{0}_snp_pairwiseMatrix.txt'.format(project):
+                    snp_df = pd.read_table(os.path.join(results_dir, output_file))
+                    output_tables_list.append(snp_df.to_html(classes='snp_pairwiseMatrix'))
+                    logging.debug('index {0}'.format(snp_df.index))
+                    logging.debug('columns {0}'.format(snp_df.columns))
+                    titles_list.append('SNP pairwise Matrix')
+                elif output_file == '{0}_genome_lengths.txt'.format(project):
+                    genome_df = pd.read_table(os.path.join(results_dir, output_file))
+                    output_tables_list.append(genome_df.to_html(classes='genome_lengths'))
+                    titles_list.append('Genome Length')
 
-    ref_stats = stats_df.iloc[full_genome_file_count:].drop(2, axis=1)
-    ref_stats = ref_stats.set_index(0)
-    ref_stats.columns = ['']
-    del ref_stats.index.name
-    output_tables_list = [lengths_df.to_html(classes='lengths'), '*reference used', '-', ref_stats[2:].to_html(classes='ref_stats')]
-    titles_list = ['genome lengths', '', '', 'Core Genome Size']
-    if os.path.exists(os.path.join(results_dir, 'CDScoords.txt')):
-        coords_df = pd.read_table(os.path.join(results_dir, 'CDScoords.txt'), header=None)
-        coords_df.columns = ['genome name', 'begin', 'end', 'type']
-        coords_df = coords_df.set_index('genome name')
-        output_tables_list.append(coords_df.to_html(classes='coords'))
-        titles_list.append('coordinates')
+        # Prepare tree files -- create symlinks between tree files in output directory and flask static directory
+        if not os.path.exists(target_dir):
+            os.makedirs(target_dir)
+        tree_file_list = [fname for fname in os.listdir(results_dir) if fname.endswith('.fasttree')]
 
-    run_time = '' if not log_time else log_time[:6]
-    run_summary_df = pd.DataFrame({'# of genomes analyzed': reads_file_count + contigs_file_count +
-                                                                 full_genome_file_count,
-                                   '# of contigs': contigs_file_count,
-                                   '# of reads': reads_file_count,
-                                   '# of full genomes': full_genome_file_count,
-                                   'reference genome used': ref_stats.loc['Reference used:'],
-                                   'project name': project,
-                                   'run time (s)': run_time
-                                   }
-                                  )
-    titles_list.insert(0, 'Run Summary')
-    titles_list.insert(0, 'na')
-    output_tables_list.insert(0, run_summary_df.to_html(classes='summary'))
+        tree_files = []
+        for tree in tree_file_list:
+            tree_split = tree.split('/')[-1]
+            target = os.path.join(target_dir, 'trees', tree_split)
+            tree_files.append(tree_split)
+            logging.debug('fasttree file: trees/{0}'.format(tree_split))
+            source = os.path.join(results_dir, tree_split)
+            if not os.path.exists(target):
+                os.symlink(source, target)
+            if not os.path.exists(target):
+                error = {'msg': 'File does not exists {0}'.format(target)}
+                return render_template('error.html', error=error)
 
-    # Prepare tree files -- create symlinks between tree files in output directory and flask static directory
-    if not os.path.exists(target_dir):
-        os.makedirs(target_dir)
-    tree_file_list = [fname for fname in os.listdir(results_dir) if fname.endswith('.fasttree')]
+        logging.debug('results dir: {0}/*.fastree'.format(results_dir))
 
-    tree_files = []
-    for tree in tree_file_list:
-        tree_split = tree.split('/')[-1]
-        target = os.path.join(target_dir, 'trees', tree_split)
-        tree_files.append(tree_split)
-        logging.debug('fasttree file: trees/{0}'.format(tree_split))
-        source = os.path.join(results_dir, tree_split)
-        if not os.path.exists(target):
-            os.symlink(source, target)
-        if not os.path.exists(target):
-            error = {'msg': 'File does not exists {0}'.format(target)}
-            return render_template('error.html', error=error)
+        # file_links_suffixes = ['_all_snp_alignment.fna', '_cds_snp_alignment.fna', '_int_snp_alignment.fna', '_snp_core_matrix.txt']
+        # file_links = []
+        # for link in file_links_suffixes:
+        #     link_file = '{0}{1}'.format(project, link)
+        #     link_file_path = os.path.join(results_dir, link_file)
+        #     if os.path.exists(link_file_path):
+        #         file_target = os.path.join(target_dir, 'trees', link_file)
+        #         if not os.path.exists(file_target):
+        #             os.symlink(link_file_path, file_target)
+        #         file_links.append('{0}{1}'.format(project, link))
+        for output_table, title in zip(output_tables_list, titles_list):
+            logging.debug('title {0}'.format(title))
+            logging.debug('table {0}'.format(output_table))
+        return render_template('display.html',
+                        tables=output_tables_list,
+                        titles=titles_list, tree_files=tree_files, project=project)
 
-    logging.debug('results dir: {0}/*.fastree'.format(results_dir))
-
-    file_links_suffixes = ['_all_snp_alignment.fna', '_cds_snp_alignment.fna', '_int_snp_alignment.fna', '_snp_core_matrix.txt']
-    file_links = []
-    for link in file_links_suffixes:
-        link_file = '{0}{1}'.format(project, link)
-        link_file_path = os.path.join(results_dir, link_file)
-        if os.path.exists(link_file_path):
-            file_target = os.path.join(target_dir, 'trees', link_file)
-            if not os.path.exists(file_target):
-                os.symlink(link_file_path, file_target)
-            file_links.append('{0}{1}'.format(project, link))
-    return render_template('display.html',
-                    tables=output_tables_list,
-                    titles=titles_list, tree_files=tree_files, project=project, file_links=file_links)
+    except os.EX_OSERR as e:
+        logging.exception(str(e))
+        return render_template('display.html',
+                               tables=[],
+                               titles=[], tree_files=[], project=project, file_links=[])
 
 
 
