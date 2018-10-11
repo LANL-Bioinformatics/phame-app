@@ -230,6 +230,13 @@
               {% endfor %}
           </div>
           <div class="flex-container-row">
+              <div class="flex-label">{{ form.buildSNPdb.label }}</div>
+              <div class="flex-field">{{ form.buildSNPdb(title='Build SNP database', data_toggle="tooltip") }}</div>
+              {% for error in form.buildSNPdb.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+          </div>
+          <div class="flex-container-row">
               <div class="flex-label">{{ form.tree.label }}</div>
               <div class="flex-field">{{ form.tree(title='Choose an aligner', data_toggle="tooltip", onchange="showBootstrap()") }}</div>
               {% for error in form.tree.errors %}
