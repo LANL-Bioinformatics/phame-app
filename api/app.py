@@ -355,14 +355,14 @@ def input():
                 remove_uploaded_files(project_dir)
                 return render_template('input.html', title='Phame input', form=form, error=error)
 
-            # Ensure each fasta file has a corresponding mapping file if Generate SNPs or Perform selection analysis are yes
-            if form.cds_snps.data == '1' or form.do_select.data == '1':
+            # Ensure each fasta file has a corresponding mapping file if Generate SNPs is yes and 'random' or 'ani'
+            if form.cds_snps.data == '1' and (form.reference.data == '0' or form.reference.data == '2'):
                 for fname in os.listdir(ref_dir):
                     if fname.endswith('.fa') or fname.endswith('.fasta') or fname.endswith('.fna'):
                         if not os.path.exists(os.path.join(ref_dir, '{0}.{1}'.format(fname.split('.')[0],'gff'))):
                             remove_uploaded_files(project_dir)
-                            error = 'Each full genome file must have a corresponding .gff file if either '\
-                                    '"Generate SNPs from coding regions" or "Perform selection analysis" is Yes'
+                            error = 'Each full genome file must have a corresponding .gff file if '\
+                                    '"Generate SNPs from coding regions" is yes and "Referemce" is random or ANI'
                             return render_template('input.html', title='Phame input', form=form, error=error)
 
             # Ensure a reference file is selected if the Reference option selected is 'given'
