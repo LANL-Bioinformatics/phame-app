@@ -7,19 +7,21 @@ import datetime
 import glob
 import requests
 import time
-from flask import Flask, render_template, redirect, flash, url_for, request, send_file, jsonify, send_from_directory
+import json
+import logging
+import pandas as pd
 
+from flask import Flask, render_template, redirect, flash, url_for, request, send_file, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 from werkzeug.urls import url_parse
 import subprocess
 from forms import LoginForm, InputForm, SignupForm, RegistrationForm, SubsetForm
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required
+import celery.states as states
+
 from database import db_session
 from config import Config
-import logging
-import pandas as pd
 from worker import celery
-import celery.states as states
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -52,7 +54,7 @@ def check_task(task_id):
 
         result = str(res.result)
 
-    return jsonify({'Result': result, 'task_output':str(res.result)})
+    return jsonify({'Result': result, 'task_output':json.dumps(res.result)})
 
 
 @app.route('/wait/<string:task_id>/<project>', methods=['POST', 'GET'])
@@ -63,7 +65,7 @@ def wait(task_id, project):
 @app.route('/status/<project>', methods=['POST', 'GET'])
 def display_status(project):
     logging.debug('request '+jsonify(request.json))
-    project_status = request.json['data']
+    project_status = json.dumps(request.json['data'])
     return render_template('status.html', project=project, project_status=project_status)
 
 

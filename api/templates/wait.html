@@ -90,16 +90,25 @@
                         // rerun in 2 seconds
                         setTimeout(function () {
                             {#display_status(project, project_status);#}
-                            var t1 = document.getElementById("project-status");
-                            var d = document.createElement("div");
-                            d.id ="step";
-                            t1.appendChild(d);
-                            document.getElementById("step").innerHTML = '<li>status...' + project_status+'</li>';
-                            console.log('d.id ' + d.id);
-                            console.log('d.innerHTML ' + d.innerHTML);
-                            console.log('doc ' + document.getElementById("step").innerHTML);
+                            {#var t1 = document.getElementById("project-status");#}
+                            {#var d = document.createElement("div");#}
+                            {#d.id ="step";#}
+                            {#t1.appendChild(d);#}
+                          console.log(project_status);
+                          let status_json = JSON.parse(project_status);
+                          console.log(status_json);
+                          console.log(status_json['status']);
+                          let fields = status_json['status'].split("  ");
+                          console.log(fields);
+                          let elapsed_time = fields[0].replace("b'", "");
+                          console.log(elapsed_time);
+                          let current_step = fields[1].slice(0, -3);
+                          console.log(current_step);
+                            document.getElementById("project-status").innerHTML = 'current step...' + current_step;
+                            document.getElementById("project-time").innerHTML = 'elapsed time...' + elapsed_time;
+
                             update_progress(status_url, project);
-                        }, 50);
+                        }, 1000);
                     }
                 },
                 error: function() {
@@ -108,7 +117,7 @@
             });
 
         }
-        {#window.onload = showLoading('{{ project }}');#}
+
         window.onload = update_progress('{{ status_url }}', '{{ project }}');
     </script>
 {% endblock %}
@@ -116,6 +125,7 @@
 {% block content %}
   <div id="loading">
     <div id="project-name"></div>
+    <div id="project-time"></div>
     <div id="project-status"></div>
     <div id="show-img"></div>
   </div>
@@ -131,7 +141,7 @@
         loading_div.style.display = 'block';
         content_div.style.display = 'none';
         document.getElementById("project-name").innerHTML = 'running...{{ project }}';
-        document.getElementById("project-status").innerHTML = '<ol></ol>';
+        document.getElementById("project-status").innerHTML = 'status...';
 
 
         </script>
