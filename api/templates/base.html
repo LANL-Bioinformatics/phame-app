@@ -1,29 +1,90 @@
 <html>
     <head>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/edge.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/edge-theme.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/edge-output.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/edge.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/project.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/phame-base.css') }}">
+{#    <link rel="stylesheet" href="{{ url_for('static', filename='css/edge.css') }}">#}
+{#    <link rel="stylesheet" href="{{ url_for('static', filename='css/edge-theme.css') }}">#}
+{#    <link rel="stylesheet" href="{{ url_for('static', filename='css/edge-output.css') }}">#}
+{#    <link rel="stylesheet" href="{{ url_for('static', filename='css/edge.css') }}">#}
+{#    <link rel="stylesheet" href="{{ url_for('static', filename='css/project.css') }}">#}
+{#    <link rel="stylesheet" href="{{ url_for('static', filename='css/phame-base.css') }}">#}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery.mobile.1.4.3.min.css') }}">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<style>
+  .jumbotron {
+    margin-bottom: 10px;
+    height: 200px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+	.navbar {
+	    margin-bottom: 0;
+	    background-color: #2d2d30;
+	    border: 0;
+	    font-size: 11px !important;
+	    letter-spacing: 4px;
+	    opacity:0.9;
+	}
 
+	/* Add a gray color to all navbar links */
+	.navbar li a, .navbar .navbar-brand {
+		    color: #d5d5d5 !important;
+	}
+
+	/* On hover, the links will turn white */
+	.navbar-nav li a:hover {
+		    color: #fff !important;
+	}
+
+	/* The active link */
+	.navbar-nav li.active a {
+		    color: #fff !important;
+			        background-color:#29292c !important;
+	}
+
+	/* Remove border color from the collapsible button */
+	.navbar-default .navbar-toggle {
+		    border-color: transparent;
+	}
+  .main {
+    margin-top: 80px;
+    margin-left: 150px;
+  }
+
+    </style>
     {% block head %}{% endblock %}
     </head>
     <body>
-        <div class="grid-container">
-          <div class="grid-item1">
-          <img src={{ url_for('static', filename="images/phame_logo.png") }} style="width:40px;height:40px;" >
-          <a href="{{ url_for('index') }}">Home</a>
-          <a href="{{ url_for('login') }}">Login</a>
-          <a href="{{ url_for('logout') }}">Logout</a>
-          <a href="{{ url_for('input') }}">Input</a>
-          <a href="{{ url_for('projects') }}">Projects</a>
+        <div class="container">
+          <nav class="navbar navbar-default navbar-fixed-top">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" style="padding:5px" href="#"><img src={{ url_for('static', filename="images/phame_logo.png") }} style="width:50px;height:40px;" ></a>
+              </div>
+              <div class="collapse navbar-collapse" id="myNavbar">
+                <ul class="nav navbar-nav navbar-right">
+            <li><a href="{{ url_for('index') }}"><span class="glyphicon glyphicon-home"></span>Home</a></li>
+            {% if current_user.username %}
+            <li><a href="{{ url_for('logout') }}"><span class="glyphicon glyphicon-log-out"></span>Logout</a></li>
+            {% else %}
+            <li><a href="{{ url_for('login') }}"><span class="glyphicon glyphicon-log-in"></span>Login</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('input') }}"><span class="glyphicon glyphicon-tree-conifer"></span>Input</a></li>
+            <li><a href="{{ url_for('projects') }}"><span class="glyphicon glyphicon-th-list"></span>Projects</a></li>
+            {% if current_user.username %}
+              <li><a href="{{ url_for('profile') }}"><p class="navbar-text" style="color:white";><span class="glyphicon glyphicon-user"></span>{{ current_user.username}}</p><</a>/li>
+            {% endif %}
+          </ul>
+              </div>
             </div>
-          <div class="grid-item2">{{ current_user.username }}</div>
+          </nav>
         </div>
-
-        <hr>
+        <div class="main">
         {% with messages = get_flashed_messages() %}
         {% if messages %}
         <ul>
@@ -35,5 +96,6 @@
         {% endwith %}
 
         {% block content %}{% endblock %}
+        </div>
     </body>
 </html>
