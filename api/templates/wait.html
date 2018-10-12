@@ -34,6 +34,22 @@
             });
         }
 
+        function display_status(project, project_status) {
+            console.log('project: '+ project);
+            // send ajax POST request to start background job
+            $.ajax({
+                type: 'POST',
+                url: '/status/' + project,
+                data: {project_status:project_status},
+                success: function(data, status, request) {
+                  $("#output").load('/status/'+project + '/' + project_status)
+                },
+                error: function() {
+                    alert('Unexpected error');
+                }
+            });
+        }
+
         function send_notification(project) {
           console.log('email project: '+ project);
           $.ajax({
@@ -56,8 +72,10 @@
                 url: status_url,
                 success: function(data, status, request) {
                   result = data['Result'];
-                  console.log('status: '+status_url);
-                  console.log('data: '+data['Result']);
+                  project_status = data['task_output']
+                  console.log('url: '+status_url);
+                  console.log('result: '+result);
+                  console.log('result: '+project_status);
                   console.log('status: '+status);
                     if (result !== 'PENDING' && result !== 'PROGRESS') {
                       var loading_div = document.getElementById("loading");
@@ -71,8 +89,17 @@
                     else {
                         // rerun in 2 seconds
                         setTimeout(function () {
+                            {#display_status(project, project_status);#}
+                            var t1 = document.getElementById("project-status");
+                            var d = document.createElement("div");
+                            d.id ="step";
+                            t1.appendChild(d);
+                            document.getElementById("step").innerHTML = '<li>status...' + project_status+'</li>';
+                            console.log('d.id ' + d.id);
+                            console.log('d.innerHTML ' + d.innerHTML);
+                            console.log('doc ' + document.getElementById("step").innerHTML);
                             update_progress(status_url, project);
-                        }, 2000);
+                        }, 50);
                     }
                 },
                 error: function() {
@@ -89,6 +116,7 @@
 {% block content %}
   <div id="loading">
     <div id="project-name"></div>
+    <div id="project-status"></div>
     <div id="show-img"></div>
   </div>
 
@@ -103,6 +131,7 @@
         loading_div.style.display = 'block';
         content_div.style.display = 'none';
         document.getElementById("project-name").innerHTML = 'running...{{ project }}';
+        document.getElementById("project-status").innerHTML = '<ol></ol>';
 
 
         </script>
