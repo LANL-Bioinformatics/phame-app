@@ -263,6 +263,10 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html', title='Register', form=form)
 
+@app.route('/profile')
+def profile():
+    return render_template('profile.html', user=current_user)
+
 
 @app.route("/success")
 def success():
