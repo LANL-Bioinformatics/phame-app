@@ -30,10 +30,13 @@ def phame_run(self, project, username):
         cmd = ['phame', '/phame_api/media/{0}/{1}/config.ctl'.format(project, username)]
         p1 = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         logger.info('process launched')
-
-        with p1.stdout:
-            # self.update_state(state='RUNNING', meta=p1.stdout)
-            log_subprocess_output(p1.stdout)
+        try:
+            with p1.stdout:
+                for line in p1.stdout:
+                    self.update_state(state='PROGRESS', meta={'status':str(line)})
+                    logger.info('subprocess output: %r', line)
+        except Exception as e:
+            logger.error(str(e))
         logger.info('Exited writing output')
 
     except subprocess.CalledProcessError as e:

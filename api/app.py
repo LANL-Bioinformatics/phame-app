@@ -45,9 +45,11 @@ def add(param1, param2):
 @app.route('/check/<string:task_id>')
 def check_task(task_id):
     res = celery.AsyncResult(task_id)
+    logging.debug(res.__dict__)
     if res.state == states.PENDING:
         result= res.state
     else:
+
         result = str(res.result)
 
     return jsonify({'Result': result})
@@ -63,7 +65,8 @@ def runphame(project):
     log_time_data = {}
     task = celery.send_task('tasks.run_phame', args = [current_user.username, project])
     logging.debug('task id: {0}'.format(task.id))
-    logging.debug('check task {0}'.format(check_task(task.id)))
+    response = check_task(task.id)
+    logging.debug('check task {0}'.format(response.state))
 
     return redirect(url_for('wait', task_id = task.id, project=project))
 
@@ -582,19 +585,6 @@ def display(project, log_time=None):
 
         logging.debug('results dir: {0}/*.fastree'.format(results_dir))
 
-        # file_links_suffixes = ['_all_snp_alignment.fna', '_cds_snp_alignment.fna', '_int_snp_alignment.fna', '_snp_core_matrix.txt']
-        # file_links = []
-        # for link in file_links_suffixes:
-        #     link_file = '{0}{1}'.format(project, link)
-        #     link_file_path = os.path.join(results_dir, link_file)
-        #     if os.path.exists(link_file_path):
-        #         file_target = os.path.join(target_dir, 'trees', link_file)
-        #         if not os.path.exists(file_target):
-        #             os.symlink(link_file_path, file_target)
-        #         file_links.append('{0}{1}'.format(project, link))
-        # for output_table, title in zip(output_tables_list, titles_list):
-        #     logging.debug('title {0}'.format(title))
-        #     logging.debug('table {0}'.format(output_table))
         return render_template('display.html',
                         tables=output_tables_list,
                         titles=titles_list, tree_files=tree_files, project=project)
