@@ -45,19 +45,26 @@ def add(param1, param2):
 @app.route('/check/<string:task_id>')
 def check_task(task_id):
     res = celery.AsyncResult(task_id)
-    logging.debug(res.__dict__)
-    if res.state == states.PENDING:
+    logging.debug('res state' + res.state)
+    if res.state == states.PENDING or res.state == 'PROGRESS':
         result= res.state
     else:
 
         result = str(res.result)
 
-    return jsonify({'Result': result})
+    return jsonify({'Result': result, 'task_output':str(res.result)})
 
 
 @app.route('/wait/<string:task_id>/<project>', methods=['POST', 'GET'])
 def wait(task_id, project):
     return render_template('wait.html', status_url = url_for('check_task', task_id=task_id), project=project)
+
+
+@app.route('/status/<project>', methods=['POST', 'GET'])
+def display_status(project):
+    logging.debug('request '+jsonify(request.json))
+    project_status = request.json['data']
+    return render_template('status.html', project=project, project_status=project_status)
 
 
 @app.route('/runphame/<project>', methods=['POST', 'GET'])
@@ -66,7 +73,7 @@ def runphame(project):
     task = celery.send_task('tasks.run_phame', args = [current_user.username, project])
     logging.debug('task id: {0}'.format(task.id))
     response = check_task(task.id)
-    logging.debug('check task {0}'.format(response.state))
+    logging.debug('check task {0}'.format(response.__dict__))
 
     return redirect(url_for('wait', task_id = task.id, project=project))
 
@@ -444,15 +451,15 @@ def send_mailgun(message, project):
     recipient = current_user.email
     logging.info('current_user.email: {0}'.format(recipient))
     request_url = 'https://api.mailgun.net/v3/{0}/messages'.format(email_domain)
-    request = requests.post(request_url, auth=('api', key), data={
+    mail_request = requests.post(request_url, auth=('api', key), data={
         'from': 'donotreply@edgebioinformatics.org',
         'to': recipient,
         'subject': 'Project {0}'.format(project),
         'text': message
     })
 
-    logging.info('Status: {0}'.format(request.status_code))
-    return request.status_code
+    logging.info('Status: {0}'.format(mail_request.status_code))
+    return mail_request.status_code
 
 
 @app.route('/notify/<project>', methods=['GET'])
@@ -556,9 +563,6 @@ def display(project, log_time=None):
                     snp_df.rename(index=str, columns={'Unnamed: 0':''}, inplace=True)
                     snp_df.drop(snp_df.columns[-1], axis=1, inplace=True)
                     output_tables_list.append(snp_df.to_html(classes='snp_pairwiseMatrix'))
-                    logging.debug('index {0}'.format(snp_df.index))
-                    logging.debug('columns {0}'.format(snp_df.columns))
-                    logging.debug('df {0}'.format(snp_df))
                     titles_list.append('SNP pairwise Matrix')
                 elif output_file == '{0}_genome_lengths.txt'.format(project):
                     genome_df = pd.read_table(os.path.join(results_dir, output_file))
