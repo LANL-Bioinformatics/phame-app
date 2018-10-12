@@ -448,18 +448,28 @@ def send_email_message(message, project):
 
 def send_mailgun(message, project):
     key = '21ef71d498213b5dc9f52648e049f031-c8e745ec-6fe78acd'
-    sandbox = 'sandbox1d2d8e9caf264c82a25a2dc1380fa0ba.mailgun.org'
     email_domain = 'mail.edgebioinformatics.org'
     recipient = current_user.email
     logging.info('current_user.email: {0}'.format(recipient))
     request_url = 'https://api.mailgun.net/v3/{0}/messages'.format(email_domain)
-    mail_request = requests.post(request_url, auth=('api', key), data={
-        'from': 'donotreply@edgebioinformatics.org',
-        'to': recipient,
-        'subject': 'Project {0}'.format(project),
-        'text': message
-    })
-
+    results_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'workdir', 'results')
+    log_file = '{0}.log'.format(project)
+    log_fh = open(os.path.join(results_dir, log_file),"rb").read()
+    error_file = '{0}.error'.format(project)
+    error_fh = open(os.path.join(results_dir, error_file),"rb").read()
+    mail_request = requests.post(request_url,
+                                 auth=('api', key),
+                                 files=[("attachment", log_fh),("attachment", error_fh)],
+                                 data={'from': 'donotreply@edgebioinformatics.org',
+                                       'to': recipient,
+                                       'subject': 'Project {0}'.format(project),
+                                       'text': message
+                                       },
+                                 # headers={'Content-type': 'multipart/form-data;'},
+                                 )
+    logging.debug('from: {0} to: {1} subject: {2} text: {3}'.format('donotreply@edgebioinformatics.org', recipient,
+                                                                   'Project {0}'.format(project), message))
+    logging.debug('log file: {0}, error file: {1}'.format(log_file, error_file))
     logging.info('Status: {0}'.format(mail_request.status_code))
     return mail_request.status_code
 
