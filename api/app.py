@@ -378,7 +378,7 @@ def input():
                         if not os.path.exists(os.path.join(ref_dir, '{0}.{1}'.format(fname.split('.')[0],'gff'))):
                             remove_uploaded_files(project_dir)
                             error = 'Each full genome file must have a corresponding .gff file if '\
-                                    '"Generate SNPs from coding regions" is yes and "Referemce" is random or ANI'
+                                    '"Generate SNPs from coding regions" is yes and "Reference" is random or ANI'
                             return render_template('input.html', title='Phame input', form=form, error=error)
 
             # Ensure a reference file is selected if the Reference option selected is 'given'
