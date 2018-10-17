@@ -53,7 +53,10 @@ def check_task(task_id):
     else:
 
         result = str(res.result)
-
+    logging.debug('result ' + str(result))
+    if str(result) is None:
+        logging.debug('result is None')
+        return render_template('error.html', error={'msg' : 'Task status could not be obtained'})
     return jsonify({'Result': result, 'task_output':json.dumps(res.result)})
 
 
@@ -75,7 +78,8 @@ def runphame(project):
     task = celery.send_task('tasks.run_phame', args = [current_user.username, project])
     logging.debug('task id: {0}'.format(task.id))
     response = check_task(task.id)
-    logging.debug('check task {0}'.format(response.__dict__))
+    if isinstance(response, dict):
+        logging.debug('check task {0}'.format(response.__dict__))
 
     return redirect(url_for('wait', task_id = task.id, project=project))
 
@@ -533,6 +537,10 @@ def display(project, log_time=None):
     refdir = os.path.join(project_dir, 'refdir')
     target_dir = os.path.join(os.path.dirname(__file__), 'static')
 
+    if not os.path.exists(workdir):
+        error = {'msg': 'Directory does not exist {0}'.format(workdir)}
+        return render_template('error.html', error=error)
+    
     # create output tables
     reads_file_count = len(
         [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])

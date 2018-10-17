@@ -72,10 +72,10 @@
                 url: status_url,
                 success: function(data, status, request) {
                   result = data['Result'];
-                  project_status = data['task_output']
+                  project_status = data['task_output'];
                   console.log('url: '+status_url);
                   console.log('result: '+result);
-                  console.log('result: '+project_status);
+                  console.log('project_status: '+project_status);
                   console.log('status: '+status);
                     if (result !== 'PENDING' && result !== 'PROGRESS') {
                       var loading_div = document.getElementById("loading");
@@ -94,16 +94,16 @@
                             {#var d = document.createElement("div");#}
                             {#d.id ="step";#}
                             {#t1.appendChild(d);#}
-                          console.log(project_status);
+                          console.log('project status ' + project_status);
                           let status_json = JSON.parse(project_status);
-                          console.log(status_json);
+                          console.log('status_json ' + status_json);
                           console.log(status_json['status']);
                           let fields = status_json['status'].split("  ");
-                          console.log(fields);
+                          console.log('fields ' + fields);
                           let elapsed_time = fields[0].replace("b'", "");
                           console.log(elapsed_time);
                           let current_step = fields[1].slice(0, -3);
-                          console.log(current_step);
+                          console.log('current step ' + current_step);
                             document.getElementById("project-status").innerHTML = 'current step...' + current_step;
                             document.getElementById("project-time").innerHTML = 'elapsed time...' + elapsed_time;
 
