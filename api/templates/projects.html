@@ -1,7 +1,16 @@
 {% extends "base.html" %}
-
+<style>
+  a {
+    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+    font-size: 14px;
+    line-height: 1.42857143;
+    color: #333
+  }
+</style>
 {% block content %}
+  <div class="project_list">
     {% for project in projects %}
       <div><a href="display/{{ project }}">{{ project }}</a></div>
     {% endfor %}
+  </div>
 {% endblock %}
