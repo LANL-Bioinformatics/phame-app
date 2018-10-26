@@ -52,6 +52,7 @@ services:
       - phame_data:/phame_api/media
       - tree_data:/api/static/trees
       - ./api/templates:/api/templates
+      - ./api/static:/api/static
     depends_on:
       - redis
       - postgres
