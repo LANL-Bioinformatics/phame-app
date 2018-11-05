@@ -558,10 +558,10 @@ def display(project, log_time=None):
     titles_list = []
     try:
         for output_file in output_files_list:
-            if os.path.exists(os.path.join(results_dir, output_file)):
+            if os.path.exists(os.path.join(results_dir, 'tables', output_file)):
                 if output_file == '{0}_summaryStatistics.txt'.format(project):
                     run_time = '' if not log_time else log_time[:6]
-                    stats_df = pd.read_table(os.path.join(results_dir, output_file), header=None, index_col=0)
+                    stats_df = pd.read_table(os.path.join(results_dir, 'tables', output_file), header=None, index_col=0)
                     del stats_df.index.name
                     stats_df.columns = ['']
                     run_summary_df = pd.DataFrame({'# of genomes analyzed': reads_file_count + contigs_file_count +
@@ -579,24 +579,24 @@ def display(project, log_time=None):
                     titles_list.append('Run Summary')
                     titles_list.append('Summary Statistics')
                 elif output_file == '{0}_coverage.txt'.format(project):
-                    coverage_df = pd.read_table(os.path.join(results_dir, output_file))
+                    coverage_df = pd.read_table(os.path.join(results_dir, 'tables', output_file))
                     output_tables_list.append(coverage_df.to_html(classes='coverage'))
                     titles_list.append('Genome Coverage')
                 elif output_file == '{0}_snp_pairwiseMatrix.txt'.format(project):
-                    snp_df = pd.read_table(os.path.join(results_dir, output_file), sep='\t')
+                    snp_df = pd.read_table(os.path.join(results_dir, 'tables', output_file), sep='\t')
                     snp_df.rename(index=str, columns={'Unnamed: 0':''}, inplace=True)
                     snp_df.drop(snp_df.columns[-1], axis=1, inplace=True)
                     output_tables_list.append(snp_df.to_html(classes='snp_pairwiseMatrix'))
                     titles_list.append('SNP pairwise Matrix')
                 elif output_file == '{0}_genome_lengths.txt'.format(project):
-                    genome_df = pd.read_table(os.path.join(results_dir, output_file))
+                    genome_df = pd.read_table(os.path.join(results_dir, 'tables', output_file))
                     output_tables_list.append(genome_df.to_html(classes='genome_lengths'))
                     titles_list.append('Genome Length')
 
         # Prepare tree files -- create symlinks between tree files in output directory and flask static directory
         if not os.path.exists(target_dir):
             os.makedirs(target_dir)
-        tree_file_list = [fname for fname in os.listdir(results_dir) if fname.endswith('.fasttree')]
+        tree_file_list = [fname for fname in os.listdir(os.path.join(results_dir, 'trees')) if fname.endswith('.fasttree')]
 
         tree_files = []
         for tree in tree_file_list:
@@ -604,14 +604,14 @@ def display(project, log_time=None):
             target = os.path.join(target_dir, 'trees', tree_split)
             tree_files.append(tree_split)
             logging.debug('fasttree file: trees/{0}'.format(tree_split))
-            source = os.path.join(results_dir, tree_split)
+            source = os.path.join(results_dir, 'trees', tree_split)
             if not os.path.exists(target):
                 os.symlink(source, target)
             if not os.path.exists(target):
                 error = {'msg': 'File does not exists {0}'.format(target)}
                 return render_template('error.html', error=error)
 
-        logging.debug('results dir: {0}/*.fastree'.format(results_dir))
+        logging.debug(f'results dir: {results_dir}/trees/*.fastree')
 
         return render_template('display.html',
                         tables=output_tables_list,
