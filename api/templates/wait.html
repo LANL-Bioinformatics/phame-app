@@ -86,8 +86,8 @@
                       send_notification(project);
                       get_display(project);
                     }
-                    else if (result === 'null') {
-                      alert('Unexpected error');
+                    else if (project_status === 'null') {
+                      alert('The application is not receiving status updates');
                     }
                     else {
                         // rerun in 2 seconds
