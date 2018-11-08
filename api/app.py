@@ -248,6 +248,11 @@ def logout():
     return redirect(url_for('login'))
 
 
+@app.route('/files', methods=['GET'])
+def files_list():
+    return jsonify(os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], 'uploads', current_user.username)))
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     """
@@ -264,6 +269,7 @@ def register():
         db_session.commit()
         flash('Congratulations, you are now a registered user!')
         os.mkdir(os.path.join(app.config['PROJECT_DIRECTORY'], user.username))
+        os.makedirs(os.path.join(app.config['PROJECT_DIRECTORY'], 'uploads', user.username))
         return redirect(url_for('login'))
     return render_template('register.html', title='Register', form=form)
 
