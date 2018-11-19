@@ -23,6 +23,7 @@ import celery.states as states
 from database import db_session
 from config import Config
 from worker import celery
+from sqlalchemy import exc
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -63,7 +64,10 @@ def check_task(task_id):
 
 @app.route('/wait/<string:task_id>/<project>', methods=['POST', 'GET'])
 def wait(task_id, project):
-    return render_template('wait.html', status_url = url_for('check_task', task_id=task_id), project=project)
+    try:
+        return render_template('wait.html', status_url = url_for('check_task', task_id=task_id), project=project)
+    except exc.TimeoutError as e:
+        return render_template('error.html', error={'msg': str(e)})
 
 
 @app.route('/status/<project>', methods=['POST', 'GET'])
@@ -456,6 +460,7 @@ def projects():
     try:
         pd.set_option('display.max_colwidth', 1000)
         projects = [project for project in os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username))]
+        projects.sort()
         projects_list = []
         for project in projects:
             project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project)
@@ -487,7 +492,7 @@ def projects():
         run_summary_df = pd.DataFrame(projects_list)
         run_summary_df['project name'] = run_summary_df['project name'].apply(lambda x:'<a href="/display/{0}">{0}</a>'.format(x))
         run_summary_df = run_summary_df[['project name', '# of genomes analyzed', '# of contigs', '# of reads', 'reference genome used']]
-        return render_template('projects.html', run_summary=HTML(run_summary_df.to_html(escape=False, classes='run_summary',index=False)))
+        return render_template('projects.html', run_summary=run_summary_df.to_html(escape=False, classes='run summary',index=False))
     except Exception as e:
         logging.exception(str(e))
         return render_template('error.html', error={'msg' : f'There was a problem displaying projects: {str(e)}'})
@@ -635,11 +640,11 @@ def display(project, log_time=None):
                     snp_df = pd.read_table(os.path.join(results_dir, 'tables', output_file), sep='\t')
                     snp_df.rename(index=str, columns={'Unnamed: 0':''}, inplace=True)
                     snp_df.drop(snp_df.columns[-1], axis=1, inplace=True)
-                    output_tables_list.append(snp_df.to_html(classes='snp_pairwiseMatrix'))
+                    output_tables_list.append(snp_df.to_html(classes='snp_pairwiseMatrix', index=False))
                     titles_list.append('SNP pairwise Matrix')
                 elif output_file == '{0}_genome_lengths.txt'.format(project):
                     genome_df = pd.read_table(os.path.join(results_dir, 'tables', output_file))
-                    output_tables_list.append(genome_df.to_html(classes='genome_lengths'))
+                    output_tables_list.append(genome_df.to_html(classes='genome_lengths', index=False))
                     titles_list.append('Genome Length')
 
         # Prepare tree files -- create symlinks between tree files in output directory and flask static directory
