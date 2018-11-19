@@ -85,6 +85,13 @@ def runphame(project):
     return redirect(url_for('wait', task_id = task.id, project=project))
 
 
+@app.route('/num_results_files/<project>', methods=['GET'])
+def num_results_files(project):
+    results_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'workdir', 'results')
+    num_files = len(os.listdir(results_dir)) if os.path.exists(results_dir) else 0
+    return jsonify({'num_files':num_files})
+
+
 @login.user_loader
 def load_user(id):
     return User.query.get(int(id))
