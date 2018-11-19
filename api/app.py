@@ -10,6 +10,7 @@ import time
 import json
 import logging
 import pandas as pd
+from IPython.display import HTML
 
 from flask import Flask, render_template, redirect, flash, url_for, request, send_file, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
@@ -445,8 +446,40 @@ def projects():
     Displays links to user's projects
     :return:
     """
+    pd.set_option('display.max_colwidth', 1000)
     projects = [project for project in os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username))]
-    return render_template('projects.html', projects=projects)
+    projects_list = []
+    for project in projects:
+        project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project)
+        workdir = os.path.join(project_dir, 'workdir')
+        results_dir = os.path.join(workdir, 'results')
+        refdir = os.path.join(project_dir, 'refdir')
+        summary_statistics_file = os.path.join(results_dir, 'tables','{0}_summaryStatistics.txt'.format(project))
+        if os.path.exists(summary_statistics_file):
+            logging.debug(f'{project}')
+            # create output tables
+            reads_file_count = len(
+                [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
+            contigs_file_count = len(
+                [fname for fname in os.listdir(workdir) if fname.endswith('.contig')])
+            full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or
+                                                                                    fname.endswith('.fasta'))])
+            stats_df = pd.read_table(summary_statistics_file, header=None, index_col=0, squeeze=True)
+            logging.debug(f"stats {stats_df}")
+            logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}, ref used {stats_df.loc['Reference used']}")
+            projects_list.append({'# of genomes analyzed': reads_file_count + contigs_file_count +
+                                                                    full_genome_file_count,
+                                           '# of contigs': contigs_file_count,
+                                           '# of reads': reads_file_count,
+                                           '# of full genomes': full_genome_file_count,
+                                           'reference genome used': stats_df.loc['Reference used'],
+                                           'project name': project
+                                           })
+
+    run_summary_df = pd.DataFrame(projects_list)
+    run_summary_df['project name'] = run_summary_df['project name'].apply(lambda x:'<a href="/display/{0}">{0}</a>'.format(x))
+    run_summary_df = run_summary_df[['project name', '# of genomes analyzed', '# of contigs', '# of reads', 'reference genome used']]
+    return render_template('projects.html', run_summary=HTML(run_summary_df.to_html(escape=False, classes='run_summary',index=False)))
 
 def send_email_message(message, project):
     SENDMAIL = "/usr/sbin/sendmail"  # sendmail location
@@ -576,8 +609,7 @@ def display(project, log_time=None):
                                                    '# of reads': reads_file_count,
                                                    '# of full genomes': full_genome_file_count,
                                                    'reference genome used': stats_df.loc['Reference used'],
-                                                   'project name': project,
-                                                   'run time (s)': run_time
+                                                   'project name': project
                                                    }
                                                   )
                     output_tables_list.append(run_summary_df.to_html(classes='run_summary'))
