@@ -147,14 +147,14 @@
           </div>
           <div class="flex-container-row">
               <div class="flex-label">{{ form.data_type.label }}</div>
-              <div class="flex-field">{{ form.data_type(title='Choose from complete(F), only Contig (C) or only Reads (R)', data_toggle="tooltip", oninput="showReadfileInput()") }}</div>
+              <div class="flex-field">{{ form.data_type(title='Choose from complete(F), only Contig (C) or only Reads (R)', data_toggle="tooltip", onchange="showReadfileInput(event)") }}</div>
               {% for error in form.data.errors %}
                 <span style="color: red;">[{{ error }}]</span>
               {% endfor %}
           </div>
           <div class="flex-container-row">
               <div class="flex-label">{{ form.ref_dir.label }}</div>
-              <div class="flex-field">{{ form.ref_dir(title='Reference genome files (.fasta/.fna/.gff)', data_toggle="tooltip", oninput="referenceFileUpdate()") }}</div>
+              <div class="flex-field">{{ form.ref_dir(title='Reference genome files (.fasta/.fna/.gff)', data_toggle="tooltip", onchange="referenceFileUpdate()") }}</div>
               {% for error in form.ref_dir.errors %}
                 <span style="color: red;">[{{ error }}]</span>
               {% endfor %}
