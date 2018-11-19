@@ -77,7 +77,7 @@
             <li><a href="{{ url_for('input') }}"><span class="glyphicon glyphicon-tree-conifer"></span>Input</a></li>
             <li><a href="{{ url_for('projects') }}"><span class="glyphicon glyphicon-th-list"></span>Projects</a></li>
             {% if current_user.username %}
-              <li><a href="{{ url_for('profile') }}"><p class="navbar-text" style="color:white";><span class="glyphicon glyphicon-user"></span>{{ current_user.username}}</p><</a>/li>
+              <li><a href="{{ url_for('profile') }}"><p class="navbar-text" style="color:white";><span class="glyphicon glyphicon-user"></span>{{ current_user.username}}</p></a>/li>
             {% endif %}
           </ul>
               </div>

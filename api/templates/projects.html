@@ -1,21 +1,15 @@
 {% extends "base.html" %}
-<style>
-  a {
-    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
-    font-size: 14px;
-    line-height: 1.42857143;
-    color: #333
-  }
-</style>
+{% block head %}
+<!-- CSS for jQuery UI: -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.0/themes/base/jquery-ui.css">
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/phame-output.css') }}">
+{% endblock %}
+
 {% block content %}
   <div>
 
     <h2>Projects</h2>
     {{ run_summary|safe }}
   </div>
-  <div class="project_list">
-    {% for project in projects %}
-      <div><a href="display/{{ project }}">{{ project }}</a></div>
-    {% endfor %}
-  </div>
+
 {% endblock %}
