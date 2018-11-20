@@ -478,7 +478,6 @@ def projects():
                 full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or
                                                                                         fname.endswith('.fasta'))])
                 stats_df = pd.read_table(summary_statistics_file, header=None, index_col=0, squeeze=True)
-                logging.debug(f"stats {stats_df}")
                 logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}, ref used {stats_df.loc['Reference used']}")
                 projects_list.append({'# of genomes analyzed': reads_file_count + contigs_file_count +
                                                                         full_genome_file_count,
