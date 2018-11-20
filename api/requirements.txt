@@ -8,6 +8,8 @@ flask-login
 flask-migrate
 flask-sqlalchemy
 flask-wtf
+flask_debugtoolbar
+flask_cors
 itsdangerous==0.24
 Jinja2==2.10
 kombu==4.2.0
