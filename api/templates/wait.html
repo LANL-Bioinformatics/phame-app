@@ -34,20 +34,24 @@
             });
         }
 
-        function get_num_results_files(project) {
+        function myCallback(result) {
+          return result
+        }
+        function get_num_results_files(project, callback) {
             $.ajax({
                 type: 'GET',
                 url: '/num_results_files/' + project,
                 success: function(data, status, request) {
                   let result = data['num_files'];
-                  console.log(result);
-                  return result
+                  callback(result);
                 },
                 error: function() {
                     alert('Unexpected error');
                 }
             });
         }
+
+
         function display_status(project, project_status) {
             console.log('project: '+ project);
             // send ajax POST request to start background job
@@ -92,7 +96,9 @@
                   console.log('result: '+result);
                   console.log('project_status: '+project_status);
                   console.log('status: '+status);
-                  let nfiles = get_num_results_files(project);
+                  let nfiles = get_num_results_files(project, myCallback);
+                  console.log(typeof nfiles);
+                  console.log(nfiles);
                     if ( (result !== 'PENDING' && result !== 'PROGRESS') || (project_status === 'null' && nfiles > 0)) {
                       let loading_div = document.getElementById("loading");
                       let content_div = document.getElementById("content");
