@@ -5,7 +5,7 @@
 
 .flex-container-col > div {
   background-color: #f1f1f1;
-  width: 50%;
+  width: 85%;
   text-align: left;
   line-height: 15px;
   justify-content: center;
@@ -40,8 +40,3 @@
   text-align: right;
 }
 
-.flex-field:hover,
-
-.content {
-  margin-left: 80px;
-}
