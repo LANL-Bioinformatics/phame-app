@@ -1,74 +1,34 @@
-phame_api01
-===========
+Step by step guide to run PhaME using web interface in a local machine. Docker and git is required.
 
-API for PhAME
+1. clone the repo
 
-.. image:: https://img.shields.io/badge/built%20with-Cookiecutter%20Django-ff69b4.svg
-     :target: https://github.com/pydanny/cookiecutter-django/
-     :alt: Built with Cookiecutter Django
+``git clone git@github.com:LANL-Bioinformatics/phame-api.git``
 
+2. create a .postegres file within the cloned directory phame_api01/.envs/.local/.postgres, and add following lines to it.
 
-Settings
---------
+```
+# PostgreSQL
+# ----------
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=phame_api01
+POSTGRES_USER=debug
+POSTGRES_PASSWORD=debug
+```
 
-Moved to settings_.
+4. cd to the project root directory `phame_api01`
 
-.. _settings: http://cookiecutter-django.readthedocs.io/en/latest/settings.html
+`cd phame_api01`
 
-Basic Commands
---------------
+5. Create docker containers.
+`docker-compose build`
 
-Setting Up Your Users
-^^^^^^^^^^^^^^^^^^^^^
+6. start docker
 
-* To create a **normal user account**, just go to Sign Up and fill out the form. Once you submit it, you'll see a "Verify Your E-mail Address" page. Go to your console to see a simulated email verification message. Copy the link into your browser. Now the user's email should be verified and ready to go.
+`docker-compose up`
 
-* To create an **superuser account**, use this command::
+7. initialize the database.
 
-    $ python manage.py createsuperuser
+`docker-compose run --rm web /bin/bash -c "python -c  'import database; database.init_db()'"`
 
-For convenience, you can keep your normal user logged in on Chrome and your superuser logged in on Firefox (or similar), so that you can see how the site behaves for both kinds of users.
-
-Test coverage
-^^^^^^^^^^^^^
-
-To run the tests, check your test coverage, and generate an HTML coverage report::
-
-    $ coverage run manage.py test
-    $ coverage html
-    $ open htmlcov/index.html
-
-Running tests with py.test
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-::
-
-  $ py.test
-
-Live reloading and Sass CSS compilation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Moved to `Live reloading and SASS compilation`_.
-
-.. _`Live reloading and SASS compilation`: http://cookiecutter-django.readthedocs.io/en/latest/live-reloading-and-sass-compilation.html
-
-
-
-
-
-Deployment
-----------
-
-The following details how to deploy this application.
-
-
-
-Docker
-^^^^^^
-
-See detailed `cookiecutter-django Docker documentation`_.
-
-.. _`cookiecutter-django Docker documentation`: http://cookiecutter-django.readthedocs.io/en/latest/deployment-with-docker.html
-
-
-
+If all went well, you can go to localhost:8080 to see the phame webpage.
