@@ -5,7 +5,6 @@ celery==4.2.0rc4
 click==6.7
 Flask==1.0.2
 flask-login
-flask-migrate
 flask-sqlalchemy
 flask-wtf
 flask_debugtoolbar
@@ -22,3 +21,4 @@ tornado==5.0.2
 vine==1.1.4
 Werkzeug==0.14.1
 requests
+IPython

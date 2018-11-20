@@ -28,7 +28,7 @@
         var tree_value = document.getElementById("tree").value;
         console.log(tree_value);
         var bootstrap = document.getElementById("bootstrapshow");
-        if (bootstrap.style.display === "none" && (tree_value === '2' || tree_value === '3')) {
+        if (tree_value === '2' || tree_value === '3'|| tree_value === '4') {
             bootstrap.style.display = "block";
         } else {
             bootstrap.style.display = "none";
@@ -147,14 +147,14 @@
           </div>
           <div class="flex-container-row">
               <div class="flex-label">{{ form.data_type.label }}</div>
-              <div class="flex-field">{{ form.data_type(title='Choose from complete(F), only Contig (C) or only Reads (R)', data_toggle="tooltip", oninput="showReadfileInput()") }}</div>
+              <div class="flex-field">{{ form.data_type(title='Choose from complete(F), only Contig (C) or only Reads (R)', data_toggle="tooltip", onchange="showReadfileInput(event)") }}</div>
               {% for error in form.data.errors %}
                 <span style="color: red;">[{{ error }}]</span>
               {% endfor %}
           </div>
           <div class="flex-container-row">
               <div class="flex-label">{{ form.ref_dir.label }}</div>
-              <div class="flex-field">{{ form.ref_dir(title='Reference genome files (.fasta/.fna/.gff)', data_toggle="tooltip", oninput="referenceFileUpdate()") }}</div>
+              <div class="flex-field">{{ form.ref_dir(title='Reference genome files (.fasta/.fna/.gff)', data_toggle="tooltip", onchange="referenceFileUpdate()") }}</div>
               {% for error in form.ref_dir.errors %}
                 <span style="color: red;">[{{ error }}]</span>
               {% endfor %}
@@ -288,41 +288,13 @@
           </div>
           <div class="flex-container-row">
               <div class="flex-label">{{ form.threads.label }}</div>
-              <div class="flex-field">{{ form.threads(title='Specify the number of threads to run analysis ON', data_toggle="tooltip") }}</div>
+              <div class="flex-field">{{ form.threads(title='Specify the number of threads to run analysis ON (between 1 and 16)', data_toggle="tooltip") }}</div>
               {% for error in form.threads.errors %}
                 <span style="color: red;">[{{ error }}]</span>
               {% endfor %}
           </div>
       </div>
         <p>{{ form.submit(onclick="showLoading()") }}</p>
-
-
-{#        <p>#}
-{#          {{ form.tree.label }}#}
-{#            <select id="tree" onchange="showBootstrap()">#}
-{#              <option value="0">No tree</option>#}
-{#              <option value="1">FastTree</option>#}
-{#              <option value="2">RAxML</option>#}
-{#              <option value="3">Both</option>#}
-{#            </select>#}
-{#        </p>#}
-{#        </div>#}
-{#        <div id="bootstrap" style="display: none">#}
-{#            <select id="bootstrapshow" onchange="showBootstrapN()">#}
-{#              <option value="0">No#}
-{#              <option value="1">Yes#}
-{#            </select>#}
-{#        </div>#}
-{#        <div id="bootstrapN" style="display: none">#}
-{#        <p>#}
-{#            {{ form.N.label }}#}
-{#            {{ form.N() }}#}
-{#            {% for error in form.N.errors %}#}
-{#              <span style="color: red;">[{{ error }}]</span>#}
-{#            {% endfor %}#}
-{#        </p>#}
-{#        </div>#}
-
     </form>
 </div>
 {% endblock %}

@@ -10,6 +10,7 @@ import time
 import json
 import logging
 import pandas as pd
+from IPython.display import HTML
 
 from flask import Flask, render_template, redirect, flash, url_for, request, send_file, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
@@ -22,6 +23,7 @@ import celery.states as states
 from database import db_session
 from config import Config
 from worker import celery
+from sqlalchemy import exc
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -62,7 +64,10 @@ def check_task(task_id):
 
 @app.route('/wait/<string:task_id>/<project>', methods=['POST', 'GET'])
 def wait(task_id, project):
-    return render_template('wait.html', status_url = url_for('check_task', task_id=task_id), project=project)
+    try:
+        return render_template('wait.html', status_url = url_for('check_task', task_id=task_id), project=project)
+    except exc.TimeoutError as e:
+        return render_template('error.html', error={'msg': str(e)})
 
 
 @app.route('/status/<project>', methods=['POST', 'GET'])
@@ -82,6 +87,13 @@ def runphame(project):
         logging.debug('check task {0}'.format(response.__dict__))
 
     return redirect(url_for('wait', task_id = task.id, project=project))
+
+
+@app.route('/num_results_files/<project>', methods=['GET'])
+def num_results_files(project):
+    results_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'workdir', 'results')
+    num_files = len(os.listdir(results_dir)) if os.path.exists(results_dir) else 0
+    return jsonify({'num_files':num_files})
 
 
 @login.user_loader
@@ -248,6 +260,11 @@ def logout():
     return redirect(url_for('login'))
 
 
+@app.route('/files', methods=['GET'])
+def files_list():
+    return jsonify(os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], 'uploads', current_user.username)))
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     """
@@ -264,6 +281,7 @@ def register():
         db_session.commit()
         flash('Congratulations, you are now a registered user!')
         os.mkdir(os.path.join(app.config['PROJECT_DIRECTORY'], user.username))
+        os.makedirs(os.path.join(app.config['PROJECT_DIRECTORY'], 'uploads', user.username))
         return redirect(url_for('login'))
     return render_template('register.html', title='Register', form=form)
 
@@ -439,8 +457,44 @@ def projects():
     Displays links to user's projects
     :return:
     """
-    projects = [project for project in os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username))]
-    return render_template('projects.html', projects=projects)
+    try:
+        pd.set_option('display.max_colwidth', 1000)
+        projects = [project for project in os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username))]
+        projects.sort()
+        projects_list = []
+        for project in projects:
+            project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project)
+            workdir = os.path.join(project_dir, 'workdir')
+            results_dir = os.path.join(workdir, 'results')
+            refdir = os.path.join(project_dir, 'refdir')
+            summary_statistics_file = os.path.join(results_dir, 'tables','{0}_summaryStatistics.txt'.format(project))
+            if os.path.exists(summary_statistics_file):
+                logging.debug(f'{project}')
+                # create output tables
+                reads_file_count = len(
+                    [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
+                contigs_file_count = len(
+                    [fname for fname in os.listdir(workdir) if fname.endswith('.contig')])
+                full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or
+                                                                                        fname.endswith('.fasta'))])
+                stats_df = pd.read_table(summary_statistics_file, header=None, index_col=0, squeeze=True)
+                logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}, ref used {stats_df.loc['Reference used']}")
+                projects_list.append({'# of genomes analyzed': reads_file_count + contigs_file_count +
+                                                                        full_genome_file_count,
+                                               '# of contigs': contigs_file_count,
+                                               '# of reads': reads_file_count,
+                                               '# of full genomes': full_genome_file_count,
+                                               'reference genome used': stats_df.loc['Reference used'],
+                                               'project name': project
+                                               })
+
+        run_summary_df = pd.DataFrame(projects_list)
+        run_summary_df['project name'] = run_summary_df['project name'].apply(lambda x:'<a href="/display/{0}">{0}</a>'.format(x))
+        run_summary_df = run_summary_df[['project name', '# of genomes analyzed', '# of contigs', '# of reads', 'reference genome used']]
+        return render_template('projects.html', run_summary=run_summary_df.to_html(escape=False, classes='run summary',index=False))
+    except Exception as e:
+        logging.exception(str(e))
+        return render_template('error.html', error={'msg' : f'There was a problem displaying projects: {str(e)}'})
 
 def send_email_message(message, project):
     SENDMAIL = "/usr/sbin/sendmail"  # sendmail location
@@ -558,10 +612,10 @@ def display(project, log_time=None):
     titles_list = []
     try:
         for output_file in output_files_list:
-            if os.path.exists(os.path.join(results_dir, output_file)):
+            if os.path.exists(os.path.join(results_dir, 'tables', output_file)):
                 if output_file == '{0}_summaryStatistics.txt'.format(project):
                     run_time = '' if not log_time else log_time[:6]
-                    stats_df = pd.read_table(os.path.join(results_dir, output_file), header=None, index_col=0)
+                    stats_df = pd.read_table(os.path.join(results_dir, 'tables', output_file), header=None, index_col=0)
                     del stats_df.index.name
                     stats_df.columns = ['']
                     run_summary_df = pd.DataFrame({'# of genomes analyzed': reads_file_count + contigs_file_count +
@@ -570,8 +624,7 @@ def display(project, log_time=None):
                                                    '# of reads': reads_file_count,
                                                    '# of full genomes': full_genome_file_count,
                                                    'reference genome used': stats_df.loc['Reference used'],
-                                                   'project name': project,
-                                                   'run time (s)': run_time
+                                                   'project name': project
                                                    }
                                                   )
                     output_tables_list.append(run_summary_df.to_html(classes='run_summary'))
@@ -579,24 +632,24 @@ def display(project, log_time=None):
                     titles_list.append('Run Summary')
                     titles_list.append('Summary Statistics')
                 elif output_file == '{0}_coverage.txt'.format(project):
-                    coverage_df = pd.read_table(os.path.join(results_dir, output_file))
+                    coverage_df = pd.read_table(os.path.join(results_dir, 'tables', output_file))
                     output_tables_list.append(coverage_df.to_html(classes='coverage'))
                     titles_list.append('Genome Coverage')
                 elif output_file == '{0}_snp_pairwiseMatrix.txt'.format(project):
-                    snp_df = pd.read_table(os.path.join(results_dir, output_file), sep='\t')
+                    snp_df = pd.read_table(os.path.join(results_dir, 'tables', output_file), sep='\t')
                     snp_df.rename(index=str, columns={'Unnamed: 0':''}, inplace=True)
                     snp_df.drop(snp_df.columns[-1], axis=1, inplace=True)
-                    output_tables_list.append(snp_df.to_html(classes='snp_pairwiseMatrix'))
+                    output_tables_list.append(snp_df.to_html(classes='snp_pairwiseMatrix', index=False))
                     titles_list.append('SNP pairwise Matrix')
                 elif output_file == '{0}_genome_lengths.txt'.format(project):
-                    genome_df = pd.read_table(os.path.join(results_dir, output_file))
-                    output_tables_list.append(genome_df.to_html(classes='genome_lengths'))
+                    genome_df = pd.read_table(os.path.join(results_dir, 'tables', output_file))
+                    output_tables_list.append(genome_df.to_html(classes='genome_lengths', index=False))
                     titles_list.append('Genome Length')
 
         # Prepare tree files -- create symlinks between tree files in output directory and flask static directory
         if not os.path.exists(target_dir):
             os.makedirs(target_dir)
-        tree_file_list = [fname for fname in os.listdir(results_dir) if fname.endswith('.fasttree')]
+        tree_file_list = [fname for fname in os.listdir(os.path.join(results_dir, 'trees')) if fname.endswith('.fasttree')]
 
         tree_files = []
         for tree in tree_file_list:
@@ -604,14 +657,14 @@ def display(project, log_time=None):
             target = os.path.join(target_dir, 'trees', tree_split)
             tree_files.append(tree_split)
             logging.debug('fasttree file: trees/{0}'.format(tree_split))
-            source = os.path.join(results_dir, tree_split)
+            source = os.path.join(results_dir, 'trees', tree_split)
             if not os.path.exists(target):
                 os.symlink(source, target)
             if not os.path.exists(target):
                 error = {'msg': 'File does not exists {0}'.format(target)}
                 return render_template('error.html', error=error)
 
-        logging.debug('results dir: {0}/*.fastree'.format(results_dir))
+        logging.debug(f'results dir: {results_dir}/trees/*.fastree')
 
         return render_template('display.html',
                         tables=output_tables_list,

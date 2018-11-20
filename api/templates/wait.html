@@ -34,6 +34,24 @@
             });
         }
 
+        function myCallback(result) {
+          return result
+        }
+        function get_num_results_files(project, callback) {
+            $.ajax({
+                type: 'GET',
+                url: '/num_results_files/' + project,
+                success: function(data, status, request) {
+                  let result = data['num_files'];
+                  callback(result);
+                },
+                error: function() {
+                    alert('Unexpected error');
+                }
+            });
+        }
+
+
         function display_status(project, project_status) {
             console.log('project: '+ project);
             // send ajax POST request to start background job
@@ -67,33 +85,42 @@
             console.log('update progress called with: ' + status_url);
             // send GET request to status URL
             console.log('project: '+ project);
+
             $.ajax({
                 type: 'GET',
                 url: status_url,
                 success: function(data, status, request) {
-                  result = data['Result'];
-                  project_status = data['task_output'];
+                  let result = data['Result'];
+                  let project_status = data['task_output'];
                   console.log('url: '+status_url);
                   console.log('result: '+result);
                   console.log('project_status: '+project_status);
                   console.log('status: '+status);
-                    if (result !== 'PENDING' && result !== 'PROGRESS') {
-                      var loading_div = document.getElementById("loading");
-                      var content_div = document.getElementById("content");
+                  let nfiles = get_num_results_files(project, myCallback);
+                  console.log(typeof nfiles);
+                  console.log(nfiles);
+                    if ( (result !== 'PENDING' && result !== 'PROGRESS') || (project_status === 'null' && nfiles > 0)) {
+                      let loading_div = document.getElementById("loading");
+                      let content_div = document.getElementById("content");
                       loading_div.style.display = 'none';
                       content_div.style.display = 'block';
-
                       send_notification(project);
                       get_display(project);
+                    }
+                    // not getting status updates, so check number of output files to see if job is done
+                    else if (project_status === 'null' && nfiles === 0){
+                      // rerun in 2 seconds
+                        setTimeout(function () {
+
+                            document.getElementById("project-status").innerHTML = 'current step...unknown';
+                            document.getElementById("project-time").innerHTML = 'elapsed time...unknown';
+
+                            update_progress(status_url, project);
+                        }, 1000);
                     }
                     else {
                         // rerun in 2 seconds
                         setTimeout(function () {
-                            {#display_status(project, project_status);#}
-                            {#var t1 = document.getElementById("project-status");#}
-                            {#var d = document.createElement("div");#}
-                            {#d.id ="step";#}
-                            {#t1.appendChild(d);#}
                           console.log('project status ' + project_status);
                           let status_json = JSON.parse(project_status);
                           console.log('status_json ' + status_json);
