@@ -449,6 +449,8 @@ def input():
         return redirect(url_for('projects'))
 
     form = InputForm()
+    if not os.path.exists(os.path.join(app.config['UPLOAD_DIR'], current_user.username)):
+        os.makedirs(os.path.join(app.config['UPLOAD_DIR'], current_user.username))
     files_list = os.listdir(os.path.join(app.config['UPLOAD_DIR'], current_user.username))
     form.reference_file.choices = []
     # form.reference_file.choices = [(a, a) for a in files_list]
@@ -676,7 +678,7 @@ def display(project, log_time=None):
     if not os.path.exists(workdir):
         error = {'msg': 'Directory does not exist {0}'.format(workdir)}
         return render_template('error.html', error=error)
-    
+
     # create output tables
     reads_file_count = len(
         [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
