@@ -10,7 +10,7 @@ import time
 import json
 import logging
 import pandas as pd
-from IPython.display import HTML
+from uuid import uuid4
 
 from flask import Flask, render_template, redirect, flash, url_for, request, send_file, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
@@ -124,6 +124,52 @@ def zip_output_files(project):
                 zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, '..')))
     return zip_name
 
+@app.route("/upload", methods=["POST"])
+def upload():
+    """Handle the upload of a file."""
+    form = request.form
+
+    # Create a unique "session ID" for this particular batch of uploads.
+    upload_key = str(uuid4())
+
+    # Is the upload using Ajax, or a direct POST by the form?
+    is_ajax = False
+    if form.get("__ajax", None) == "true":
+        is_ajax = True
+
+    # Target folder for these uploads.
+    target = app.config['UPLOAD_DIR']
+    try:
+        os.mkdir(target)
+    except:
+        if is_ajax:
+            return ajax_response(False, "Couldn't create upload directory: {}".format(target))
+        else:
+            return "Couldn't create upload directory: {}".format(target)
+
+    print("=== Form Data ===")
+    for key, value in list(form.items()):
+        print(key, "=>", value)
+
+    for upload in request.files.getlist("file"):
+        filename = upload.filename.rsplit("/")[0]
+        destination = "/".join([target, filename])
+        print("Accept incoming file:", filename)
+        print("Save it to:", destination)
+        upload.save(destination)
+
+    if is_ajax:
+        return ajax_response(True, upload_key)
+    else:
+        return redirect(url_for("input"))
+
+
+def ajax_response(status, msg):
+    status_code = "ok" if status else "error"
+    return json.dumps(dict(
+        status=status_code,
+        msg=msg,
+    ))
 
 def upload_files(request, project_dir, ref_dir, work_dir, form):
     """
@@ -262,7 +308,7 @@ def logout():
 
 @app.route('/files', methods=['GET'])
 def files_list():
-    return jsonify(os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], 'uploads', current_user.username)))
+    return jsonify(os.listdir(os.path.join('static', 'uploads', current_user.username)))
 
 
 @app.route('/register', methods=['GET', 'POST'])

@@ -9,5 +9,7 @@ class Config(object):
         'postgres:///phame_api01'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     STATIC_FOLDER = '/static/media'
+    UPLOAD_DIR = '/static/uploads'
+    MAX_CONTENT_LENGTH = 50 * 1024 * 1024
 
 
