@@ -10,6 +10,7 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     STATIC_FOLDER = '/static/media'
     UPLOAD_DIR = 'static/uploads'
+    PHAME_UPLOAD_DIR = '/api/static/uploads'
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024
 
 
