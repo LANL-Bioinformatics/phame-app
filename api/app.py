@@ -263,9 +263,9 @@ def check_files(form):
     :return: error: String containing file types that need to be uploaded
     """
     error = ''
-    if '0' in form.data_type.data and 'ref_dir' not in request.files:
+    if '0' in form.data_type.data and not form.reference_file:
         error += 'Please select full genome files...'
-    if '1' in form.data_type.data and 'work_dir' not in request.files:
+    if '1' in form.data_type.data :
         error += 'Please select contig files...'
     if '2' in form.data_type.data and 'reads_file' not in request.files:
         error += 'Please select reads file...'
@@ -309,8 +309,8 @@ def logout():
 
 
 @app.route('/files', methods=['GET'])
-def files_list():
-    return jsonify(os.listdir(os.path.join('static', 'uploads', current_user.username)))
+def upload_files_list():
+    return jsonify({'uploads':os.listdir(os.path.join(app.config['UPLOAD_DIR'], current_user.username))})
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -424,7 +424,11 @@ def input():
         return redirect(url_for('projects'))
 
     form = InputForm()
+    files_list = os.listdir(os.path.join(app.config['UPLOAD_DIR'], current_user.username))
     form.reference_file.choices = []
+    # form.reference_file.choices = [(a, a) for a in files_list]
+    form.complete_genomes.choices = [(a, a) for a in files_list]
+
     if request.method == 'POST':
         project_dir, ref_dir = project_setup(form)
         if project_dir is None:
