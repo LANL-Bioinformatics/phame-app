@@ -10,6 +10,7 @@
     function showRefFileAlert() {
       alert("Please select a file from Reference Genome");
     }
+
     function removeOptions(selectbox)
     {
         var i;
@@ -19,11 +20,9 @@
         }
     }
 
-
     function referenceFileUpdate() {
       console.log("updated file list");
       console.log(reference_file.options);
-      //using the function:
       removeOptions(document.getElementById("reference_file"));
       var genome_files = $('#complete_genomes').val();
       {#var genome_files = document.getElementById("complete_genomes").selected;#}
@@ -203,13 +202,7 @@
                 <span style="color: red;">[{{ error }}]</span>
               {% endfor %}
           </div>
-          <div class="flex-container-row">
-              <div class="flex-label">{{ form.ref_dir.label }}</div>
-              <div class="flex-field">{{ form.ref_dir(title='Reference genome files (.fasta/.fna/.gff)', data_toggle="tooltip", onchange="referenceFileUpdate()") }}</div>
-              {% for error in form.ref_dir.errors %}
-                <span style="color: red;">[{{ error }}]</span>
-              {% endfor %}
-          </div>
+
           <div id="contigs_file" style="display: none;">
               <div class="flex-container-row">
                   <div class="flex-label">{{ form.work_dir.label }}</div>
