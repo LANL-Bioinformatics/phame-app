@@ -33,6 +33,7 @@ class InputForm(FlaskForm):
     project = StringField(u'Project Name', description='Choose a unique project name')
     data_type = MultiCheckboxField(u'Data', choices=[('0', 'Complete'), ('1', 'Contig'), ('2', 'Read')], default='0')
     ref_dir = MultipleFileField(u'Upload Complete Genomes', description='.gff/.fasta')
+    complete_genomes = SelectMultipleField(u'Select Complete Genomes')
     work_dir = MultipleFileField(u'Upload Contigs')
     reads = SelectField(u'Type of Reads',choices=[('0', 'single reads'), ('1', 'paired reads'), ('2', 'both')], default='2')
     reads_file = MultipleFileField('Upload Reads')
