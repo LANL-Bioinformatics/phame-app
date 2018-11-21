@@ -138,14 +138,16 @@ def upload():
         is_ajax = True
 
     # Target folder for these uploads.
-    target = app.config['UPLOAD_DIR']
-    try:
-        os.mkdir(target)
-    except:
-        if is_ajax:
-            return ajax_response(False, "Couldn't create upload directory: {}".format(target))
-        else:
-            return "Couldn't create upload directory: {}".format(target)
+    target = os.path.join(app.config['UPLOAD_DIR'], current_user.username)
+    if not os.path.exists(target):
+        logging.debug(f'creating directory {target}')
+        try:
+            os.mkdir(target)
+        except:
+            if is_ajax:
+                return ajax_response(False, "Couldn't create upload directory: {}".format(target))
+            else:
+                return "Couldn't create upload directory: {}".format(target)
 
     print("=== Form Data ===")
     for key, value in list(form.items()):
