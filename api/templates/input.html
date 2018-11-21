@@ -10,18 +10,30 @@
     function showRefFileAlert() {
       alert("Please select a file from Reference Genome");
     }
+    function removeOptions(selectbox)
+    {
+        var i;
+        for(i = selectbox.options.length - 1 ; i >= 0 ; i--)
+        {
+            selectbox.remove(i);
+        }
+    }
+
+
     function referenceFileUpdate() {
       console.log("updated file list");
-      var genome_files = document.getElementById("ref_dir");
+      console.log(reference_file.options);
+      //using the function:
+      removeOptions(document.getElementById("reference_file"));
+      var genome_files = $('#complete_genomes').val();
+      {#var genome_files = document.getElementById("complete_genomes").selected;#}
       var ref_value = document.getElementById("reference").value;
       console.log(genome_files);
-      for (i = 0; i < genome_files.files.length; i++) {
-        console.log(genome_files.files[i]);
-        reference_file.options.add(new Option(genome_files.files[i].name, genome_files.files[i].name));
+      for (i = 0; i < genome_files.length; i++) {
+        console.log(genome_files[i]);
+        reference_file.options.add(new Option(genome_files[i], genome_files[i]));
       }
-      if (ref_value === '1') {
-        {#showRefFileAlert();#}
-      }
+
     }
 
     function showBootstrap() {
@@ -112,10 +124,10 @@
       console.log('calling get files list');
       $.ajax({
           type: 'GET',
-          url: '{{ url_for('files_list') }}',
+          url: '{{ url_for('upload_files_list') }}',
           success: function(data, status, request) {
-            for (i = 0; i < data.length; i++) {
-              document.getElementById("uploads").innerHTML += data[i] + "\n";
+            for (i = 0; i < data['uploads'].length; i++) {
+              document.getElementById("uploads").innerHTML += data['uploads'][i] + "\n";
             }
           },
           error: function() {
@@ -124,9 +136,7 @@
       });
     }
 
-    window.onload = function() {
-  getUploadedFilesList();
-}
+    window.onload = function() {getUploadedFilesList();}
     </script>
 
 
@@ -233,6 +243,15 @@
               {% for error in form.reference.errors %}
                 <span style="color: red;">[{{ error }}]</span>
               {% endfor %}
+          </div>
+          <div id="complete_genomes_div" style="display: block">
+              <div class="flex-container-row">
+                  <div class="flex-label">{{ form.complete_genomes.label }}</div>
+                  <div class="flex-field">{{ form.complete_genomes(title='Select complete genome files', data_toggle="tooltip", onchange="referenceFileUpdate()") }}</div>
+                  {% for error in form.complete_genomes.errors %}
+                    <span style="color: red;">[{{ error }}]</span>
+                  {% endfor %}
+              </div>
           </div>
           <div id="ref_file_div" style="display: block">
               <div class="flex-container-row">
