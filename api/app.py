@@ -173,6 +173,32 @@ def ajax_response(status, msg):
         msg=msg,
     ))
 
+
+def link_files(project_dir, ref_dir, work_dir, form):
+    os.makedirs(project_dir)
+    if len(form.complete_genomes.data) > 0:
+        if not os.path.exists(ref_dir):
+            os.makedirs(ref_dir)
+        # symlink complete genome files
+        for file_name in form.complete_genomes.data:
+            os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
+                       os.path.join(ref_dir, file_name))
+
+    if len(form.reads_files.data) > 0:
+        # symlink reads files
+        for file_name in form.reads_files.data:
+            os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], file_name),
+                       os.path.join(ref_dir, file_name))
+
+    if len(form.contig_files.data) > 0:
+        os.makedirs(work_dir)
+        # symlink contig files
+        for file_name in form.contig_files.data:
+            new_filename = os.path.splitext(file_name)[0] + '.contig'
+            os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], file_name),
+                       os.path.join(work_dir, new_filename))
+
+
 def upload_files(request, project_dir, ref_dir, work_dir, form):
     """
     uploads files to the proper directories
@@ -227,7 +253,6 @@ def project_setup(form):
     :param form:
     :return: project and reference directory paths
     """
-    # project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user, form.project.data)
     project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, form.project.data)
     ref_dir = os.path.join(project_dir, 'refdir')
     work_dir = os.path.join(project_dir, 'workdir')
@@ -235,7 +260,7 @@ def project_setup(form):
     # project name must be unique
     if os.path.exists(project_dir):
         return None, None
-    upload_files(request, project_dir, ref_dir, work_dir, form)
+    link_files(project_dir, ref_dir, work_dir, form)
     return project_dir, ref_dir
 
 
@@ -428,9 +453,14 @@ def input():
     form.reference_file.choices = []
     # form.reference_file.choices = [(a, a) for a in files_list]
     form.complete_genomes.choices = [(a, a) for a in files_list]
+    form.contig_files.choices = [(a, a) for a in files_list]
+    form.reads_files.choices = [(a, a) for a in files_list]
+
 
     if request.method == 'POST':
+        logging.debug(f'request method {request.method}')
         project_dir, ref_dir = project_setup(form)
+        logging.debug(f'ref file {form.reference_file.data}')
         if project_dir is None:
             error = 'Project directory already exists'
             return render_template('input.html', title='Phame input', form=form, error=error)
@@ -457,7 +487,7 @@ def input():
 
             # Ensure a reference file is selected if the Reference option selected is 'given'
             if form.reference.data == '1' and len(form.reference_file.data) == 0:
-                error = 'You must select a reference genome if you select "given" in from the Reference menu'
+                error = 'You must select a reference genome if you select "manual selection" in from the Reference menu'
                 remove_uploaded_files(project_dir)
                 return render_template('input.html', title='Phame input', form=form, error=error)
 
@@ -465,8 +495,8 @@ def input():
             create_config_file(form)
 
             return redirect(url_for('runphame', project=form.project.data))
-        else:
-            remove_uploaded_files(project_dir)
+        # else:
+        #     remove_uploaded_files(project_dir)
 
     return render_template('input.html', title='Phame input', form=form)
 
