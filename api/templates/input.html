@@ -115,7 +115,6 @@
           url: '{{ url_for('files_list') }}',
           success: function(data, status, request) {
             for (i = 0; i < data.length; i++) {
-              console.log(data[i]);
               document.getElementById("uploads").innerHTML += data[i] + "\n";
             }
           },
@@ -169,7 +168,7 @@
             </div>
         </fieldset><p>
 
-        <input type="submit" value="Upload!" id="upload-button">
+        <input type="submit" value="Upload!" id="upload-button" onclick="getUploadedFilesList()">
     </form>
     <form action="" method="post" enctype="multipart/form-data" novalidate>
     {% if error %}
