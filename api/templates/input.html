@@ -107,7 +107,29 @@
         content_div.style.display = 'none';
         document.getElementById("project-name").innerHTML = 'running ' + project_name + '...';
     }
+
+    function getUploadedFilesList() {
+      console.log('calling get files list');
+      $.ajax({
+          type: 'GET',
+          url: '{{ url_for('files_list') }}',
+          success: function(data, status, request) {
+            for (i = 0; i < data.length; i++) {
+              console.log(data[i]);
+              document.getElementById("uploads").innerHTML += data[i] + "\n";
+            }
+          },
+          error: function() {
+              alert('Unexpected error');
+          }
+      });
+    }
+
+    window.onload = function() {
+  getUploadedFilesList();
+}
     </script>
+
 
 {% endblock %}
 
@@ -129,6 +151,26 @@
         </ul>
       {% endif %}
     {% endwith %}
+
+    <form id="upload-form" action="{{ url_for('upload') }}" method="POST" enctype="multipart/form-data">
+
+        <strong>Uploaded Files:</strong><br>
+        <textarea id="uploads" rows="4" cols="40" name="uploads"></textarea><p>
+
+        <strong>Files:</strong><br>
+        Select files to upload.
+        <input id="file-picker" type="file" name="file" multiple><p>
+
+        <fieldset id="progress" style="display: none">
+            <legend>Files Progress</legend>
+
+            <div class="progress-trough">
+                <div id="progress-bar" class="progress-bar">0%</div>
+            </div>
+        </fieldset><p>
+
+        <input type="submit" value="Upload!" id="upload-button">
+    </form>
     <form action="" method="post" enctype="multipart/form-data" novalidate>
     {% if error %}
     <p class=error><strong>Error:</strong> {{ error }}
