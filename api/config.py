@@ -11,6 +11,6 @@ class Config(object):
     STATIC_FOLDER = '/static/media'
     UPLOAD_DIR = 'static/uploads'
     PHAME_UPLOAD_DIR = '/api/static/uploads'
-    MAX_CONTENT_LENGTH = 50 * 1024 * 1024
+    MAX_CONTENT_LENGTH = 1000 * 1024 * 1024
 
 
