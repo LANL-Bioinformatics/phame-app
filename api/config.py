@@ -10,4 +10,5 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     STATIC_FOLDER = '/static/media'
     MAX_CONTENT_LENGTH = 1000 * 1024 * 1024
+    POOL_SIZE = 10
 

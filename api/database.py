@@ -9,7 +9,7 @@ pwd = os.environ['POSTGRES_PASSWORD']
 db = os.environ['POSTGRES_DB']
 host = os.environ['POSTGRES_HOST']
 port = os.environ['POSTGRES_PORT']
-pool_size = 10
+pool_size = os.environ['POOL_SIZE']
 engine = create_engine('postgres://%s:%s@%s:%s/%s' % (user, pwd, host, port, db), pool_size=pool_size)
 
 db_session = scoped_session(sessionmaker(autocommit=False,
