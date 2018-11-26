@@ -41,7 +41,7 @@ class InputForm(FlaskForm):
     reads_files = SelectMultipleField(u'Select Reads Files')
     aligner = SelectField(choices=[('bowtie', 'bowtie'), ('bwa', 'bwa')], default='bowtie')
     reference = SelectField(choices=[('0', 'random'), ('1', 'manual selection'), ('2', 'MASH')], default='1')
-    reference_file = SelectMultipleField(u'Select Reference Genome', [validators.Optional()])
+    reference_file = SelectMultipleField(u'Select Reference Genome')
     snp_choices = [('0', 'No'), ('1', 'Yes')]
     cds_snps = SelectField(u'Generate SNPs from coding regions',choices=snp_choices, default='0')
     buildSNPdb = SelectField(u'Build SNP Database',choices=[('0', 'only align to reference'), ('1', 'build SNP database')], default='0')
