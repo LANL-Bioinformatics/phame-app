@@ -28,17 +28,22 @@ class SubsetForm(FlaskForm):
     subset_files = SelectMultipleField(u'Full Genomes')
     submit = SubmitField('Submit')
 
+
+class UploadForm(FlaskForm):
+    file_name = SelectMultipleField()
+    ref_dir = MultipleFileField(u'Upload Files', description='.gff/.fasta')
+    upload = SubmitField('Upload')
+    remove = SubmitField('Remove')
+
+
 class InputForm(FlaskForm):
     boolean_choices = [('0', 'no'), ('1', 'yes')]
     project = StringField(u'Project Name', description='Choose a unique project name')
     data_type = MultiCheckboxField(u'Data', choices=[('0', 'Complete'), ('1', 'Contig'), ('2', 'Read')], default='0')
-    # ref_dir = MultipleFileField(u'Upload Complete Genomes', description='.gff/.fasta')
     complete_genomes = SelectMultipleField(u'Select Complete Genomes')
-    # work_dir = MultipleFileField(u'Upload Contigs')
-    contig_files = SelectMultipleField(u'Select Contig Files')
-    reads = SelectField(u'Type of Reads',choices=[('0', 'single reads'), ('1', 'paired reads'), ('2', 'both')], default='2')
-    # reads_file = MultipleFileField('Upload Reads')
-    reads_files = SelectMultipleField(u'Select Reads Files')
+    contigs = SelectMultipleField(u'Select Contigs')
+    reads_type = SelectField(u'Type of Reads',choices=[('0', 'single reads'), ('1', 'paired reads'), ('2', 'both')], default='2')
+    reads = SelectMultipleField(u'Select Reads')
     aligner = SelectField(choices=[('bowtie', 'bowtie'), ('bwa', 'bwa')], default='bowtie')
     reference = SelectField(choices=[('0', 'random'), ('1', 'manual selection'), ('2', 'MASH')], default='1')
     reference_file = SelectMultipleField(u'Select Reference Genome')
