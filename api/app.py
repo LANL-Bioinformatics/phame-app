@@ -149,15 +149,15 @@ def upload():
             else:
                 return "Couldn't create upload directory: {}".format(target)
 
-    print("=== Form Data ===")
+    logging.debug("=== Form Data ===")
     for key, value in list(form.items()):
-        print(key, "=>", value)
+        logging.debug(key, "=>", value)
 
     for upload in request.files.getlist("file"):
         filename = upload.filename.rsplit("/")[0]
         destination = "/".join([target, filename])
-        print("Accept incoming file:", filename)
-        print("Save it to:", destination)
+        logging.debug("Accept incoming file:", filename)
+        logging.debug("Save it to:", destination)
         upload.save(destination)
 
     if is_ajax:
@@ -183,7 +183,7 @@ def link_files(project_dir, ref_dir, work_dir, form):
         for file_name in form.complete_genomes.data:
             os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
                        os.path.join(ref_dir, file_name))
-
+        form.reference_file.choices = [(a, a) for a in form.complete_genomes.data]
     if len(form.reads_files.data) > 0:
         # symlink reads files
         for file_name in form.reads_files.data:
@@ -335,7 +335,8 @@ def logout():
 
 @app.route('/files', methods=['GET'])
 def upload_files_list():
-    return jsonify({'uploads':os.listdir(os.path.join(app.config['UPLOAD_DIR'], current_user.username))})
+    file_list = os.listdir(os.path.join(app.config['UPLOAD_DIR'], current_user.username))
+    return jsonify({'uploads':sorted(file_list)})
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -453,7 +454,6 @@ def input():
         os.makedirs(os.path.join(app.config['UPLOAD_DIR'], current_user.username))
     files_list = os.listdir(os.path.join(app.config['UPLOAD_DIR'], current_user.username))
     form.reference_file.choices = []
-    # form.reference_file.choices = [(a, a) for a in files_list]
     form.complete_genomes.choices = [(a, a) for a in files_list]
     form.contig_files.choices = [(a, a) for a in files_list]
     form.reads_files.choices = [(a, a) for a in files_list]

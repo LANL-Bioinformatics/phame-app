@@ -181,8 +181,8 @@
     </form>
     <form action="" method="post" enctype="multipart/form-data" novalidate>
     {% if error %}
-    <p class=error><strong>Error:</strong> {{ error }}
-  {% endif %}
+      <p class=error><strong>Error:</strong> {{ error }}
+    {% endif %}
 
 
         {{ form.hidden_tag() }}
