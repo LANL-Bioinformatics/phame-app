@@ -5,7 +5,7 @@
 // Constants
 var MAX_UPLOAD_FILE_SIZE = 1024*1024; // 1 MB
 var UPLOAD_URL = "/upload";
-var NEXT_URL   = "/files/";
+var NEXT_URL   = "/files";
 
 // List of pending files to handle when the Upload button is finally clicked.
 var PENDING_FILES  = [];
@@ -65,7 +65,7 @@ function doUpload() {
                     if (event.lengthComputable) {
                         percent = Math.ceil(position / total * 100);
                     }
-
+                    console.log('percent '+percent);
                     // Set the progress bar.
                     $progressBar.css({"width": percent + "%"});
                     $progressBar.text(percent + "%");
@@ -82,7 +82,7 @@ function doUpload() {
         success: function(data) {
             $progressBar.css({"width": "100%"});
             data = JSON.parse(data);
-
+            console.log('data '+data.msg);
             // How'd it go?
             if (data.status === "error") {
                 // Uh-oh.
@@ -93,6 +93,18 @@ function doUpload() {
             else {
                 // Ok! Get the UUID.
                 var uuid = data.msg;
+                $("#progress").hide();
+                $.ajax({
+                  type: 'GET',
+                  url: NEXT_URL,
+                  success: function(data, status, request) {
+                    console.log('uploaded files list');
+                    return data['uploads'];
+                  },
+                  error: function() {
+                      alert('Unexpected error');
+                  }
+              });
 
             }
         },
@@ -144,6 +156,7 @@ function handleFiles(files) {
 
 function initDropbox() {
     var $dropbox = $("#dropbox");
+    console.log('init dropbox called ' + $dropbox);
 
     // On drag enter...
     $dropbox.on("dragenter", function(e) {

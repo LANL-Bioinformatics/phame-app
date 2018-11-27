@@ -3,6 +3,7 @@
 
   <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/phame-loading.css') }}">
   <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/phame-input.css') }}">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
 <script>
     function outputUpdate(cutoff) {
           document.querySelector('#selected-cutoff').value = Math.round(cutoff * 100) / 100;
@@ -176,24 +177,37 @@
 
     <form id="upload-form" action="{{ url_for('upload') }}" method="POST" enctype="multipart/form-data">
 
-        <strong>Uploaded Files:</strong><br>
-        <textarea id="uploads" rows="4" cols="40" name="uploads"></textarea><p>
 
-        <strong>Files:</strong><br>
-        Select files to upload.
-        <input id="file-picker" type="file" name="file" multiple><p>
+      <div class="flex-container-col">
+        <div class="flex-container-row">
+          <div class="flex-label">Uploaded Files</div>
 
-        <fieldset id="progress" style="display: none">
-            <legend>Files Progress</legend>
+          <div class="flex-field"><textarea id="uploads" rows="4" cols="40" name="uploads"></textarea><p></div>
 
-            <div class="progress-trough">
-                <div id="progress-bar" class="progress-bar">0%</div>
-            </div>
-        </fieldset><p>
+        </div>
+
+        <div class="flex-container-row">
+          <div class="flex-label">Select files to upload.</div>
+
+          <div class="flex-field"><input id="file-picker" type="file" name="file" multiple><p></div>
+
+        </div>
+      </div>
+
+      <fieldset id="progress" style="display: none">
+          <legend>Files Progress</legend>
+
+          <div class="progress-trough">
+              <div id="progress-bar" class="progress-bar">0%</div>
+          </div>
+      </fieldset><p>
 
         <input type="submit" value="Upload!" id="upload-button" onclick="getUploadedFilesList()">
         <input type="submit" value="Remove files" id="remove-button" onclick="removeUploadedFiles()">
     </form>
+
+<script type="text/javascript" src="{{ url_for('static', filename='javascript/jquery-2.1.1.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='javascript/uploadr.js') }}"></script>
     <form action="" method="post" enctype="multipart/form-data" novalidate>
     {% if error %}
       <p class=error><strong>Error:</strong> {{ error }}
