@@ -94,17 +94,18 @@ function doUpload() {
                 // Ok! Get the UUID.
                 var uuid = data.msg;
                 $("#progress").hide();
-                $.ajax({
-                  type: 'GET',
-                  url: NEXT_URL,
-                  success: function(data, status, request) {
-                    console.log('uploaded files list');
-                    return data['uploads'];
-                  },
-                  error: function() {
-                      alert('Unexpected error');
-                  }
-              });
+                window.location = '/input';
+              //   $.ajax({
+              //     type: 'GET',
+              //     url: NEXT_URL,
+              //     success: function(data, status, request) {
+              //       console.log('uploaded files list');
+              //       return data['uploads'];
+              //     },
+              //     error: function() {
+              //         alert('Unexpected error');
+              //     }
+              // });
 
             }
         },
