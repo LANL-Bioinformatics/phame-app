@@ -27,6 +27,7 @@
 .flex-label {
   display: grid;
   justify-content: left;
+  font-weight: bold;
 }
 
 .flex-label > div {
