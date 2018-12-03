@@ -231,15 +231,6 @@
                 <span style="color: red;">[{{ error }}]</span>
               {% endfor %}
           </div>
-          <div id="reads_combo_div" style="display: none;">
-              <div class="flex-container-row">
-                  <div class="flex-label">{{ form.reads_type.label }}</div>
-                  <div class="flex-field">{{ form.reads_type(title='Select Single-ended, paired-ended or both', data_toggle="tooltip") }}</div>
-                  {% for error in form.reads_type.errors %}
-                    <span style="color: red;">[{{ error }}]</span>
-                  {% endfor %}
-              </div>
-          </div>
           <div class="flex-container-row">
               <div class="flex-label">{{ form.reference.label }}</div>
               <div class="flex-field">{{ form.reference(title='Choose whether to use a random reference file, reference calculated from ANI or use a file of your choosing', data_toggle="tooltip", onchange="showReferenceFile()") }}</div>
@@ -265,20 +256,29 @@
                   {% endfor %}
               </div>
           </div>
-          <div id="reads_div" style="display: none;">
-              <div class="flex-container-row">
-                  <div class="flex-label">{{ form.reads.label }}</div>
-                  <div class="flex-field">{{ form.reads(title='Select reads files', data_toggle="tooltip") }}</div>
-                  {% for error in form.reads.errors %}
-                    <span style="color: red;">[{{ error }}]</span>
-                  {% endfor %}
-              </div>
-          </div>
           <div id="contigs_div" style="display: none;">
               <div class="flex-container-row">
                   <div class="flex-label">{{ form.contigs.label }}</div>
                   <div class="flex-field">{{ form.contigs(title='Select contig files', data_toggle="tooltip") }}</div>
                   {% for error in form.contigs.errors %}
+                    <span style="color: red;">[{{ error }}]</span>
+                  {% endfor %}
+              </div>
+          </div>
+          <div id="reads_combo_div" style="display: none;">
+              <div class="flex-container-row">
+                  <div class="flex-label">{{ form.reads_type.label }}</div>
+                  <div class="flex-field">{{ form.reads_type(title='Select Single-ended, paired-ended or both', data_toggle="tooltip") }}</div>
+                  {% for error in form.reads_type.errors %}
+                    <span style="color: red;">[{{ error }}]</span>
+                  {% endfor %}
+              </div>
+          </div>
+          <div id="reads_div" style="display: none;">
+              <div class="flex-container-row">
+                  <div class="flex-label">{{ form.reads.label }}</div>
+                  <div class="flex-field">{{ form.reads(title='Select reads files', data_toggle="tooltip") }}</div>
+                  {% for error in form.reads.errors %}
                     <span style="color: red;">[{{ error }}]</span>
                   {% endfor %}
               </div>
