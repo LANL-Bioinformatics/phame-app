@@ -47,6 +47,7 @@ services:
     hostname: web
     env_file:
       - ./.envs/.local/.postgres
+      - ./.envs/.local/.mailgun
     restart: always
     volumes:
       - phame_data:/phame_api/media
