@@ -215,7 +215,6 @@ def link_files(project_dir, ref_dir, work_dir, form):
         for file_name in form.reads.data:
             os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
                        os.path.join(ref_dir, file_name))
-        # form.reads_files.choices = [(a, a) for a in form.reads_files.data]
 
     if len(form.contigs.data) > 0:
         os.makedirs(work_dir)
@@ -224,8 +223,6 @@ def link_files(project_dir, ref_dir, work_dir, form):
             new_filename = os.path.splitext(file_name)[0] + '.contig'
             os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
                        os.path.join(work_dir, new_filename))
-
-        # form.contig_files.choices = [(a, a) for a in form.contig_files.data]
 
 
 def remove_uploaded_files(project_dir):
@@ -270,7 +267,7 @@ def create_config_file(form):
     form_dict['ref_dir'] = '../{0}/refdir/'.format(project)
     form_dict['work_dir'] = '../{0}/workdir'.format(project)
     if len(form.reference_file.data) > 0:
-        form_dict['reference_file'] = form.reference_file.data[0]
+        form_dict['reference_file'] = form.reference_file.data
     content = render_template('phame.tmpl', form=form_dict)
     with open(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'config.ctl'), 'w') as conf:
         conf.write(content)
@@ -611,7 +608,7 @@ def send_email_message(message, project):
 
 
 def send_mailgun(message, project):
-    key = '21ef71d498213b5dc9f52648e049f031-c8e745ec-6fe78acd'
+    key = os.environ['MAILGUN_KEY']
     email_domain = 'mail.edgebioinformatics.org'
     recipient = current_user.email
     logging.info('current_user.email: {0}'.format(recipient))
