@@ -200,7 +200,7 @@ def ajax_response(status, msg):
 
 def link_files(project_dir, ref_dir, work_dir, form):
     """Symlink files in user's upload directory in web container to project directory in PhaME container"""
-    os.makedirs(project_dir)
+    os.makedirs(project_dir, exist_ok=True)
     if len(form.complete_genomes.data) > 0:
         if not os.path.exists(ref_dir):
             os.makedirs(ref_dir)
@@ -248,8 +248,12 @@ def project_setup(form):
     ref_dir = os.path.join(project_dir, 'refdir')
     work_dir = os.path.join(project_dir, 'workdir')
     logging.debug('project directory: {0}'.format(project_dir))
+    logging.debug(f'reference file: {form.reference_file.data}')
+    logging.debug(f'reference file: {form.project.data}')
     # project name must be unique
-    if os.path.exists(project_dir):
+    if os.path.exists(os.path.join(work_dir, 'results', f'{form.project.data}.log')) \
+        or len(form.reference_file.data) == 0 \
+        or len(form.project.data) == 0:
         return None, None
     link_files(project_dir, ref_dir, work_dir, form)
     return project_dir, ref_dir
@@ -456,7 +460,10 @@ def input():
 
     if request.method == 'POST':
         logging.debug(f'request method {request.method}')
-        logging.debug(f'reads files {form.reads.data}')
+        logging.debug(f'reference file {form.reference_file.data}')
+        if len(form.project.data) == 0:
+            error = 'Please enter a project name'
+            return render_template('input.html', title='Phame input', form=form, error=error)
         project_dir, ref_dir = project_setup(form)
         logging.debug(f'ref file {form.reference_file.data}')
         if project_dir is None:
@@ -637,12 +644,13 @@ def send_mailgun(message, project):
 
 @app.route('/notify/<project>', methods=['GET'])
 def notify(project):
-    state = None
-    try:
-        state = send_mailgun('Your project {0} has finished running'.format(project), project)
-        logging.info('message sent to {0} for project {1} status code {2}'.format(current_user.email, project, state))
-    except os.error as e:
-        logging.error(str(e))
+    logging.debug(f"send notifications: {app.config['SEND_NOTIFICATIONS']}")
+    if app.config['SEND_NOTIFICATIONS']:
+        try:
+            state = send_mailgun('Your project {0} has finished running'.format(project), project)
+            logging.info('message sent to {0} for project {1} status code {2}'.format(current_user.email, project, state))
+        except os.error as e:
+            logging.error(str(e))
     return redirect(url_for('display', project=project))
 
 class Switcher(object):
