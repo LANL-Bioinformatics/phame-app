@@ -209,9 +209,10 @@
 <script type="text/javascript" src="{{ url_for('static', filename='javascript/jquery-2.1.1.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='javascript/uploadr.js') }}"></script>
     <form action="" method="post" enctype="multipart/form-data" novalidate>
-    {% if error %}
-      <p class=error><strong>Error:</strong> {{ error }}
-    {% endif %}
+
+        {% if error %}
+          <p class=error><strong>Error:</strong> {{ error }}
+        {% endif %}
 
 
         {{ form.hidden_tag() }}
