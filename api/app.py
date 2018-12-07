@@ -206,6 +206,8 @@ def link_files(project_dir, ref_dir, work_dir, form):
             os.makedirs(ref_dir)
         # symlink complete genome files
         for file_name in form.complete_genomes.data:
+            if os.path.exists(os.path.join(ref_dir, file_name)):
+                os.remove(os.path.join(ref_dir, file_name))
             os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
                        os.path.join(ref_dir, file_name))
         form.reference_file.choices = [(a, a) for a in form.complete_genomes.data]
@@ -213,6 +215,8 @@ def link_files(project_dir, ref_dir, work_dir, form):
     if len(form.reads.data) > 0:
         # symlink reads files
         for file_name in form.reads.data:
+            if os.path.exists(os.path.join(ref_dir, file_name)):
+                os.remove(os.path.join(ref_dir, file_name))
             os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
                        os.path.join(ref_dir, file_name))
 
@@ -221,6 +225,8 @@ def link_files(project_dir, ref_dir, work_dir, form):
         # symlink contig files
         for file_name in form.contigs.data:
             new_filename = os.path.splitext(file_name)[0] + '.contig'
+            if os.path.exists(os.path.join(ref_dir, file_name)):
+                os.remove(os.path.join(ref_dir, new_filename))
             os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
                        os.path.join(work_dir, new_filename))
 
@@ -250,7 +256,7 @@ def project_setup(form):
     logging.debug('project directory: {0}'.format(project_dir))
     logging.debug(f'reference file: {form.reference_file.data}')
     logging.debug(f'reference file: {form.project.data}')
-    # project name must be unique
+    # project name for projects that have successfully completed must be unique
     if os.path.exists(os.path.join(work_dir, 'results', f'{form.project.data}.log')) \
         or len(form.reference_file.data) == 0 \
         or len(form.project.data) == 0:
@@ -467,14 +473,11 @@ def input():
         project_dir, ref_dir = project_setup(form)
         logging.debug(f'ref file {form.reference_file.data}')
         if project_dir is None:
+            # project creation failed because there is an existing project that successfully completed
             error = 'Project directory already exists'
             return render_template('input.html', title='Phame input', form=form, error=error)
         if form.validate_on_submit():
             # Perform validation based on requirements of PhaME
-            # files_error = check_files(form)
-            # if len(files_error) > 0:
-            #     return render_template('input.html', title='Phame input', form=form, error=files_error)
-
             if ('1' in form.data_type.data or '2' in form.data_type.data) and len(form.reference_file.data) == 0:
                 error = 'You must upload a reference genome if you select Contigs or Reads from Data'
                 remove_uploaded_files(project_dir)
@@ -744,9 +747,11 @@ def display(project, log_time=None):
                     titles_list.append('Genome Coverage')
                 elif output_file == '{0}_snp_pairwiseMatrix.txt'.format(project):
                     snp_df = pd.read_table(os.path.join(results_dir, 'tables', output_file), sep='\t')
-                    snp_df.rename(index=str, columns={'Unnamed: 0':''}, inplace=True)
+                    snp_df.rename(index=str, columns={'Unnamed: 0': 'Genome'}, inplace=True)
                     snp_df.drop(snp_df.columns[-1], axis=1, inplace=True)
-                    output_tables_list.append(snp_df.to_html(classes='snp_pairwiseMatrix', index=False))
+                    snp_df.set_index('genome', inplace=True)
+                    snp_df = snp_df[list(snp_df.columns)].fillna(0.0).astype(int)
+                    output_tables_list.append(snp_df.to_html(classes='snp_pairwiseMatrix', index=True))
                     titles_list.append('SNP pairwise Matrix')
                 elif output_file == '{0}_genome_lengths.txt'.format(project):
                     genome_df = pd.read_table(os.path.join(results_dir, 'tables', output_file))
@@ -756,7 +761,7 @@ def display(project, log_time=None):
         # Prepare tree files -- create symlinks between tree files in output directory and flask static directory
         if not os.path.exists(target_dir):
             os.makedirs(target_dir)
-        tree_file_list = [fname for fname in os.listdir(os.path.join(results_dir, 'trees')) if fname.endswith('.fasttree')]
+        tree_file_list = [fname for fname in os.listdir(os.path.join(results_dir, 'trees'))]
 
         tree_files = []
         for tree in tree_file_list:
