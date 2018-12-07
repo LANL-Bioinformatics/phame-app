@@ -120,7 +120,7 @@
             } else {
               random_ref_file.style.display = "block";
               console.log('len ref options ' + reference_file.options.length);
-              var idx = Math.floor(Math.random() * reference_file.options.length - 1);
+              var idx = Math.floor(Math.random() * reference_file.options.length);
               console.log('idx ' + idx);
               console.log(reference_file.options[idx]);
               document.getElementById("random_genome_file").innerHTML =reference_file.options[idx].value;
