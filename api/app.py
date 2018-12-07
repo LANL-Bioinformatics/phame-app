@@ -749,7 +749,7 @@ def display(project, log_time=None):
                     snp_df = pd.read_table(os.path.join(results_dir, 'tables', output_file), sep='\t')
                     snp_df.rename(index=str, columns={'Unnamed: 0': 'Genome'}, inplace=True)
                     snp_df.drop(snp_df.columns[-1], axis=1, inplace=True)
-                    snp_df.set_index('genome', inplace=True)
+                    snp_df.set_index('Genome', inplace=True)
                     snp_df = snp_df[list(snp_df.columns)].fillna(0.0).astype(int)
                     output_tables_list.append(snp_df.to_html(classes='snp_pairwiseMatrix', index=True))
                     titles_list.append('SNP pairwise Matrix')
