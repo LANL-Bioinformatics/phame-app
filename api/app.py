@@ -518,6 +518,17 @@ def display_tree(project, tree):
     """
     return render_template('tree_output.html', tree= tree, project=project)
 
+def get_config_property(project_dir, property):
+    value = None
+    try:
+        with open(os.path.join(project_dir, 'config.ctl'), 'r') as fp:
+            lines = fp.readlines()
+            for line in lines:
+                if re.search(property, line):
+                    value = line.split('=')[1].split()[0].strip()
+    except IOError as e:
+        logging.exception(f'Cannot get config property {property} for project directory {project_dir}')
+    return value
 
 @app.route('/download/<project>')
 def download(project):
@@ -565,31 +576,29 @@ def projects():
                 if os.path.exists(workdir) else 0
             full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or
                                                                                     fname.endswith('.fasta'))])
-            if os.path.exists(summary_statistics_file):
+            num_threads = get_config_property(project_dir, 'threads')
+            if num_threads is None:
+                num_threads = 'Unknown'
 
+            project_summary = {'# of genomes analyzed': reads_file_count + contigs_file_count + full_genome_file_count,
+                               '# of contigs': contigs_file_count,
+                               '# of reads': reads_file_count,
+                               '# of full genomes': full_genome_file_count,
+                               'reference genome used': '',
+                               'project name': project,
+                               'number of threads': num_threads,
+                               'status': ''
+                               }
+            if os.path.exists(summary_statistics_file):
                 stats_df = pd.read_table(summary_statistics_file, header=None, index_col=0, squeeze=True)
                 logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}, ref used {stats_df.loc['Reference used']}")
-                projects_list.append({'# of genomes analyzed': reads_file_count + contigs_file_count +
-                                                                        full_genome_file_count,
-                                      '# of contigs': contigs_file_count,
-                                      '# of reads': reads_file_count,
-                                      '# of full genomes': full_genome_file_count,
-                                      'reference genome used': stats_df.loc['Reference used'],
-                                      'project name': project,
-                                      'status': 'Finished'
-                                      })
+                project_summary['reference genome used'] = stats_df.loc['Reference used']
+                project_summary['status'] = 'Finished'
+                projects_list.append(project_summary)
             else:
                 logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}")
                 logging.debug('Running')
-                projects_list.append({'# of genomes analyzed': reads_file_count + contigs_file_count +
-                                                               full_genome_file_count,
-                                      '# of contigs': contigs_file_count,
-                                      '# of reads': reads_file_count,
-                                      '# of full genomes': full_genome_file_count,
-                                      'reference genome used': '',
-                                      'project name': project,
-                                      'status': 'Running'
-                                      })
+                projects_list.append(project_summary)
 
         run_summary_df = pd.DataFrame(projects_list)
 
@@ -598,7 +607,7 @@ def projects():
             lambda x: '<a href="/display/{0}">{0}</a>'.format(x['project name']) if x['status'] == 'Finished' else x[
                 'project name'], axis=1)
         run_summary_df = run_summary_df[['project name', '# of genomes analyzed', '# of contigs', '# of reads',
-                                         'reference genome used', 'status']]
+                                         'reference genome used', 'number of threads', 'status']]
         return render_template('projects.html', run_summary=run_summary_df.to_html(escape=False, classes='run summary',
                                                                                    index=False))
     except Exception as e:
