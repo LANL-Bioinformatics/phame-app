@@ -180,8 +180,8 @@ def upload():
     for upload in request.files.getlist("file"):
         filename = upload.filename.rsplit("/")[0]
         destination = "/".join([target, filename])
-        logging.debug("Accept incoming file:", filename)
-        logging.debug("Save it to:", destination)
+        # logging.debug("Accept incoming file:", filename)
+        # logging.debug("Save it to:", destination)
         upload.save(destination)
 
     if is_ajax:
@@ -265,6 +265,17 @@ def project_setup(form):
     return project_dir, ref_dir
 
 
+def get_data_type(options_list):
+    # determines what option to enter into config file based on which options were selected in 'Data' from form
+    # 0:only complete(F); 1:only contig(C); 2:only reads(R);
+    # 3:combination F+C; 4:combination F+R; 5:combination C+R;
+    # 6:combination F+C+R;
+    if len(options_list) == 1:
+        return options_list[0]
+    else:
+        return str(sum([int(x) + 1 for x in options_list]))
+
+
 def create_config_file(form):
     """
     create PhaME config.ctl file
@@ -278,6 +289,7 @@ def create_config_file(form):
     form_dict['work_dir'] = '../{0}/workdir'.format(project)
     if len(form.reference_file.data) > 0:
         form_dict['reference_file'] = form.reference_file.data
+    form_dict['data_type'] = get_data_type(form.data_type.data)
     content = render_template('phame.tmpl', form=form_dict)
     with open(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'config.ctl'), 'w') as conf:
         conf.write(content)
@@ -377,14 +389,6 @@ def subset(project):
     new_project = project+'_subset'
     new_project_path = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, new_project)
 
-    # Get list of reference genome choices
-    # working_list_file = os.path.join(project_path, 'workdir', 'working_list.txt')
-    # with open(working_list_file, 'r') as config:
-    #     lines = config.readlines()
-    #     reference_genome_files = []
-    #     for line in lines:
-    #         reference_genome_files.append((line.strip(), line.strip()))
-    #     logging.debug('genome choices {0}'.format(reference_genome_files))
     ref_dir_files = sorted(os.listdir(os.path.join(project_path, 'refdir')))
 
     form.subset_files.choices = [(a, a) for a in ref_dir_files if (a.endswith('fna') or a.endswith('fasta') or a.endswith('gff'))]
@@ -401,6 +405,30 @@ def subset(project):
 
         # Change project name in config file
         shutil.copy(os.path.join(project_path, 'config.ctl'), os.path.join(new_project_path))
+
+        # copy selected results directories to new project
+        dir_list = ['gaps', 'miscs', 'snps', 'stats', 'temp', 'trees']
+        for results_dir in dir_list:
+            shutil.copytree(os.path.join(project_path, 'workdir', 'results', results_dir),
+                            os.path.join(new_project_path, 'workdir', 'results', results_dir))
+
+        #copy files from results directory
+        results_files = os.listdir(os.path.join(project_path, 'workdir', 'results'))
+        for result_file in results_files:
+            if not os.path.isdir(os.path.join(project_path, 'workdir', 'results', result_file)):
+                logging.debug(f'result file {result_file}')
+                logging.debug(f'isdir {os.path.isdir(result_file)}')
+                shutil.copy(os.path.join(project_path, 'workdir', 'results', result_file),
+                            os.path.join(new_project_path, 'workdir', 'results'))
+
+
+
+        #create new working_list.txt file
+        with open(os.path.join(new_project_path, 'workdir', 'working_list.txt'), 'w') as fp:
+            for ref_file in form.subset_files.data:
+                fp.write(ref_file)
+
+        #modify config.ctl file to change project to new name and get reference file name
         fh, abs_path = mkstemp()
         with os.fdopen(fh, 'w') as tmp, open(os.path.join(new_project_path, 'config.ctl'), 'r')as config:
             lines = config.readlines()
@@ -408,6 +436,8 @@ def subset(project):
             for line in lines:
                 if re.search(project, line):
                     tmp.write(re.sub(project, new_project, line))
+                elif re.search('data', line):
+                    tmp.write('data = 7\n')
                 else:
                     tmp.write(line)
 
@@ -477,6 +507,8 @@ def input():
             error = 'Project directory already exists'
             return render_template('input.html', title='Phame input', form=form, error=error)
         if form.validate_on_submit():
+            logging.debug(f"data {form.data_type.data}")
+
             # Perform validation based on requirements of PhaME
             if ('1' in form.data_type.data or '2' in form.data_type.data) and len(form.reference_file.data) == 0:
                 error = 'You must upload a reference genome if you select Contigs or Reads from Data'
@@ -498,6 +530,7 @@ def input():
                 error = 'You must select a reference genome if you select "manual selection" from the Reference menu'
                 remove_uploaded_files(project_dir)
                 return render_template('input.html', title='Phame input', form=form, error=error)
+
 
             # Create config file
             create_config_file(form)
@@ -733,7 +766,7 @@ def display(project, log_time=None):
         for output_file in output_files_list:
             if os.path.exists(os.path.join(results_dir, 'tables', output_file)):
                 if output_file == '{0}_summaryStatistics.txt'.format(project):
-                    run_time = '' if not log_time else log_time[:6]
+                    # run_time = '' if not log_time else log_time[:6]
                     stats_df = pd.read_table(os.path.join(results_dir, 'tables', output_file), header=None, index_col=0)
                     del stats_df.index.name
                     stats_df.columns = ['']
@@ -770,7 +803,8 @@ def display(project, log_time=None):
         # Prepare tree files -- create symlinks between tree files in output directory and flask static directory
         if not os.path.exists(target_dir):
             os.makedirs(target_dir)
-        tree_file_list = [fname for fname in os.listdir(os.path.join(results_dir, 'trees'))]
+        tree_file_list = [fname for fname in os.listdir(os.path.join(results_dir, 'trees'))
+                          if fname.endswith('.fasttree') or fname.endswith('.treefile') or 'bestTree' in fname] # if fname.endswith('.fasttree') or 'bipartitions' in fname
 
         tree_files = []
         for tree in tree_file_list:
