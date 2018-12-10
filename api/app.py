@@ -38,13 +38,6 @@ logging.basicConfig(filename='api.log', level=logging.DEBUG)
 logging.debug(app.config['PROJECT_DIRECTORY'])
 logging.debug(app.config['STATIC_FOLDER'])
 
-@app.route('/add/<int:param1>/<int:param2>')
-def add(param1, param2):
-    task = celery.send_task('tasks.add', args=[param1, param2], kwargs={})
-    response = "<a href='{url}'>check status of {id} </a>".format(id=task.id,
-                                                                  url=url_for('check_task', task_id=task.id, external=True))
-    return response
-
 
 @app.route('/check/<string:task_id>')
 def check_task(task_id):
@@ -70,22 +63,30 @@ def wait(task_id, project):
         return render_template('error.html', error={'msg': str(e)})
 
 
-@app.route('/status/<project>', methods=['POST', 'GET'])
-def display_status(project):
-    logging.debug('request '+jsonify(request.json))
-    project_status = json.dumps(request.json['data'])
-    return render_template('status.html', project=project, project_status=project_status)
+# @app.route('/status/<project>', methods=['POST', 'GET'])
+# def display_status(project):
+#     logging.debug('request '+jsonify(request.json))
+#     project_status = json.dumps(request.json['data'])
+#     return render_template('status.html', project=project, project_status=project_status)
 
+def timeit(method):
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+        name = kw.get('log_name', method.__name__.upper())
+        kw['log_time'][name] = te-ts
+
+        return result
+    return timed
 
 @app.route('/runphame/<project>', methods=['POST', 'GET'])
 def runphame(project):
-    log_time_data = {}
     task = celery.send_task('tasks.run_phame', args = [current_user.username, project])
     logging.debug('task id: {0}'.format(task.id))
     response = check_task(task.id)
     if isinstance(response, dict):
         logging.debug('check task {0}'.format(response.__dict__))
-
     return redirect(url_for('wait', task_id = task.id, project=project))
 
 
@@ -113,16 +114,8 @@ def num_results_files(project):
 def load_user(id):
     return User.query.get(int(id))
 
-def timeit(method):
-    def timed(*args, **kw):
-        ts = time.time()
-        result = method(*args, **kw)
-        te = time.time()
-        name = kw.get('log_name', method.__name__.upper())
-        kw['log_time'][name] = te-ts
 
-        return result
-    return timed
+
 
 def zip_output_files(project):
     """
@@ -535,7 +528,8 @@ def input():
             # Create config file
             create_config_file(form)
 
-            return redirect(url_for('runphame', project=form.project.data))
+            log_time_data = {}
+            return redirect(url_for('runphame', project=form.project.data, log_time=log_time_data))
 
     return render_template('input.html', title='Phame input', form=form)
 
@@ -582,6 +576,29 @@ def display_file(filename, project):
     return render_template('content.html', text=content)
 
 
+@app.route('/status/<project>')
+def get_project_status(project):
+    project_log = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, f'{project}.log')
+    if not os.path.exists(project_log):
+        return jsonify({'project_status': 'Failed'})
+    else:
+        with open(project_log, 'r') as fp:
+            for line in fp.readlines():
+                if 'Tree phylogeny complete.' in line:
+                    return jsonify({'project_status': 'Finished'})
+
+
+@app.route('/delete', methods=["POST"])
+def delete_projects():
+    logging.debug('delete called')
+    form = request.form
+    logging.debug(f'delete form {list(form.items())}')
+    for key, value in list(form.items()):
+        logging.debug(f'removing project: {value}')
+        shutil.rmtree(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, f'{value}'))
+    return redirect(url_for('projects'))
+
+
 @app.route('/projects')
 @login_required
 def projects():
@@ -612,7 +629,6 @@ def projects():
             num_threads = get_config_property(project_dir, 'threads')
             if num_threads is None:
                 num_threads = 'Unknown'
-
             project_summary = {'# of genomes analyzed': reads_file_count + contigs_file_count + full_genome_file_count,
                                '# of contigs': contigs_file_count,
                                '# of reads': reads_file_count,
@@ -620,8 +636,14 @@ def projects():
                                'reference genome used': '',
                                'project name': project,
                                'number of threads': num_threads,
-                               'status': ''
+                               'status': '',
+                               'execution time(s)': '',
+                               'delete': '<input name="deleteCheckBox" type="checkbox" value={0} unchecked">'.format(project)
                                }
+            if os.path.exists(os.path.join(project_dir, 'time.log')):
+                with open(os.path.join(project_dir, 'time.log'), 'r') as fp:
+                    exec_time = float(fp.readline())/1000.
+                    project_summary['execution time(s)'] = str(exec_time)
             if os.path.exists(summary_statistics_file):
                 stats_df = pd.read_table(summary_statistics_file, header=None, index_col=0, squeeze=True)
                 logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}, ref used {stats_df.loc['Reference used']}")
@@ -639,8 +661,9 @@ def projects():
         run_summary_df['project name'] = run_summary_df[['project name', 'status']].apply(
             lambda x: '<a href="/display/{0}">{0}</a>'.format(x['project name']) if x['status'] == 'Finished' else x[
                 'project name'], axis=1)
+
         run_summary_df = run_summary_df[['project name', '# of genomes analyzed', '# of contigs', '# of reads',
-                                         'reference genome used', 'number of threads', 'status']]
+                                         'reference genome used', 'number of threads', 'status', 'execution time(s)', 'delete']]
         return render_template('projects.html', run_summary=run_summary_df.to_html(escape=False, classes='run summary',
                                                                                    index=False))
     except Exception as e:
