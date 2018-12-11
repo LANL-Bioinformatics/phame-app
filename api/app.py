@@ -639,6 +639,13 @@ def projects():
                                'execution time(s)': '',
                                'delete': '<input name="deleteCheckBox" type="checkbox" value={0} unchecked">'.format(project)
                                }
+            if not os.path.exists(os.path.join(project_dir, 'config.ctl')):
+                project_summary['status'] = 'Failed'
+
+            if os.path.exists(os.path.join(project_dir, 'config.ctl')) and not \
+                os.path.exists(os.path.join(project_dir, 'workdir', 'results', f'{project}.log')):
+                project_summary['status'] = 'Running'
+
             if os.path.exists(os.path.join(project_dir, 'time.log')):
                 with open(os.path.join(project_dir, 'time.log'), 'r') as fp:
                     exec_time = float(fp.readline())/1000.
