@@ -211,13 +211,19 @@
           <div class="flex-field"><textarea id="uploads" rows="4" cols="40" name="uploads"></textarea><p></div>
 
         </div>
-
         <div class="flex-container-row">
-          <div class="flex-label">Select files to upload.</div>
-
-          <div class="flex-field"><input id="file-picker" type="file" name="file" multiple><p></div>
-
+              <div class="flex-label">Select files to upload.</div>
+              <div class="flex-field">
+                <div id="dropbox">
+                                Drag and Drop Files Here
+                </div>
+              </div>
         </div>
+        <div class="flex-container-row">
+        <div class="flex-label"></div>
+          <div class="flex-field"><input id="file-picker" type="file" name="file" multiple><p></div>
+        </div>
+
       </div>
 
       <fieldset id="progress" style="display: none">
