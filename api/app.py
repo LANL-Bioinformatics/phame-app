@@ -528,8 +528,7 @@ def input():
             # Create config file
             create_config_file(form)
 
-            log_time_data = {}
-            return redirect(url_for('runphame', project=form.project.data, log_time=log_time_data))
+            return redirect(url_for('runphame', project=form.project.data))
 
     return render_template('input.html', title='Phame input', form=form)
 
@@ -644,6 +643,7 @@ def projects():
                 with open(os.path.join(project_dir, 'time.log'), 'r') as fp:
                     exec_time = float(fp.readline())/1000.
                     project_summary['execution time(s)'] = str(exec_time)
+
             if os.path.exists(summary_statistics_file):
                 stats_df = pd.read_table(summary_statistics_file, header=None, index_col=0, squeeze=True)
                 logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}, ref used {stats_df.loc['Reference used']}")
@@ -662,8 +662,10 @@ def projects():
             lambda x: '<a href="/display/{0}">{0}</a>'.format(x['project name']) if x['status'] == 'Finished' else x[
                 'project name'], axis=1)
 
+
         run_summary_df = run_summary_df[['project name', '# of genomes analyzed', '# of contigs', '# of reads',
                                          'reference genome used', 'number of threads', 'status', 'execution time(s)', 'delete']]
+
         return render_template('projects.html', run_summary=run_summary_df.to_html(escape=False, classes='run summary',
                                                                                    index=False))
     except Exception as e:
