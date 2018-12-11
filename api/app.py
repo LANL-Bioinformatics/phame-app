@@ -591,10 +591,10 @@ def get_project_status(project):
 def delete_projects():
     logging.debug('delete called')
     form = request.form
-    logging.debug(f'delete form {list(form.items())}')
-    for key, value in list(form.items()):
-        logging.debug(f'removing project: {value}')
-        shutil.rmtree(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, f'{value}'))
+    projects = form.to_dict(flat=False)
+    for project in projects['deleteCheckBox']:
+        logging.debug(f'removing project: {project}')
+        shutil.rmtree(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, f'{project}'))
     return redirect(url_for('projects'))
 
 
