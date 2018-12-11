@@ -400,7 +400,7 @@ def subset(project):
         shutil.copy(os.path.join(project_path, 'config.ctl'), os.path.join(new_project_path))
 
         # copy selected results directories to new project
-        dir_list = ['gaps', 'miscs', 'snps', 'stats', 'temp', 'trees']
+        dir_list = ['gaps', 'miscs', 'snps', 'stats', 'temp', 'trees', 'tables']
         for results_dir in dir_list:
             shutil.copytree(os.path.join(project_path, 'workdir', 'results', results_dir),
                             os.path.join(new_project_path, 'workdir', 'results', results_dir))
@@ -790,7 +790,7 @@ def display(project, log_time=None):
     try:
         for output_file in output_files_list:
             if os.path.exists(os.path.join(results_dir, 'tables', output_file)):
-                if output_file == '{0}_summaryStatistics.txt'.format(project):
+                if output_file == f'{project}_summaryStatistics.txt':
                     # run_time = '' if not log_time else log_time[:6]
                     stats_df = pd.read_table(os.path.join(results_dir, 'tables', output_file), header=None, index_col=0)
                     del stats_df.index.name
@@ -808,11 +808,11 @@ def display(project, log_time=None):
                     output_tables_list.append(stats_df.to_html(classes='stats'))
                     titles_list.append('Run Summary')
                     titles_list.append('Summary Statistics')
-                elif output_file == '{0}_coverage.txt'.format(project):
+                elif output_file == f'{project}_coverage.txt':
                     coverage_df = pd.read_table(os.path.join(results_dir, 'tables', output_file))
                     output_tables_list.append(coverage_df.to_html(classes='coverage'))
                     titles_list.append('Genome Coverage')
-                elif output_file == '{0}_snp_pairwiseMatrix.txt'.format(project):
+                elif output_file == f'{project}_snp_pairwiseMatrix.txt':
                     snp_df = pd.read_table(os.path.join(results_dir, 'tables', output_file), sep='\t')
                     snp_df.rename(index=str, columns={'Unnamed: 0': 'Genome'}, inplace=True)
                     snp_df.drop(snp_df.columns[-1], axis=1, inplace=True)
@@ -820,7 +820,7 @@ def display(project, log_time=None):
                     snp_df = snp_df[list(snp_df.columns)].fillna(0.0).astype(int)
                     output_tables_list.append(snp_df.to_html(classes='snp_pairwiseMatrix', index=True))
                     titles_list.append('SNP pairwise Matrix')
-                elif output_file == '{0}_genome_lengths.txt'.format(project):
+                elif output_file == f'{project}_genome_lengths.txt':
                     genome_df = pd.read_table(os.path.join(results_dir, 'tables', output_file))
                     output_tables_list.append(genome_df.to_html(classes='genome_lengths', index=False))
                     titles_list.append('Genome Length')
@@ -829,7 +829,8 @@ def display(project, log_time=None):
         if not os.path.exists(target_dir):
             os.makedirs(target_dir)
         tree_file_list = [fname for fname in os.listdir(os.path.join(results_dir, 'trees'))
-                          if fname.endswith('.fasttree') or fname.endswith('.treefile') or 'bestTree' in fname] # if fname.endswith('.fasttree') or 'bipartitions' in fname
+                          if fname.endswith('.fasttree') or fname.endswith('.treefile')
+                          or 'bestTree' in fname or 'bipartitions' in fname]
 
         tree_files = []
         for tree in tree_file_list:
