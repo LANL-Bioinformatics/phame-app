@@ -415,11 +415,17 @@ def subset(project):
                             os.path.join(new_project_path, 'workdir', 'results'))
 
 
-
-        #create new working_list.txt file
+        #create new working_list.txt file and copy files
+        if not os.path.exists(os.path.join(new_project_path, 'workdir', 'files')):
+            os.mkdir(os.path.join(new_project_path, 'workdir', 'files'))
         with open(os.path.join(new_project_path, 'workdir', 'working_list.txt'), 'w') as fp:
             for ref_file in form.subset_files.data:
                 fp.write(ref_file)
+                if ref_file.endswith('fasta'):
+                    ref_file = os.path.splitext(ref_file)[0] + '.fna'
+                if os.path.exists(os.path.join(project_path, 'workdir', 'files', ref_file)):
+                    shutil.copy(os.path.join(project_path, 'workdir', 'files', ref_file),
+                                os.path.join(new_project_path, 'workdir', 'files', ref_file))
 
         #modify config.ctl file to change project to new name and get reference file name
         fh, abs_path = mkstemp()
@@ -615,8 +621,24 @@ def projects():
             workdir = os.path.join(project_dir, 'workdir')
             results_dir = os.path.join(workdir, 'results')
             refdir = os.path.join(project_dir, 'refdir')
-            summary_statistics_file = os.path.join(results_dir, 'tables','{0}_summaryStatistics.txt'.format(project))
             logging.debug(f'{project}')
+
+            # hack to fix tables for subsetted projects
+            if re.search('_subset$', project):
+                try:
+                    output_files_list = [f'{project}_summaryStatistics.txt', f'{project}_coverage.txt',
+                                         f'{project}_snp_pairwiseMatrix.txt', f'{project}_genome_lengths.txt']
+                    logging.debug(f'copying tables for {project}')
+                    for output_file in output_files_list:
+                        if not os.path.exists(os.path.join(results_dir, 'tables')):
+                            os.mkdir(os.path.join(results_dir, 'tables'))
+                        if os.path.exists(os.path.join(results_dir, output_file)):
+                            shutil.copy(os.path.join(results_dir, output_file),
+                                        os.path.join(results_dir, 'tables', output_file))
+                except IOError as e:
+                    logging.debug(f'error for project {project}: {str(e)}')
+
+            summary_statistics_file = os.path.join(results_dir, 'tables',f'{project}_summaryStatistics.txt')
             # create output tables
             reads_file_count = len(
                 [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
@@ -628,6 +650,7 @@ def projects():
             num_threads = get_config_property(project_dir, 'threads')
             if num_threads is None:
                 num_threads = 'Unknown'
+
             project_summary = {'# of genomes analyzed': reads_file_count + contigs_file_count + full_genome_file_count,
                                '# of contigs': contigs_file_count,
                                '# of reads': reads_file_count,
@@ -651,7 +674,7 @@ def projects():
                     exec_time = float(fp.readline())/1000.
                     project_summary['execution time(s)'] = str(exec_time)
 
-            if os.path.exists(summary_statistics_file):
+            if os.path.exists(summary_statistics_file) and os.path.getsize(summary_statistics_file) > 0:
                 stats_df = pd.read_table(summary_statistics_file, header=None, index_col=0, squeeze=True)
                 logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}, ref used {stats_df.loc['Reference used']}")
                 project_summary['reference genome used'] = stats_df.loc['Reference used']
@@ -789,8 +812,8 @@ def display(project, log_time=None):
     logging.debug('# reads files {0}, # contig files {1}, # full genomes {2}, len(length_df) {3}'.format(
         reads_file_count, contigs_file_count, full_genome_file_count, full_genome_file_count*3-1))
 
-    output_files_list = ['{0}_summaryStatistics.txt'.format(project), '{0}_coverage.txt'.format(project),
-                         '{0}_snp_pairwiseMatrix.txt'.format(project), '{0}_genome_lengths.txt'.format(project)]
+    output_files_list = [f'{project}_summaryStatistics.txt', f'{project}_coverage.txt',
+                         f'{project}_snp_pairwiseMatrix.txt', f'{project}_genome_lengths.txt']
 
     output_tables_list = []
     titles_list = []
