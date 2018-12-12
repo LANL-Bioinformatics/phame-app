@@ -1,5 +1,5 @@
-###Step by step guide to running PhaME using a web interface on a local machine. 
-Docker and git is required.
+### Step by step guide to running PhaME using a web interface on a local machine. 
+*Docker and git is required.*
 
 1. clone the repo  
 
