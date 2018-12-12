@@ -10,7 +10,7 @@ import time
 import json
 import logging
 import pandas as pd
-from IPython.display import HTML
+from uuid import uuid4
 
 from flask import Flask, render_template, redirect, flash, url_for, request, send_file, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
@@ -38,13 +38,6 @@ logging.basicConfig(filename='api.log', level=logging.DEBUG)
 logging.debug(app.config['PROJECT_DIRECTORY'])
 logging.debug(app.config['STATIC_FOLDER'])
 
-@app.route('/add/<int:param1>/<int:param2>')
-def add(param1, param2):
-    task = celery.send_task('tasks.add', args=[param1, param2], kwargs={})
-    response = "<a href='{url}'>check status of {id} </a>".format(id=task.id,
-                                                                  url=url_for('check_task', task_id=task.id, external=True))
-    return response
-
 
 @app.route('/check/<string:task_id>')
 def check_task(task_id):
@@ -70,23 +63,44 @@ def wait(task_id, project):
         return render_template('error.html', error={'msg': str(e)})
 
 
-@app.route('/status/<project>', methods=['POST', 'GET'])
-def display_status(project):
-    logging.debug('request '+jsonify(request.json))
-    project_status = json.dumps(request.json['data'])
-    return render_template('status.html', project=project, project_status=project_status)
+# @app.route('/status/<project>', methods=['POST', 'GET'])
+# def display_status(project):
+#     logging.debug('request '+jsonify(request.json))
+#     project_status = json.dumps(request.json['data'])
+#     return render_template('status.html', project=project, project_status=project_status)
 
+def timeit(method):
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+        name = kw.get('log_name', method.__name__.upper())
+        kw['log_time'][name] = te-ts
+
+        return result
+    return timed
 
 @app.route('/runphame/<project>', methods=['POST', 'GET'])
 def runphame(project):
-    log_time_data = {}
     task = celery.send_task('tasks.run_phame', args = [current_user.username, project])
     logging.debug('task id: {0}'.format(task.id))
     response = check_task(task.id)
     if isinstance(response, dict):
         logging.debug('check task {0}'.format(response.__dict__))
-
     return redirect(url_for('wait', task_id = task.id, project=project))
+
+
+@app.route('/get_log/<project>', methods=['GET'])
+def get_log(project):
+    log_file = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'workdir', 'results', f'{project}.log')
+    if not os.path.exists(log_file):
+        return jsonify({'log': 'null'})
+    with open(log_file, 'rb') as f:
+        f.seek(-2, os.SEEK_END)  # Jump to the second last byte.
+        while f.read(1) != b"\n":  # Until EOL is found...
+            f.seek(-2, os.SEEK_CUR)  # ...jump back the read byte plus one more.
+        last = f.readline()
+    return jsonify({'log':str(last)})
 
 
 @app.route('/num_results_files/<project>', methods=['GET'])
@@ -100,16 +114,8 @@ def num_results_files(project):
 def load_user(id):
     return User.query.get(int(id))
 
-def timeit(method):
-    def timed(*args, **kw):
-        ts = time.time()
-        result = method(*args, **kw)
-        te = time.time()
-        name = kw.get('log_name', method.__name__.upper())
-        kw['log_time'][name] = te-ts
 
-        return result
-    return timed
+
 
 def zip_output_files(project):
     """
@@ -125,39 +131,97 @@ def zip_output_files(project):
     return zip_name
 
 
-def upload_files(request, project_dir, ref_dir, work_dir, form):
-    """
-    uploads files to the proper directories
-    updates list of files for reference file combobox
-    changes extension of files in work_dir to .contig
-    :param request: http request
-    :param project_dir: directory where all project files live
-    :param ref_dir: directory for complete genome files
-    :param work_dir: directory for contigs and PhaME output
-    :param form: flask form
-    :return:
-    """
-    os.makedirs(project_dir)
-    if 'ref_dir' in request.files:
+@app.route('/remove', methods=['POST'])
+def remove_files():
+    """Remove all of user's uploaded files"""
+    file_list = os.listdir(os.path.join(app.config['UPLOAD_DIR'], current_user.username))
+    for file_name in file_list:
+        os.remove(os.path.join(app.config['UPLOAD_DIR'], current_user.username, file_name))
+    file_list = os.listdir(os.path.join(app.config['UPLOAD_DIR'], current_user.username))
+    return jsonify({'uploads': sorted(file_list)})
+
+
+@app.route("/upload", methods=["POST"])
+def upload():
+    """Handle the upload of a file."""
+    form = request.form
+
+    # Create a unique "session ID" for this particular batch of uploads.
+    upload_key = str(uuid4())
+
+    # Is the upload using Ajax, or a direct POST by the form?
+    is_ajax = False
+    if form.get("__ajax", None) == "true":
+        is_ajax = True
+
+    # Target folder for these uploads.
+    target = os.path.join(app.config['UPLOAD_DIR'], current_user.username)
+    if not os.path.exists(target):
+        logging.debug(f'creating directory {target}')
+        try:
+            os.mkdir(target)
+        except:
+            if is_ajax:
+                return ajax_response(False, "Couldn't create upload directory: {}".format(target))
+            else:
+                return "Couldn't create upload directory: {}".format(target)
+
+    logging.debug("=== Form Data ===")
+    for key, value in list(form.items()):
+        logging.debug(key, "=>", value)
+
+    for upload in request.files.getlist("file"):
+        filename = upload.filename.rsplit("/")[0]
+        destination = "/".join([target, filename])
+        # logging.debug("Accept incoming file:", filename)
+        # logging.debug("Save it to:", destination)
+        upload.save(destination)
+
+    if is_ajax:
+        return ajax_response(True, upload_key)
+    else:
+        return redirect(url_for("input"))
+
+
+def ajax_response(status, msg):
+    status_code = "ok" if status else "error"
+    return json.dumps(dict(
+        status=status_code,
+        msg=msg,
+    ))
+
+
+def link_files(project_dir, ref_dir, work_dir, form):
+    """Symlink files in user's upload directory in web container to project directory in PhaME container"""
+    os.makedirs(project_dir, exist_ok=True)
+    if len(form.complete_genomes.data) > 0:
         if not os.path.exists(ref_dir):
             os.makedirs(ref_dir)
-        for file_name in request.files.getlist("ref_dir"):
-            filename = secure_filename(file_name.filename)
-            file_name.save(os.path.join(ref_dir, filename))
+        # symlink complete genome files
+        for file_name in form.complete_genomes.data:
+            if os.path.exists(os.path.join(ref_dir, file_name)):
+                os.remove(os.path.join(ref_dir, file_name))
+            os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
+                       os.path.join(ref_dir, file_name))
+        form.reference_file.choices = [(a, a) for a in form.complete_genomes.data]
 
-        # update reference file choices from list of reference genomes uploaded
-        form.reference_file.choices = [(a.filename, a.filename) for a in request.files.getlist("ref_dir")]
-    if 'work_dir' in request.files:
+    if len(form.reads.data) > 0:
+        # symlink reads files
+        for file_name in form.reads.data:
+            if os.path.exists(os.path.join(ref_dir, file_name)):
+                os.remove(os.path.join(ref_dir, file_name))
+            os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
+                       os.path.join(ref_dir, file_name))
+
+    if len(form.contigs.data) > 0:
         os.makedirs(work_dir)
-        for file_name in request.files.getlist("work_dir"):
-            filename = secure_filename(file_name.filename)
-            filename = os.path.splitext(filename)[0] + '.contig'
-            file_name.save(os.path.join(work_dir, filename))
-
-    if 'reads_file' in request.files:
-        for reads_file in request.files.getlist('reads_file'):
-            filename = secure_filename(reads_file.filename)
-            reads_file.save(os.path.join(ref_dir, filename))
+        # symlink contig files
+        for file_name in form.contigs.data:
+            new_filename = os.path.splitext(file_name)[0] + '.contig'
+            if os.path.exists(os.path.join(ref_dir, file_name)):
+                os.remove(os.path.join(ref_dir, new_filename))
+            os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
+                       os.path.join(work_dir, new_filename))
 
 
 def remove_uploaded_files(project_dir):
@@ -179,16 +243,30 @@ def project_setup(form):
     :param form:
     :return: project and reference directory paths
     """
-    # project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user, form.project.data)
     project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, form.project.data)
     ref_dir = os.path.join(project_dir, 'refdir')
     work_dir = os.path.join(project_dir, 'workdir')
     logging.debug('project directory: {0}'.format(project_dir))
-    # project name must be unique
-    if os.path.exists(project_dir):
+    logging.debug(f'reference file: {form.reference_file.data}')
+    logging.debug(f'reference file: {form.project.data}')
+    # project name for projects that have successfully completed must be unique
+    if os.path.exists(os.path.join(work_dir, 'results', f'{form.project.data}.log')) \
+        or len(form.reference_file.data) == 0 \
+        or len(form.project.data) == 0:
         return None, None
-    upload_files(request, project_dir, ref_dir, work_dir, form)
+    link_files(project_dir, ref_dir, work_dir, form)
     return project_dir, ref_dir
+
+
+def get_data_type(options_list):
+    # determines what option to enter into config file based on which options were selected in 'Data' from form
+    # 0:only complete(F); 1:only contig(C); 2:only reads(R);
+    # 3:combination F+C; 4:combination F+R; 5:combination C+R;
+    # 6:combination F+C+R;
+    if len(options_list) == 1:
+        return options_list[0]
+    else:
+        return str(sum([int(x) + 1 for x in options_list]))
 
 
 def create_config_file(form):
@@ -203,7 +281,8 @@ def create_config_file(form):
     form_dict['ref_dir'] = '../{0}/refdir/'.format(project)
     form_dict['work_dir'] = '../{0}/workdir'.format(project)
     if len(form.reference_file.data) > 0:
-        form_dict['reference_file'] = form.reference_file.data[0]
+        form_dict['reference_file'] = form.reference_file.data
+    form_dict['data_type'] = get_data_type(form.data_type.data)
     content = render_template('phame.tmpl', form=form_dict)
     with open(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'config.ctl'), 'w') as conf:
         conf.write(content)
@@ -215,9 +294,9 @@ def check_files(form):
     :return: error: String containing file types that need to be uploaded
     """
     error = ''
-    if '0' in form.data_type.data and 'ref_dir' not in request.files:
+    if '0' in form.data_type.data and not form.reference_file:
         error += 'Please select full genome files...'
-    if '1' in form.data_type.data and 'work_dir' not in request.files:
+    if '1' in form.data_type.data :
         error += 'Please select contig files...'
     if '2' in form.data_type.data and 'reads_file' not in request.files:
         error += 'Please select reads file...'
@@ -261,8 +340,9 @@ def logout():
 
 
 @app.route('/files', methods=['GET'])
-def files_list():
-    return jsonify(os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], 'uploads', current_user.username)))
+def upload_files_list():
+    file_list = os.listdir(os.path.join(app.config['UPLOAD_DIR'], current_user.username))
+    return jsonify({'uploads':sorted(file_list)})
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -302,20 +382,13 @@ def subset(project):
     new_project = project+'_subset'
     new_project_path = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, new_project)
 
-    # Get list of reference genome choices
-    working_list_file = os.path.join(project_path, 'workdir', 'working_list.txt')
-    with open(working_list_file, 'r') as config:
-        lines = config.readlines()
-        reference_genome_files = []
-        for line in lines:
-            reference_genome_files.append((line.strip(), line.strip()))
-        logging.debug('genome choices {0}'.format(reference_genome_files))
-    form.subset_files.choices = reference_genome_files
+    ref_dir_files = sorted(os.listdir(os.path.join(project_path, 'refdir')))
+
+    form.subset_files.choices = [(a, a) for a in ref_dir_files if (a.endswith('fna') or a.endswith('fasta'))]
 
     if request.method == 'POST':
         logging.debug('POST')
         logging.debug('post subset files: {0}'.format(form.subset_files.data))
-        logging.debug('working list file: {0}'.format(working_list_file))
 
         # Delete subset directory tree and create new directories
         if os.path.exists(new_project_path):
@@ -325,6 +398,36 @@ def subset(project):
 
         # Change project name in config file
         shutil.copy(os.path.join(project_path, 'config.ctl'), os.path.join(new_project_path))
+
+        # copy selected results directories to new project
+        dir_list = ['gaps', 'miscs', 'snps', 'stats', 'temp', 'trees', 'tables']
+        for results_dir in dir_list:
+            shutil.copytree(os.path.join(project_path, 'workdir', 'results', results_dir),
+                            os.path.join(new_project_path, 'workdir', 'results', results_dir))
+
+        #copy files from results directory
+        results_files = os.listdir(os.path.join(project_path, 'workdir', 'results'))
+        for result_file in results_files:
+            if not os.path.isdir(os.path.join(project_path, 'workdir', 'results', result_file)):
+                logging.debug(f'result file {result_file}')
+                logging.debug(f'isdir {os.path.isdir(result_file)}')
+                shutil.copy(os.path.join(project_path, 'workdir', 'results', result_file),
+                            os.path.join(new_project_path, 'workdir', 'results'))
+
+
+        #create new working_list.txt file and copy files
+        if not os.path.exists(os.path.join(new_project_path, 'workdir', 'files')):
+            os.mkdir(os.path.join(new_project_path, 'workdir', 'files'))
+        with open(os.path.join(new_project_path, 'workdir', 'working_list.txt'), 'w') as fp:
+            for ref_file in form.subset_files.data:
+                fp.write(f'{os.path.splitext(ref_file)[0]}\n')
+                if ref_file.endswith('fasta'):
+                    ref_file = os.path.splitext(ref_file)[0] + '.fna'
+                if os.path.exists(os.path.join(project_path, 'workdir', 'files', ref_file)):
+                    shutil.copy(os.path.join(project_path, 'workdir', 'files', ref_file),
+                                os.path.join(new_project_path, 'workdir', 'files', ref_file))
+
+        #modify config.ctl file to change project to new name and get reference file name
         fh, abs_path = mkstemp()
         with os.fdopen(fh, 'w') as tmp, open(os.path.join(new_project_path, 'config.ctl'), 'r')as config:
             lines = config.readlines()
@@ -332,25 +435,31 @@ def subset(project):
             for line in lines:
                 if re.search(project, line):
                     tmp.write(re.sub(project, new_project, line))
+                elif re.search('data', line):
+                    tmp.write('data = 7\n')
                 else:
                     tmp.write(line)
 
                 # get name of reference file for form validation
                 if re.search('reffile', line):
-                    m = re.search('=\s*(\w*)', line)
-                    reference_file = m.group(1)
-                    logging.debug('reference file {0}'.format(reference_file))
+                    # m = re.search('=\s*(\w*)', line)
+                    # reference_file = os.path.splitext(line.split('=')[1].split()[0])[0]
+                    reference_file = line.split('=')[1].split()[0]
+                    logging.debug('reference line {0}'.format(line))
         shutil.move(abs_path, os.path.join(new_project_path, 'config.ctl'))
 
         # symlink subset of reference genome files
-        for file_name in os.listdir(os.path.join(project_path, 'refdir')):
-            if file_name.split('.')[0] in form.subset_files.data:
-                os.symlink(os.path.join(project_path, 'refdir', file_name), os.path.join(new_project_path, 'refdir', file_name))
+        for file_name in form.subset_files.data:
+
+            logging.debug(f'file {file_name}')
+            os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
+                       os.path.join(new_project_path, 'refdir', file_name))
+                # os.symlink(os.path.join(project_path, 'refdir', file_name), os.path.join(new_project_path, 'refdir', file_name))
 
         # symlink contig files
         for file_name in os.listdir(os.path.join(project_path, 'workdir')):
             if file_name.endswith('.contig'):
-                os.symlink(os.path.join(project_path, 'workdir', file_name),
+                os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
                            os.path.join(new_project_path, 'workdir', file_name))
 
         if form.validate_on_submit():
@@ -368,7 +477,7 @@ def subset(project):
 @login_required
 def input():
     """
-    Takes flask form, uploads files, checks parameters to make sure they are correct for PhaME, creates PhaME config
+    Takes flask form, checks parameters to make sure they are correct for PhaME, creates PhaME config
     file
     :return:
     """
@@ -376,18 +485,30 @@ def input():
         return redirect(url_for('projects'))
 
     form = InputForm()
+    if not os.path.exists(os.path.join(app.config['UPLOAD_DIR'], current_user.username)):
+        os.makedirs(os.path.join(app.config['UPLOAD_DIR'], current_user.username))
+    files_list = sorted(os.listdir(os.path.join(app.config['UPLOAD_DIR'], current_user.username)))
     form.reference_file.choices = []
+    form.complete_genomes.choices = [(a, a) for a in files_list if (a.endswith('fna') or a.endswith('fasta') or a.endswith('gff'))]
+    form.contigs.choices = [(a, a) for a in files_list if a.endswith('contig')]
+    form.reads.choices = [(a, a) for a in files_list if a.endswith('fastq')]
+
     if request.method == 'POST':
+        logging.debug(f'request method {request.method}')
+        logging.debug(f'reference file {form.reference_file.data}')
+        if len(form.project.data) == 0:
+            error = 'Please enter a project name'
+            return render_template('input.html', title='Phame input', form=form, error=error)
         project_dir, ref_dir = project_setup(form)
+        logging.debug(f'ref file {form.reference_file.data}')
         if project_dir is None:
+            # project creation failed because there is an existing project that successfully completed
             error = 'Project directory already exists'
             return render_template('input.html', title='Phame input', form=form, error=error)
         if form.validate_on_submit():
-            # Perform validation based on requirements of PhaME
-            files_error = check_files(form)
-            if len(files_error) > 0:
-                return render_template('input.html', title='Phame input', form=form, error=files_error)
+            logging.debug(f"data {form.data_type.data}")
 
+            # Perform validation based on requirements of PhaME
             if ('1' in form.data_type.data or '2' in form.data_type.data) and len(form.reference_file.data) == 0:
                 error = 'You must upload a reference genome if you select Contigs or Reads from Data'
                 remove_uploaded_files(project_dir)
@@ -403,18 +524,17 @@ def input():
                                     '"Generate SNPs from coding regions" is yes and "Reference" is random or ANI'
                             return render_template('input.html', title='Phame input', form=form, error=error)
 
-            # Ensure a reference file is selected if the Reference option selected is 'given'
+            # Ensure a reference file is selected if the Reference option selected is 'manual selection'
             if form.reference.data == '1' and len(form.reference_file.data) == 0:
-                error = 'You must select a reference genome if you select "given" in from the Reference menu'
+                error = 'You must select a reference genome if you select "manual selection" from the Reference menu'
                 remove_uploaded_files(project_dir)
                 return render_template('input.html', title='Phame input', form=form, error=error)
+
 
             # Create config file
             create_config_file(form)
 
             return redirect(url_for('runphame', project=form.project.data))
-        else:
-            remove_uploaded_files(project_dir)
 
     return render_template('input.html', title='Phame input', form=form)
 
@@ -430,6 +550,17 @@ def display_tree(project, tree):
     """
     return render_template('tree_output.html', tree= tree, project=project)
 
+def get_config_property(project_dir, property):
+    value = None
+    try:
+        with open(os.path.join(project_dir, 'config.ctl'), 'r') as fp:
+            lines = fp.readlines()
+            for line in lines:
+                if re.search(property, line):
+                    value = line.split('=')[1].split()[0].strip()
+    except IOError as e:
+        logging.exception(f'Cannot get config property {property} for project directory {project_dir}')
+    return value
 
 @app.route('/download/<project>')
 def download(project):
@@ -450,6 +581,29 @@ def display_file(filename, project):
     return render_template('content.html', text=content)
 
 
+@app.route('/status/<project>')
+def get_project_status(project):
+    project_log = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, f'{project}.log')
+    if not os.path.exists(project_log):
+        return jsonify({'project_status': 'Failed'})
+    else:
+        with open(project_log, 'r') as fp:
+            for line in fp.readlines():
+                if 'Tree phylogeny complete.' in line:
+                    return jsonify({'project_status': 'Finished'})
+
+
+@app.route('/delete', methods=["POST"])
+def delete_projects():
+    logging.debug('delete called')
+    form = request.form
+    projects = form.to_dict(flat=False)
+    for project in projects['deleteCheckBox']:
+        logging.debug(f'removing project: {project}')
+        shutil.rmtree(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, f'{project}'))
+    return redirect(url_for('projects'))
+
+
 @app.route('/projects')
 @login_required
 def projects():
@@ -467,31 +621,83 @@ def projects():
             workdir = os.path.join(project_dir, 'workdir')
             results_dir = os.path.join(workdir, 'results')
             refdir = os.path.join(project_dir, 'refdir')
-            summary_statistics_file = os.path.join(results_dir, 'tables','{0}_summaryStatistics.txt'.format(project))
-            if os.path.exists(summary_statistics_file):
-                logging.debug(f'{project}')
-                # create output tables
-                reads_file_count = len(
-                    [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
-                contigs_file_count = len(
-                    [fname for fname in os.listdir(workdir) if fname.endswith('.contig')])
-                full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or
-                                                                                        fname.endswith('.fasta'))])
+            logging.debug(f'{project}')
+
+            # hack to fix tables for subsetted projects
+            if re.search('_subset$', project):
+                try:
+                    output_files_list = [f'{project}_summaryStatistics.txt', f'{project}_coverage.txt',
+                                         f'{project}_snp_pairwiseMatrix.txt', f'{project}_genome_lengths.txt']
+                    logging.debug(f'copying tables for {project}')
+                    for output_file in output_files_list:
+                        if not os.path.exists(os.path.join(results_dir, 'tables')):
+                            os.mkdir(os.path.join(results_dir, 'tables'))
+                        if os.path.exists(os.path.join(results_dir, output_file)):
+                            shutil.copy(os.path.join(results_dir, output_file),
+                                        os.path.join(results_dir, 'tables', output_file))
+                except IOError as e:
+                    logging.debug(f'error for project {project}: {str(e)}')
+
+            summary_statistics_file = os.path.join(results_dir, 'tables',f'{project}_summaryStatistics.txt')
+            # create output tables
+            reads_file_count = len(
+                [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
+
+            contigs_file_count = len([fname for fname in os.listdir(workdir) if fname.endswith('.contig')]) \
+                if os.path.exists(workdir) else 0
+            full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or
+                                                                                    fname.endswith('.fasta'))])
+            num_threads = get_config_property(project_dir, 'threads')
+            if num_threads is None:
+                num_threads = 'Unknown'
+
+            project_summary = {'# of genomes analyzed': reads_file_count + contigs_file_count + full_genome_file_count,
+                               '# of contigs': contigs_file_count,
+                               '# of reads': reads_file_count,
+                               '# of full genomes': full_genome_file_count,
+                               'reference genome used': '',
+                               'project name': project,
+                               'number of threads': num_threads,
+                               'status': '',
+                               'execution time(s)': '',
+                               'delete': '<input name="deleteCheckBox" type="checkbox" value={0} unchecked">'.format(project)
+                               }
+            if not os.path.exists(os.path.join(project_dir, 'config.ctl')):
+                project_summary['status'] = 'Failed'
+
+            if os.path.exists(os.path.join(project_dir, 'config.ctl')) and not \
+                os.path.exists(os.path.join(project_dir, 'workdir', 'results', f'{project}.log')):
+                project_summary['status'] = 'Running'
+
+            if os.path.exists(os.path.join(project_dir, 'time.log')):
+                with open(os.path.join(project_dir, 'time.log'), 'r') as fp:
+                    exec_time = float(fp.readline())/1000.
+                    project_summary['execution time(s)'] = str(exec_time)
+
+            if os.path.exists(summary_statistics_file) and os.path.getsize(summary_statistics_file) > 0:
                 stats_df = pd.read_table(summary_statistics_file, header=None, index_col=0, squeeze=True)
                 logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}, ref used {stats_df.loc['Reference used']}")
-                projects_list.append({'# of genomes analyzed': reads_file_count + contigs_file_count +
-                                                                        full_genome_file_count,
-                                               '# of contigs': contigs_file_count,
-                                               '# of reads': reads_file_count,
-                                               '# of full genomes': full_genome_file_count,
-                                               'reference genome used': stats_df.loc['Reference used'],
-                                               'project name': project
-                                               })
+                project_summary['reference genome used'] = stats_df.loc['Reference used']
+                project_summary['status'] = 'Finished'
+                projects_list.append(project_summary)
+            else:
+                logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}")
+                logging.debug('Running')
+                projects_list.append(project_summary)
 
         run_summary_df = pd.DataFrame(projects_list)
-        run_summary_df['project name'] = run_summary_df['project name'].apply(lambda x:'<a href="/display/{0}">{0}</a>'.format(x))
-        run_summary_df = run_summary_df[['project name', '# of genomes analyzed', '# of contigs', '# of reads', 'reference genome used']]
-        return render_template('projects.html', run_summary=run_summary_df.to_html(escape=False, classes='run summary',index=False))
+
+        # Turn project name into a link to the display page if it's finished running
+        run_summary_df['project name'] = run_summary_df[['project name', 'status']].apply(
+            lambda x: '<a href="/display/{0}">{0}</a>'.format(x['project name']) if x['status'] == 'Finished' else x[
+                'project name'], axis=1)
+
+
+        run_summary_df = run_summary_df[['project name', '# of genomes analyzed', '# of contigs', '# of reads',
+                                         'reference genome used', 'number of threads', 'status', 'execution time(s)', 'delete']]
+
+        return render_template('projects.html', run_summary=run_summary_df.to_html(escape=False, classes='run summary',
+                                                                                   index=False))
     except Exception as e:
         logging.exception(str(e))
         return render_template('error.html', error={'msg' : f'There was a problem displaying projects: {str(e)}'})
@@ -509,7 +715,7 @@ def send_email_message(message, project):
 
 
 def send_mailgun(message, project):
-    key = '***REMOVED***'
+    key = os.environ['MAILGUN_KEY']
     email_domain = 'mail.edgebioinformatics.org'
     recipient = current_user.email
     logging.info('current_user.email: {0}'.format(recipient))
@@ -538,12 +744,13 @@ def send_mailgun(message, project):
 
 @app.route('/notify/<project>', methods=['GET'])
 def notify(project):
-    state = None
-    try:
-        state = send_mailgun('Your project {0} has finished running'.format(project), project)
-        logging.info('message sent to {0} for project {1} status code {2}'.format(current_user.email, project, state))
-    except os.error as e:
-        logging.error(str(e))
+    logging.debug(f"send notifications: {app.config['SEND_NOTIFICATIONS']}")
+    if app.config['SEND_NOTIFICATIONS']:
+        try:
+            state = send_mailgun('Your project {0} has finished running'.format(project), project)
+            logging.info('message sent to {0} for project {1} status code {2}'.format(current_user.email, project, state))
+        except os.error as e:
+            logging.error(str(e))
     return redirect(url_for('display', project=project))
 
 class Switcher(object):
@@ -594,7 +801,7 @@ def display(project, log_time=None):
     if not os.path.exists(workdir):
         error = {'msg': 'Directory does not exist {0}'.format(workdir)}
         return render_template('error.html', error=error)
-    
+
     # create output tables
     reads_file_count = len(
         [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
@@ -605,16 +812,16 @@ def display(project, log_time=None):
     logging.debug('# reads files {0}, # contig files {1}, # full genomes {2}, len(length_df) {3}'.format(
         reads_file_count, contigs_file_count, full_genome_file_count, full_genome_file_count*3-1))
 
-    output_files_list = ['{0}_summaryStatistics.txt'.format(project), '{0}_coverage.txt'.format(project),
-                         '{0}_snp_pairwiseMatrix.txt'.format(project), '{0}_genome_lengths.txt'.format(project)]
+    output_files_list = [f'{project}_summaryStatistics.txt', f'{project}_coverage.txt',
+                         f'{project}_snp_pairwiseMatrix.txt', f'{project}_genome_lengths.txt']
 
     output_tables_list = []
     titles_list = []
     try:
         for output_file in output_files_list:
             if os.path.exists(os.path.join(results_dir, 'tables', output_file)):
-                if output_file == '{0}_summaryStatistics.txt'.format(project):
-                    run_time = '' if not log_time else log_time[:6]
+                if output_file == f'{project}_summaryStatistics.txt':
+                    # run_time = '' if not log_time else log_time[:6]
                     stats_df = pd.read_table(os.path.join(results_dir, 'tables', output_file), header=None, index_col=0)
                     del stats_df.index.name
                     stats_df.columns = ['']
@@ -631,17 +838,19 @@ def display(project, log_time=None):
                     output_tables_list.append(stats_df.to_html(classes='stats'))
                     titles_list.append('Run Summary')
                     titles_list.append('Summary Statistics')
-                elif output_file == '{0}_coverage.txt'.format(project):
+                elif output_file == f'{project}_coverage.txt':
                     coverage_df = pd.read_table(os.path.join(results_dir, 'tables', output_file))
                     output_tables_list.append(coverage_df.to_html(classes='coverage'))
                     titles_list.append('Genome Coverage')
-                elif output_file == '{0}_snp_pairwiseMatrix.txt'.format(project):
+                elif output_file == f'{project}_snp_pairwiseMatrix.txt':
                     snp_df = pd.read_table(os.path.join(results_dir, 'tables', output_file), sep='\t')
-                    snp_df.rename(index=str, columns={'Unnamed: 0':''}, inplace=True)
+                    snp_df.rename(index=str, columns={'Unnamed: 0': 'Genome'}, inplace=True)
                     snp_df.drop(snp_df.columns[-1], axis=1, inplace=True)
-                    output_tables_list.append(snp_df.to_html(classes='snp_pairwiseMatrix', index=False))
+                    snp_df.set_index('Genome', inplace=True)
+                    snp_df = snp_df[list(snp_df.columns)].fillna(0.0).astype(int)
+                    output_tables_list.append(snp_df.to_html(classes='snp_pairwiseMatrix', index=True))
                     titles_list.append('SNP pairwise Matrix')
-                elif output_file == '{0}_genome_lengths.txt'.format(project):
+                elif output_file == f'{project}_genome_lengths.txt':
                     genome_df = pd.read_table(os.path.join(results_dir, 'tables', output_file))
                     output_tables_list.append(genome_df.to_html(classes='genome_lengths', index=False))
                     titles_list.append('Genome Length')
@@ -649,7 +858,9 @@ def display(project, log_time=None):
         # Prepare tree files -- create symlinks between tree files in output directory and flask static directory
         if not os.path.exists(target_dir):
             os.makedirs(target_dir)
-        tree_file_list = [fname for fname in os.listdir(os.path.join(results_dir, 'trees')) if fname.endswith('.fasttree')]
+        tree_file_list = [fname for fname in os.listdir(os.path.join(results_dir, 'trees'))
+                          if fname.endswith('.fasttree') or fname.endswith('.treefile')
+                          or 'bestTree' in fname or 'bipartitions' in fname]
 
         tree_files = []
         for tree in tree_file_list:
@@ -680,5 +891,5 @@ def display(project, log_time=None):
 
 
 if __name__ == '__main__':
-    app.run(debug=True,host='0.0.0.0', port=5090)
+    app.run(debug=False,host='0.0.0.0', port=5090)
     # app.run(debug=True)

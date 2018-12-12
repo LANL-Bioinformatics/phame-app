@@ -28,22 +28,30 @@ class SubsetForm(FlaskForm):
     subset_files = SelectMultipleField(u'Full Genomes')
     submit = SubmitField('Submit')
 
+
+class UploadForm(FlaskForm):
+    file_name = SelectMultipleField()
+    ref_dir = MultipleFileField(u'Upload Files', description='.gff/.fasta')
+    upload = SubmitField('Upload')
+    remove = SubmitField('Remove')
+
+
 class InputForm(FlaskForm):
     boolean_choices = [('0', 'no'), ('1', 'yes')]
-    project = StringField(u'Project Name', description='Choose a unique project name')
+    project = StringField(u'Project Name', [DataRequired(message='Please enter a unique name for this project')], description='Choose a unique project name')
     data_type = MultiCheckboxField(u'Data', choices=[('0', 'Complete'), ('1', 'Contig'), ('2', 'Read')], default='0')
-    ref_dir = MultipleFileField(u'Upload Complete Genomes', description='.gff/.fasta')
-    work_dir = MultipleFileField(u'Upload Contigs')
-    reads = SelectField(u'Type of Reads',choices=[('0', 'single reads'), ('1', 'paired reads'), ('2', 'both')], default='2')
-    reads_file = MultipleFileField('Upload Reads')
+    complete_genomes = SelectMultipleField(u'Select Complete Genomes')
+    contigs = SelectMultipleField(u'Select Contigs')
+    reads_type = SelectField(u'Type of Reads',choices=[('0', 'single reads'), ('1', 'paired reads'), ('2', 'both')], default='2')
+    reads = SelectMultipleField(u'Select Reads')
     aligner = SelectField(choices=[('bowtie', 'bowtie'), ('bwa', 'bwa')], default='bowtie')
     reference = SelectField(choices=[('0', 'random'), ('1', 'manual selection'), ('2', 'MASH')], default='1')
-    reference_file = SelectMultipleField(u'Select Reference Genome')
+    reference_file = SelectField(u'Select Reference Genome')
     snp_choices = [('0', 'No'), ('1', 'Yes')]
     cds_snps = SelectField(u'Generate SNPs from coding regions',choices=snp_choices, default='0')
     buildSNPdb = SelectField(u'Build SNP Database',choices=[('0', 'only align to reference'), ('1', 'build SNP database')], default='0')
     first_time = SelectField(choices=[('0', 'yes'), ('1', 'update existing SNP alignment')], default='1')
-    tree = SelectField(u'Tree Generation Algorithm', choices=[('0', 'no tree'), ('1', 'FastTree'), ('2', 'RAxML'), ('3', 'IQtree'), ('4', 'use all')], default='1')
+    tree = SelectField(u'Tree Generation Algorithm', choices=[('0', 'no tree'), ('1', 'FastTree'), ('2', 'RAxML'), ('3', 'IQtree')], default='1')
     bootstrap = SelectField('Perform Bootstrap', choices=boolean_choices, default='0')
     N = IntegerField('Number of bootstraps', default=100)
     do_select = SelectField(u'Perform Selection Analysis',choices = boolean_choices, default='0')

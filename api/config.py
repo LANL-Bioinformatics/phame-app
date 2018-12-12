@@ -10,5 +10,9 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     STATIC_FOLDER = '/static/media'
     MAX_CONTENT_LENGTH = 1000 * 1024 * 1024
-    POOL_SIZE = 10
+    UPLOAD_DIR = 'static/uploads'
+    PHAME_UPLOAD_DIR = '/api/static/uploads'
+    MAX_CONTENT_LENGTH = 10000 * 1024 * 1024
+    SEND_NOTIFICATIONS = False
+
 

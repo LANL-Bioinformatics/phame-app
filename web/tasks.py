@@ -5,6 +5,7 @@ import subprocess
 from subprocess import PIPE
 from celery.utils.log import get_task_logger
 from json import dumps
+import time
 
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379'),
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379')
@@ -26,6 +27,7 @@ def log_subprocess_output(pipe):
 @celery.task(name='tasks.run_phame', bind=True)
 def phame_run(self, project, username):
     try:
+        start_time = int(round(time.time() * 1000))
         logger.info("run_phame called '/usr/local/bin/phame /phame_api/media/{0}/{1}/config.ctl".format(project, username))
         cmd = ['phame', '/phame_api/media/{0}/{1}/config.ctl'.format(project, username)]
         p1 = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -37,7 +39,11 @@ def phame_run(self, project, username):
                     logger.info('subprocess output: %r', line)
         except Exception as e:
             logger.error(str(e))
+        log_time = int(round(time.time() * 1000)) - start_time
         logger.info('Exited writing output')
+        # logger.info(f'time {log_time}')
+        with open("/phame_api/media/{0}/{1}/time.log".format(project, username), 'w') as fp:
+            fp.write(str(log_time))
 
     except subprocess.CalledProcessError as e:
         logger.error(str(e))
