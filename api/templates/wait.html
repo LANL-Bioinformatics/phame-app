@@ -52,6 +52,22 @@
         }
 
 
+        function get_log(project) {
+            $.ajax({
+                type: 'GET',
+                url: '/get_log/' + project,
+                success: function(response) {
+                  return response;
+                  {#console.log(data['log']);#}
+                  {#return data['log'];#}
+
+                },
+                error: function() {
+                    alert('Unexpected error');
+                }
+            });
+        }
+
         function display_status(project, project_status) {
             console.log('project: '+ project);
             // send ajax POST request to start background job
@@ -96,9 +112,17 @@
                   console.log('result: '+result);
                   console.log('project_status: '+project_status);
                   console.log('status: '+status);
-                  get_num_results_files(project);
-                  console.log('nfiles '+ nfiles);
-                    if ( (result !== 'PENDING' && result !== 'PROGRESS') || (project_status === 'null' && nfiles > 0)) {
+                  let last_line;
+                  var promise = $.ajax('/get_log/' + project);
+                  promise.done(function(data){
+                    console.log('last line '+ data['log']);
+                    last_line = data['log'];
+                  });
+                  promise.fail(function() {
+                    console.log('cannot get log');
+                  });
+
+                    if (result !== 'PENDING' && result !== 'PROGRESS')  {
                       let loading_div = document.getElementById("loading");
                       let content_div = document.getElementById("content");
                       loading_div.style.display = 'none';
@@ -106,12 +130,22 @@
                       send_notification(project);
                       get_display(project);
                     }
-                    // not getting status updates, so check number of output files to see if job is done
-                    else if (project_status === 'null' && nfiles === 0){
+                    // not getting status updates, so check log file
+                    else if (project_status === 'null' && last_line === 'null'){
                       // rerun in 2 seconds
                         setTimeout(function () {
 
                             document.getElementById("project-status").innerHTML = 'current step...unknown';
+                            document.getElementById("project-time").innerHTML = 'elapsed time...unknown';
+
+                            update_progress(status_url, project);
+                        }, 1000);
+                    }// not getting status updates, so check log file
+                    else if (project_status === 'null' && last_line !== 'null'){
+                      // rerun in 2 seconds
+                        setTimeout(function () {
+
+                            document.getElementById("project-status").innerHTML = 'current step...' + last_line;
                             document.getElementById("project-time").innerHTML = 'elapsed time...unknown';
 
                             update_progress(status_url, project);
@@ -129,9 +163,11 @@
                           let elapsed_time = fields[0].replace("b'", "");
                           console.log(elapsed_time);
                           let current_step = fields[1].slice(0, -3);
+                          let detail = last_line.replace("b'", "").replace("\n", "");
                           console.log('current step ' + current_step);
                             document.getElementById("project-status").innerHTML = 'current step...' + current_step;
                             document.getElementById("project-time").innerHTML = 'elapsed time...' + elapsed_time;
+                            document.getElementById("project-detail").innerHTML = 'detail...' + detail;
 
                             update_progress(status_url, project);
                         }, 1000);
@@ -153,6 +189,7 @@
     <div id="project-name"></div>
     <div id="project-time"></div>
     <div id="project-status"></div>
+    <div id="project-detail"></div>
     <div id="show-img"></div>
   </div>
 
@@ -168,6 +205,7 @@
         content_div.style.display = 'none';
         document.getElementById("project-name").innerHTML = 'running...{{ project }}';
         document.getElementById("project-status").innerHTML = 'status...';
+        document.getElementById("project-detail").innerHTML = 'detail...';
 
 
         </script>

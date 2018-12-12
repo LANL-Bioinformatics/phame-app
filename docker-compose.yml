@@ -1,6 +1,6 @@
 version: "3"
 volumes:
-  tree_data: {}
+  api_data: {}
   phame_data: {}
   postgres_data_local: {}
   postgres_backup_local: {}
@@ -22,7 +22,7 @@ services:
     volumes:
      - ./compose/local/nginx/conf.d:/etc/nginx/conf.d
     ports:
-     - "8080:80"
+     - "80:80"
     depends_on:
       - web
 
@@ -37,7 +37,7 @@ services:
       - 5001:5001
     volumes:
       - phame_data:/phame_api/media
-      - tree_data:/api/static/trees
+      - api_data:/api/static/uploads
 
   # web gui that generates celery task
   web:
@@ -47,11 +47,13 @@ services:
     hostname: web
     env_file:
       - ./.envs/.local/.postgres
+      - ./.envs/.local/.mailgun
     restart: always
     volumes:
       - phame_data:/phame_api/media
-      - tree_data:/api/static/trees
-      - ./api:/api
+      - api_data:/api/static/uploads
+      - ./api/templates:/api/templates
+      - ./api/app.py:/api/app.py
     depends_on:
       - redis
       - postgres
