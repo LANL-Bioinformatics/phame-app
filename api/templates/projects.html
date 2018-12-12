@@ -13,6 +13,8 @@
     <h2>Projects</h2>
     {{ run_summary|safe }}
   </div>
+    {% if current_user.username != 'public' %}
   <input type="submit" value="Delete checked projects!" id="delete-button">
+  {% endif %}
   </form>
 {% endblock %}
