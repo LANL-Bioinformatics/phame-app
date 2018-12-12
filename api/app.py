@@ -384,7 +384,7 @@ def subset(project):
 
     ref_dir_files = sorted(os.listdir(os.path.join(project_path, 'refdir')))
 
-    form.subset_files.choices = [(a, a) for a in ref_dir_files if (a.endswith('fna') or a.endswith('fasta') or a.endswith('gff'))]
+    form.subset_files.choices = [(a, a) for a in ref_dir_files if (a.endswith('fna') or a.endswith('fasta'))]
 
     if request.method == 'POST':
         logging.debug('POST')
@@ -420,7 +420,7 @@ def subset(project):
             os.mkdir(os.path.join(new_project_path, 'workdir', 'files'))
         with open(os.path.join(new_project_path, 'workdir', 'working_list.txt'), 'w') as fp:
             for ref_file in form.subset_files.data:
-                fp.write(ref_file)
+                fp.write(f'{os.path.splitext(ref_file)[0]}\n')
                 if ref_file.endswith('fasta'):
                     ref_file = os.path.splitext(ref_file)[0] + '.fna'
                 if os.path.exists(os.path.join(project_path, 'workdir', 'files', ref_file)):
