@@ -320,10 +320,13 @@ def login():
         return redirect(url_for('projects')) if current_user.username == 'public' else redirect(url_for('index'))
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user is None or not user.check_password(form.password.data):
-            flash('Invalid username or password')
-            return redirect(url_for('login'))
+        if not form.public_login.data:
+            user = User.query.filter_by(username=form.username.data).first()
+            if user is None or not user.check_password(form.password.data):
+                flash('Invalid username or password')
+                return redirect(url_for('login'))
+        else:
+            user = User.query.filter_by(username='public').first()
         login_user(user, remember=form.remember_me.data)
         next_page = url_for('projects') if current_user.username == 'public' else request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
@@ -614,6 +617,10 @@ def projects():
     try:
         pd.set_option('display.max_colwidth', 1000)
         projects = [project for project in os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username))]
+        if len(projects) == 0 and current_user.username != 'public':
+            return redirect(url_for('input'))
+        if len(projects) == 0 and current_user.username == 'public':
+            return redirect(url_for('index'))
         projects.sort()
         projects_list = []
         for project in projects:
@@ -659,9 +666,15 @@ def projects():
                                'project name': project,
                                'number of threads': num_threads,
                                'status': '',
-                               'execution time(s)': '',
-                               'delete': '<input name="deleteCheckBox" type="checkbox" value={0} unchecked">'.format(project)
+                               'execution time(s)': ''
                                }
+            if current_user.username != 'public':
+                project_summary['delete'] = '<input name="deleteCheckBox" type="checkbox" value={0} unchecked">'.format(project)
+                run_summary_columns = ['project name', '# of genomes analyzed', '# of contigs', '# of reads',
+                                       'reference genome used', 'number of threads', 'status', 'execution time(s)', 'delete']
+            else:
+                run_summary_columns = ['project name', '# of genomes analyzed', '# of contigs', '# of reads',
+                                       'reference genome used', 'number of threads', 'status', 'execution time(s)']
             if not os.path.exists(os.path.join(project_dir, 'config.ctl')):
                 project_summary['status'] = 'Failed'
 
@@ -693,8 +706,7 @@ def projects():
                 'project name'], axis=1)
 
 
-        run_summary_df = run_summary_df[['project name', '# of genomes analyzed', '# of contigs', '# of reads',
-                                         'reference genome used', 'number of threads', 'status', 'execution time(s)', 'delete']]
+        run_summary_df = run_summary_df[run_summary_columns]
 
         return render_template('projects.html', run_summary=run_summary_df.to_html(escape=False, classes='run summary',
                                                                                    index=False))
