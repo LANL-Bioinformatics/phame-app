@@ -48,6 +48,7 @@ function doUpload() {
     // Attach the files.
     for (var i = 0, ie = PENDING_FILES.length; i < ie; i++) {
         // Collect the other form data.
+        console.log(PENDING_FILES[i]);
         fd.append("file", PENDING_FILES[i]);
     }
 
@@ -95,17 +96,6 @@ function doUpload() {
                 var uuid = data.msg;
                 $("#progress").hide();
                 window.location = '/input';
-              //   $.ajax({
-              //     type: 'GET',
-              //     url: NEXT_URL,
-              //     success: function(data, status, request) {
-              //       console.log('uploaded files list');
-              //       return data['uploads'];
-              //     },
-              //     error: function() {
-              //         alert('Unexpected error');
-              //     }
-              // });
 
             }
         },
@@ -150,14 +140,23 @@ function collectFormData() {
 function handleFiles(files) {
     // Add them to the pending files list.
     for (var i = 0, ie = files.length; i < ie; i++) {
-        PENDING_FILES.push(files[i]);
+        var ext = files[i].name.slice((files[i].name.lastIndexOf(".") -1 >>> 0) +2);
+        var file_extentions = ['fasta', 'fastq', 'fna', 'gff', 'contig'];
+        console.log('fext ' + ext);
+        if (file_extentions.includes(ext))
+        {
+            console.log('handle ' + files[i].name);
+            console.log('file ext ' + files[i].name.slice((files[i].name.lastIndexOf(".") -1 >>> 0) +2));
+            PENDING_FILES.push(files[i]);
+        }
+
+
     }
 }
 
 
 function initDropbox() {
     var $dropbox = $("#dropbox");
-    console.log('init dropbox called ' + $dropbox);
 
     // On drag enter...
     $dropbox.on("dragenter", function(e) {
@@ -179,7 +178,14 @@ function initDropbox() {
 
         // Get the files.
         var files = e.originalEvent.dataTransfer.files;
-        handleFiles(files);
+        var upload_files = [];
+        for (var i = 0, ie = files.length; i < ie; i++) {
+            if (['fasta', 'fastq', 'fna', 'gff', 'contig'].indexOf(files[i].name.slice((files[i].name.lastIndexOf(".") -1 >>> 0) +2))) {
+                console.log('upload file ' + files[i].name);
+                upload_files.push(files[i]);
+            }
+        }
+        handleFiles(upload_files);
 
         // Update the display to acknowledge the number of pending files.
         $dropbox.text(PENDING_FILES.length + " files ready for upload!");
