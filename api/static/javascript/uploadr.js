@@ -148,6 +148,8 @@ function handleFiles(files) {
             console.log('handle ' + files[i].name);
             console.log('file ext ' + files[i].name.slice((files[i].name.lastIndexOf(".") -1 >>> 0) +2));
             PENDING_FILES.push(files[i]);
+        } else {
+            alert('One or more of the files you are trying to upload has an invalid file extension.\nPlease ensure all files have one of the following extensions: ".fasta", ".fastq", ".fna", ".gff" or ".contig"');
         }
 
 
@@ -178,14 +180,12 @@ function initDropbox() {
 
         // Get the files.
         var files = e.originalEvent.dataTransfer.files;
-        var upload_files = [];
-        for (var i = 0, ie = files.length; i < ie; i++) {
-            if (['fasta', 'fastq', 'fna', 'gff', 'contig'].indexOf(files[i].name.slice((files[i].name.lastIndexOf(".") -1 >>> 0) +2))) {
-                console.log('upload file ' + files[i].name);
-                upload_files.push(files[i]);
-            }
-        }
-        handleFiles(upload_files);
+        // for (var i = 0, ie = files.length; i < ie; i++) {
+        //     if (!['fasta', 'fastq', 'fna', 'gff', 'contig'].indexOf(files[i].name.slice((files[i].name.lastIndexOf(".") -1 >>> 0) +2))) {
+        //         console.log('wrong ext for file ' + files[i].name);
+        //     }
+        // }
+        handleFiles(files);
 
         // Update the display to acknowledge the number of pending files.
         $dropbox.text(PENDING_FILES.length + " files ready for upload!");
