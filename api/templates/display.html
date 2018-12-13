@@ -43,15 +43,15 @@
   {% endfor %}
   </div>
 <div>
+  {% if current_user.username != 'public' %}
   <br>
   <div>
     <h2>Zoom in analysis</h2>
-
       <a href="{{ url_for('subset', project=project) }}">subset</a>
-
   </div>
 </div>
 <br>
+{% endif %}
 
 <h2>Download</h2>
 </div>
