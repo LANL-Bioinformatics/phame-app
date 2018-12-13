@@ -29,11 +29,11 @@ app = Flask(__name__)
 app.config.from_object(Config)
 login = LoginManager(app)
 login.login_view = 'login'
-try:
-    from models import User
-except:
-    pass
-
+# try:
+#     from models import User
+# except:
+#     pass
+from models import User
 logging.basicConfig(filename='api.log', level=logging.DEBUG)
 logging.debug(app.config['PROJECT_DIRECTORY'])
 logging.debug(app.config['STATIC_FOLDER'])
@@ -713,17 +713,6 @@ def projects():
     except Exception as e:
         logging.exception(str(e))
         return render_template('error.html', error={'msg' : f'There was a problem displaying projects: {str(e)}'})
-
-def send_email_message(message, project):
-    SENDMAIL = "/usr/sbin/sendmail"  # sendmail location
-
-    p = os.popen("%s -t" % SENDMAIL, "w")
-    p.write("To: {0}\n".format('mflynn@lanl.gov'))
-    p.write("Subject: Project {0} has finished\n".format(project))
-    p.write("\n")# blank line separating headers from body
-    p.write("{0}\n".format(message))
-    sts = p.close()
-    return sts
 
 
 def send_mailgun(message, project):
