@@ -11,6 +11,7 @@ import json
 import logging
 import pandas as pd
 from uuid import uuid4
+import ast
 
 from flask import Flask, render_template, redirect, flash, url_for, request, send_file, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
@@ -53,6 +54,19 @@ def check_task(task_id):
         logging.debug('result is None')
         return render_template('error.html', error={'msg' : 'Task status could not be obtained'})
     return jsonify({'Result': result, 'task_output':json.dumps(res.result)})
+
+# @app.route('status/<string:task_id>', methods=['POST', 'GET'])
+# def get_task_status(task_id):
+#     status = requests.get(f'http://monitor:5555/api/task/result/{task_id}')
+#     logging.debug(status.content['state'])
+#     return
+#
+#
+def get_all_task_statuses():
+    statuses = requests.get('http://monitor:5555/api/tasks')
+    logging.debug(f'status: {statuses.text}')
+    logging.debug(f'status json: {statuses.json()}')
+    return statuses.json()
 
 
 @app.route('/wait/<string:task_id>/<project>', methods=['POST', 'GET'])
@@ -623,12 +637,25 @@ def projects():
             return redirect(url_for('index'))
         projects.sort()
         projects_list = []
+
+        # Get task statuses for the current users projects
+        task_statuses = get_all_task_statuses()
+        logging.debug('task statuses:')
+        project_statuses = []
+        for task, status in task_statuses.items():
+            args_list = ast.literal_eval(status['args'])
+            logging.debug(f"task: {task}, {args_list[1]}, {status['state']}")
+            if args_list[0] == current_user.username:
+                project_statuses.append({'project':args_list[1], 'state':status['state']})
+
         for project in projects:
+            project_task_status = None
+            logging.debug(f'{project}')
+
             project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project)
             workdir = os.path.join(project_dir, 'workdir')
             results_dir = os.path.join(workdir, 'results')
             refdir = os.path.join(project_dir, 'refdir')
-            logging.debug(f'{project}')
 
             # hack to fix tables for subsetted projects
             if re.search('_subset$', project):
@@ -646,6 +673,7 @@ def projects():
                     logging.debug(f'error for project {project}: {str(e)}')
 
             summary_statistics_file = os.path.join(results_dir, 'tables',f'{project}_summaryStatistics.txt')
+
             # create output tables
             reads_file_count = len(
                 [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
@@ -664,23 +692,32 @@ def projects():
                                '# of full genomes': full_genome_file_count,
                                'reference genome used': '',
                                'project name': project,
-                               'number of threads': num_threads,
+                               '# of threads': num_threads,
                                'status': '',
                                'execution time(s)': ''
                                }
+            # add delete project checkbox if user is not public
             if current_user.username != 'public':
                 project_summary['delete'] = '<input name="deleteCheckBox" type="checkbox" value={0} unchecked">'.format(project)
                 run_summary_columns = ['project name', '# of genomes analyzed', '# of contigs', '# of reads',
-                                       'reference genome used', 'number of threads', 'status', 'execution time(s)', 'delete']
+                                       'reference genome used', '# of threads', 'status', 'execution time(s)', 'delete']
             else:
                 run_summary_columns = ['project name', '# of genomes analyzed', '# of contigs', '# of reads',
-                                       'reference genome used', 'number of threads', 'status', 'execution time(s)']
-            if not os.path.exists(os.path.join(project_dir, 'config.ctl')):
-                project_summary['status'] = 'Failed'
+                                       'reference genome used', '# of threads', 'status', 'execution time(s)']
 
-            if os.path.exists(os.path.join(project_dir, 'config.ctl')) and not \
-                os.path.exists(os.path.join(project_dir, 'workdir', 'results', f'{project}.log')):
-                project_summary['status'] = 'Running'
+            # set project status: if the status is available from the call to the monitor container, use that
+            # otherwise, see what results files are present
+            for status in project_statuses:
+                logging.debug(f'project {project} status {status}')
+                if status['project'] == project:
+                    project_task_status = status['state']
+            if not os.path.exists(os.path.join(results_dir, f'{project}.log')):
+                project_summary['status'] = 'FAILURE'
+            else:
+                project_summary['status'] = 'SUCCESS'
+
+            if project_task_status:
+                project_summary['status'] = project_task_status
 
             if os.path.exists(os.path.join(project_dir, 'time.log')):
                 with open(os.path.join(project_dir, 'time.log'), 'r') as fp:
@@ -691,18 +728,19 @@ def projects():
                 stats_df = pd.read_table(summary_statistics_file, header=None, index_col=0, squeeze=True)
                 logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}, ref used {stats_df.loc['Reference used']}")
                 project_summary['reference genome used'] = stats_df.loc['Reference used']
-                project_summary['status'] = 'Finished'
+                # project_summary['status'] = 'Finished'
                 projects_list.append(project_summary)
             else:
+                logging.debug('no summary statistics file')
                 logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}")
-                logging.debug('Running')
+                project_summary['status'] = 'FAILURE'
                 projects_list.append(project_summary)
 
         run_summary_df = pd.DataFrame(projects_list)
 
         # Turn project name into a link to the display page if it's finished running
         run_summary_df['project name'] = run_summary_df[['project name', 'status']].apply(
-            lambda x: '<a href="/display/{0}">{0}</a>'.format(x['project name']) if x['status'] == 'Finished' else x[
+            lambda x: '<a href="/display/{0}">{0}</a>'.format(x['project name']) if x['status'] != 'FAILURE' else x[
                 'project name'], axis=1)
 
 
