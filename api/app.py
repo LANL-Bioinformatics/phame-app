@@ -18,7 +18,7 @@ from flask import Flask, render_template, redirect, flash, url_for, request, sen
 from werkzeug.utils import secure_filename
 from werkzeug.urls import url_parse
 import subprocess
-from forms import LoginForm, InputForm, SignupForm, RegistrationForm, SubsetForm
+from forms import LoginForm, InputForm, SignupForm, RegistrationForm, SubsetForm, AdminForm
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required
 import celery.states as states
 
@@ -43,6 +43,11 @@ logging.debug(app.config['STATIC_FOLDER'])
 
 @app.route('/check/<string:task_id>')
 def check_task(task_id):
+    """
+    Endpoint for api that checks task status
+    :param task_id: Celery task id
+    :return: json of task state
+    """
     res = celery.AsyncResult(task_id)
     logging.debug('res state' + res.state)
     if res.state == states.PENDING or res.state == 'PROGRESS':
@@ -56,22 +61,15 @@ def check_task(task_id):
         return render_template('error.html', error={'msg' : 'Task status could not be obtained'})
     return jsonify({'Result': result, 'task_output':json.dumps(res.result)})
 
-# @app.route('status/<string:task_id>', methods=['POST', 'GET'])
-# def get_task_status(task_id):
-#     status = requests.get(f'http://monitor:5555/api/task/result/{task_id}')
-#     logging.debug(status.content['state'])
-#     return
-#
-#
-def get_all_task_statuses():
-    statuses = requests.get('http://monitor:5555/api/tasks')
-    logging.debug(f'status: {statuses.text}')
-    logging.debug(f'status json: {statuses.json()}')
-    return statuses.json()
-
 
 @app.route('/wait/<string:task_id>/<project>', methods=['POST', 'GET'])
 def wait(task_id, project):
+    """
+    Creates wait page that displays task status while project is executing
+    :param task_id: Celery task id
+    :param project: Project name
+    :return:
+    """
     try:
         return render_template('wait.html', status_url = url_for('check_task', task_id=task_id), project=project)
     except exc.TimeoutError as e:
@@ -84,19 +82,24 @@ def wait(task_id, project):
 #     project_status = json.dumps(request.json['data'])
 #     return render_template('status.html', project=project, project_status=project_status)
 
-def timeit(method):
-    def timed(*args, **kw):
-        ts = time.time()
-        result = method(*args, **kw)
-        te = time.time()
-        name = kw.get('log_name', method.__name__.upper())
-        kw['log_time'][name] = te-ts
-
-        return result
-    return timed
+# def timeit(method):
+#     def timed(*args, **kw):
+#         ts = time.time()
+#         result = method(*args, **kw)
+#         te = time.time()
+#         name = kw.get('log_name', method.__name__.upper())
+#         kw['log_time'][name] = te-ts
+#
+#         return result
+#     return timed
 
 @app.route('/runphame/<project>', methods=['POST', 'GET'])
 def runphame(project):
+    """
+    Creates celery task to run PhaME
+    :param project: Project name
+    :return:
+    """
     task = celery.send_task('tasks.run_phame', args = [current_user.username, project])
     logging.debug('task id: {0}'.format(task.id))
     response = check_task(task.id)
@@ -107,6 +110,11 @@ def runphame(project):
 
 @app.route('/get_log/<project>', methods=['GET'])
 def get_log(project):
+    """
+    Endpoint for api call to get project log
+    :param project: Project name
+    :return: json of log file
+    """
     log_file = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'workdir', 'results', f'{project}.log')
     if not os.path.exists(log_file):
         return jsonify({'log': 'null'})
@@ -128,8 +136,6 @@ def num_results_files(project):
 @login.user_loader
 def load_user(id):
     return User.query.get(int(id))
-
-
 
 
 def zip_output_files(project):
@@ -199,6 +205,12 @@ def upload():
 
 
 def ajax_response(status, msg):
+    """
+    Checks ajax response for file uploads
+    :param status: ajax response status
+    :param msg: Message
+    :return: json of status and msg
+    """
     status_code = "ok" if status else "error"
     return json.dumps(dict(
         status=status_code,
@@ -207,7 +219,14 @@ def ajax_response(status, msg):
 
 
 def link_files(project_dir, ref_dir, work_dir, form):
-    """Symlink files in user's upload directory in web container to project directory in PhaME container"""
+    """
+    Symlink files in user's upload directory in web container to project directory in PhaME container
+    :param project_dir: Path to project directory
+    :param ref_dir: Path to directory with reads and whole genome files
+    :param work_dir: Path to directory with contigs and results files
+    :param form: Input form
+    :return:
+    """
     os.makedirs(project_dir, exist_ok=True)
     if len(form.complete_genomes.data) > 0:
         if not os.path.exists(ref_dir):
@@ -254,14 +273,14 @@ def remove_uploaded_files(project_dir):
 
 def project_setup(form):
     """
-    Create directories and handle file uploads
-    :param form:
+    Checks if project exists and calls function to create symlinks
+    :param form: Input form
     :return: project and reference directory paths
     """
     project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, form.project.data)
     ref_dir = os.path.join(project_dir, 'refdir')
     work_dir = os.path.join(project_dir, 'workdir')
-    logging.debug('project directory: {0}'.format(project_dir))
+    logging.debug(f'project directory: {project_dir}')
     logging.debug(f'reference file: {form.reference_file.data}')
     logging.debug(f'reference file: {form.project.data}')
     # project name for projects that have successfully completed must be unique
@@ -302,26 +321,12 @@ def create_config_file(form):
     with open(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'config.ctl'), 'w') as conf:
         conf.write(content)
 
-def check_files(form):
-    """
-    Check to make sure that for each data type the corresponding files have been uploaded as well
-    :param form:
-    :return: error: String containing file types that need to be uploaded
-    """
-    error = ''
-    if '0' in form.data_type.data and not form.reference_file:
-        error += 'Please select full genome files...'
-    if '1' in form.data_type.data :
-        error += 'Please select contig files...'
-    if '2' in form.data_type.data and 'reads_file' not in request.files:
-        error += 'Please select reads file...'
-    return error
-
 
 @app.route('/')
 @app.route('/index')
 def index():
     return render_template('index.html', title='Home')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -383,14 +388,25 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html', title='Register', form=form)
 
-@app.route('/profile')
+@app.route('/profile', methods=['GET', 'POST'])
 def profile():
-    return render_template('profile.html', user=current_user)
+    if current_user.username == 'admin':
+        form = AdminForm()
+        user_list = User.query.all()
+        for a in user_list:
+            logging.debug(a.username)
+        # form.manage_username.choices = [(a.username, a.username) for a in user_list]
+        if request.method == 'POST':
+            return redirect(url_for('projects', username=form.manage_username.data))
+        return render_template('admin.html', user=current_user, form=form)
+    else:
+        return render_template('profile.html', user=current_user)
 
 
 @app.route("/success")
 def success():
     return "Thank you for signing up!"
+
 
 @app.route('/subset/<project>', methods=['GET', 'POST'])
 @login_required
@@ -593,22 +609,28 @@ def download(project):
 
 @app.route('/display_file/<project>/<filename>')
 def display_file(filename, project):
+    """
+    Create page to display text file
+    :param filename: Name of file to display
+    :param project: Project name
+    :return:
+    """
     with open(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project,
                                             'workdir', 'results', filename), 'r') as fp:
         content = fp.read()
     return render_template('content.html', text=content)
 
-
-@app.route('/status/<project>')
-def get_project_status(project):
-    project_log = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, f'{project}.log')
-    if not os.path.exists(project_log):
-        return jsonify({'project_status': 'Failed'})
-    else:
-        with open(project_log, 'r') as fp:
-            for line in fp.readlines():
-                if 'Tree phylogeny complete.' in line:
-                    return jsonify({'project_status': 'Finished'})
+#
+# @app.route('/status/<project>')
+# def get_project_status(project):
+#     project_log = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, f'{project}.log')
+#     if not os.path.exists(project_log):
+#         return jsonify({'project_status': 'Failed'})
+#     else:
+#         with open(project_log, 'r') as fp:
+#             for line in fp.readlines():
+#                 if 'Tree phylogeny complete.' in line:
+#                     return jsonify({'project_status': 'Finished'})
 
 
 @app.route('/delete', methods=["POST"])
@@ -661,21 +683,34 @@ def get_file_counts(refdir, workdir):
     return reads_file_count, contigs_file_count, full_genome_file_count
 
 
-def set_directories(project):
+def set_directories(display_user, project):
     """
     Set the directory names for the current project for the current user
     :param project: Project name
     :return: Full paths to project, work, results and reference directories
     """
-    project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project)
+    project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], display_user, project)
     workdir = os.path.join(project_dir, 'workdir')
     results_dir = os.path.join(workdir, 'results')
     refdir = os.path.join(project_dir, 'refdir')
     return project_dir, workdir, results_dir, refdir
 
 
-def set_project_summary(project, project_status, num_threads, reads_file_count, contigs_file_count,
+def create_project_summary(project, project_status, num_threads, reads_file_count, contigs_file_count,
                         full_genome_file_count, exec_time, reference_genome):
+    """
+    Create run summary for project
+    Adds a 'delete' field if the user is not 'public'
+    :param project: Project name
+    :param project_status: Status of project
+    :param num_threads: Number of threads used for project
+    :param reads_file_count: Number of reads files
+    :param contigs_file_count: Number of contig files
+    :param full_genome_file_count: Number of full genome files
+    :param exec_time: How long it took for project to run
+    :param reference_genome: Reference genome file
+    :return: project_summary dict
+    """
     project_summary = {'# of genomes analyzed': full_genome_file_count + contigs_file_count + reads_file_count,
                        '# of contigs': contigs_file_count,
                        '# of reads': reads_file_count,
@@ -692,20 +727,39 @@ def set_project_summary(project, project_status, num_threads, reads_file_count, 
     return project_summary
 
 
-def get_project_statuses():
-    # Get task statuses for the current users projects
+def get_all_task_statuses():
+    """
+    Make a call to the monitor container to get project status for all projects
+    :return: api call response as a json
+    """
+    statuses = requests.get('http://monitor:5555/api/tasks')
+    logging.debug(f'status: {statuses.text}')
+    logging.debug(f'status json: {statuses.json()}')
+    return statuses.json()
+
+
+def get_project_statuses(display_user):
+    """
+    Get task statuses for the current users projects
+    :return: list of dicts with project names and their states
+    """
     task_statuses = get_all_task_statuses()
     logging.debug('task statuses:')
     project_statuses = []
     for task, status in task_statuses.items():
         args_list = ast.literal_eval(status['args'])
         logging.debug(f"task: {task}, {args_list[1]}, {status['state']}")
-        if args_list[0] == current_user.username:
+        if args_list[0] == display_user:
             project_statuses.append({'project': args_list[1], 'state': status['state']})
     return project_statuses
 
 
 def get_num_threads(project_dir):
+    """
+    Get the number of threads used for project run
+    :param project_dir: Directory for project
+    :return: number of threads
+    """
     num_threads = get_config_property(project_dir, 'threads')
     if num_threads is None:
         num_threads = 'Unknown'
@@ -713,7 +767,12 @@ def get_num_threads(project_dir):
 
 
 def get_exec_time(project_dir):
-    exec_time_string = '0'
+    """
+    Get the project execution time from log file
+    :param project_dir: Directory for project
+    :return: String representation of time 'h:mm:ss'
+    """
+    exec_time_string = '0:00:00'
     if os.path.exists(os.path.join(project_dir, 'time.log')):
         with open(os.path.join(project_dir, 'time.log'), 'r') as fp:
             exec_time = float(fp.readline()) / 1000.
@@ -722,7 +781,13 @@ def get_exec_time(project_dir):
             exec_time_string = "%d:%02d:%02d" % (h, m, s)
     return exec_time_string
 
+
 def get_reference_file(summary_statistics_file):
+    """
+    Get the name of the reference genome file
+    :param summary_statistics_file: Path to summary statistics file
+    :return: Reference genome file name
+    """
     if os.path.exists(summary_statistics_file) and os.path.getsize(summary_statistics_file) > 0:
         stats_df = pd.read_table(summary_statistics_file, header=None, index_col=0, squeeze=True)
         # logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}, ref used {stats_df.loc['Reference used']}")
@@ -735,8 +800,16 @@ def get_reference_file(summary_statistics_file):
 
 
 def set_project_status(project_statuses, project, reference_genome, results_dir):
-    # set project status: if the status is available from the call to the monitor container, use that
-    # otherwise, see what results files are present
+    """
+    Set project status: if the status is available from the call to the monitor container, use that
+    otherwise, see what results files are present
+    :param project_statuses: list of dicts with project names and their states from get_project_statuses
+    :param project: Project name
+    :param reference_genome: Reference genome file name
+    :param results_dir: Path to results directory
+    :return: project status ['SUCCESS', 'FAILURE', 'STARTED']
+    """
+
     project_task_status = None
     for status in project_statuses:
         logging.debug(f'project {project} status {status}')
@@ -750,17 +823,22 @@ def set_project_status(project_statuses, project, reference_genome, results_dir)
     return project_task_status
 
 
+@app.route('/projects/<username>')
 @app.route('/projects')
 @login_required
-def projects():
+def projects(username=None):
     """
     Displays run summaries and links to user's projects
     :return:
     """
     try:
         pd.set_option('display.max_colwidth', 1000)
+
+        display_user = username if username and current_user.username == 'admin' else current_user.username
+
+        logging.debug(f'display_user {display_user}')
         # list of all projects for this user
-        projects_list = [project for project in os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username))]
+        projects_list = [project for project in os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], display_user))]
 
         if len(projects_list) == 0 and current_user.username != 'public':
             return redirect(url_for('input'))
@@ -772,13 +850,13 @@ def projects():
         # list of projects to display
         projects_display_list = []
 
-        project_statuses = get_project_statuses()
+        project_statuses = get_project_statuses(display_user)
 
         for project in projects_list:
 
             logging.debug(f'{project}')
 
-            project_dir, workdir, results_dir, refdir = set_directories(project)
+            project_dir, workdir, results_dir, refdir = set_directories(display_user, project)
 
             # hack to fix tables for subsetted projects
             if re.search('_subset$', project):
@@ -797,7 +875,7 @@ def projects():
 
             project_task_status = set_project_status(project_statuses, project, reference_genome, results_dir)
 
-            project_summary = set_project_summary(project, project_task_status, num_threads, reads_file_count,
+            project_summary = create_project_summary(project, project_task_status, num_threads, reads_file_count,
                                 contigs_file_count, full_genome_file_count, exec_time, reference_genome)
             projects_display_list.append(project_summary)
 
