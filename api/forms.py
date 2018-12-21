@@ -2,6 +2,7 @@ import os
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, FileField, MultipleFileField, IntegerField, \
     FloatField, SelectField, StringField, widgets, SelectMultipleField, validators
+from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.fields.html5 import DecimalRangeField
 from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
 from models import User
@@ -80,3 +81,12 @@ class RegistrationForm(FlaskForm):
         user = User.query.filter_by(email=email.data).first()
         if user is not None:
             raise ValidationError('Please use a different email address.')
+
+class AdminForm(FlaskForm):
+    manage_username = SelectField('Username to view')
+    # manage_username = QuerySelectField(query_factory=lambda: User.query.all())
+    submit = SubmitField('Submit')
+
+    def __init__(self,  *args, **kwargs):
+        super(AdminForm, self).__init__( *args, **kwargs)
+        self.manage_username.choices = [(u.username, u.username) for u in User.query.all()]
