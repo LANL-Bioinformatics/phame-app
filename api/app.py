@@ -612,6 +612,7 @@ def get_project_status(project):
 
 @app.route('/delete', methods=["POST"])
 def delete_projects():
+    """ Delete project directory files"""
     logging.debug('delete called')
     form = request.form
     projects = form.to_dict(flat=False)
@@ -621,128 +622,195 @@ def delete_projects():
     return redirect(url_for('projects'))
 
 
+def fix_subset_tables(project, results_dir):
+    """
+    Copy the tables directory from original directory to subset project directory
+    :param project: Name of project
+    :param results_dir: Directory with results
+    :return:
+    """
+    try:
+        output_files_list = [f'{project}_summaryStatistics.txt', f'{project}_coverage.txt',
+                             f'{project}_snp_pairwiseMatrix.txt', f'{project}_genome_lengths.txt']
+        logging.debug(f'copying tables for {project}')
+        for output_file in output_files_list:
+            if not os.path.exists(os.path.join(results_dir, 'tables')):
+                os.mkdir(os.path.join(results_dir, 'tables'))
+            if os.path.exists(os.path.join(results_dir, output_file)):
+                shutil.copy(os.path.join(results_dir, output_file),
+                            os.path.join(results_dir, 'tables', output_file))
+    except IOError as e:
+        logging.debug(f'error for project {project}: {str(e)}')
+
+
+def get_file_counts(refdir, workdir):
+    """
+    Get the number of full genome, contigs and reads files
+    :param refdir: Reference file directory
+    :param workdir: Work file directory
+    :return: Number of full, contig and read files
+    """
+    reads_file_count = len(
+        [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
+
+    contigs_file_count = len([fname for fname in os.listdir(workdir) if fname.endswith('.contig')]) \
+        if os.path.exists(workdir) else 0
+    full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or
+                                                                            fname.endswith('.fasta'))])
+    return reads_file_count, contigs_file_count, full_genome_file_count
+
+
+def set_directories(project):
+    """
+    Set the directory names for the current project for the current user
+    :param project: Project name
+    :return: Full paths to project, work, results and reference directories
+    """
+    project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project)
+    workdir = os.path.join(project_dir, 'workdir')
+    results_dir = os.path.join(workdir, 'results')
+    refdir = os.path.join(project_dir, 'refdir')
+    return project_dir, workdir, results_dir, refdir
+
+
+def set_project_summary(project, project_status, num_threads, reads_file_count, contigs_file_count,
+                        full_genome_file_count, exec_time, reference_genome):
+    project_summary = {'# of genomes analyzed': full_genome_file_count + contigs_file_count + reads_file_count,
+                       '# of contigs': contigs_file_count,
+                       '# of reads': reads_file_count,
+                       '# of full genomes': full_genome_file_count,
+                       'reference genome used': reference_genome,
+                       'project name': project,
+                       '# of threads': num_threads,
+                       'status': project_status,
+                       'execution time(s)': exec_time
+                       }
+    if current_user.username != 'public':
+        project_summary['delete'] = '<input name="deleteCheckBox" type="checkbox" value={0} unchecked">'.format(
+            project)
+    return project_summary
+
+
+def get_project_statuses():
+    # Get task statuses for the current users projects
+    task_statuses = get_all_task_statuses()
+    logging.debug('task statuses:')
+    project_statuses = []
+    for task, status in task_statuses.items():
+        args_list = ast.literal_eval(status['args'])
+        logging.debug(f"task: {task}, {args_list[1]}, {status['state']}")
+        if args_list[0] == current_user.username:
+            project_statuses.append({'project': args_list[1], 'state': status['state']})
+    return project_statuses
+
+
+def get_num_threads(project_dir):
+    num_threads = get_config_property(project_dir, 'threads')
+    if num_threads is None:
+        num_threads = 'Unknown'
+    return num_threads
+
+
+def get_exec_time(project_dir):
+    exec_time = '0'
+    if os.path.exists(os.path.join(project_dir, 'time.log')):
+        with open(os.path.join(project_dir, 'time.log'), 'r') as fp:
+            exec_time = str(float(fp.readline()) / 1000.)
+    return exec_time
+
+def get_reference_file(summary_statistics_file):
+    if os.path.exists(summary_statistics_file) and os.path.getsize(summary_statistics_file) > 0:
+        stats_df = pd.read_table(summary_statistics_file, header=None, index_col=0, squeeze=True)
+        # logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}, ref used {stats_df.loc['Reference used']}")
+        reference_genome = stats_df.loc['Reference used']
+    else:
+        logging.debug('no summary statistics file')
+        reference_genome = ''
+        # logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}")
+    return reference_genome
+
+
+def set_project_status(project_statuses, project, reference_genome, results_dir):
+    # set project status: if the status is available from the call to the monitor container, use that
+    # otherwise, see what results files are present
+    project_task_status = None
+    for status in project_statuses:
+        logging.debug(f'project {project} status {status}')
+        if status['project'] == project:
+            project_task_status = status['state']
+    if not project_task_status:
+        if not os.path.exists(os.path.join(results_dir, f'{project}.log')) or reference_genome == '':
+            project_task_status = 'FAILURE'
+        else:
+            project_task_status = 'SUCCESS'
+    return project_task_status
+
+
 @app.route('/projects')
 @login_required
 def projects():
     """
-    Displays links to user's projects
+    Displays run summaries and links to user's projects
     :return:
     """
     try:
         pd.set_option('display.max_colwidth', 1000)
-        projects = [project for project in os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username))]
-        if len(projects) == 0 and current_user.username != 'public':
+        # list of all projects for this user
+        projects_list = [project for project in os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username))]
+
+        if len(projects_list) == 0 and current_user.username != 'public':
             return redirect(url_for('input'))
-        if len(projects) == 0 and current_user.username == 'public':
+        if len(projects_list) == 0 and current_user.username == 'public':
             return redirect(url_for('index'))
-        projects.sort()
-        projects_list = []
 
-        # Get task statuses for the current users projects
-        task_statuses = get_all_task_statuses()
-        logging.debug('task statuses:')
-        project_statuses = []
-        for task, status in task_statuses.items():
-            args_list = ast.literal_eval(status['args'])
-            logging.debug(f"task: {task}, {args_list[1]}, {status['state']}")
-            if args_list[0] == current_user.username:
-                project_statuses.append({'project':args_list[1], 'state':status['state']})
+        projects_list.sort()
 
-        for project in projects:
-            project_task_status = None
+        # list of projects to display
+        projects_display_list = []
+
+        project_statuses = get_project_statuses()
+
+        for project in projects_list:
+
             logging.debug(f'{project}')
 
-            project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project)
-            workdir = os.path.join(project_dir, 'workdir')
-            results_dir = os.path.join(workdir, 'results')
-            refdir = os.path.join(project_dir, 'refdir')
+            project_dir, workdir, results_dir, refdir = set_directories(project)
 
             # hack to fix tables for subsetted projects
             if re.search('_subset$', project):
-                try:
-                    output_files_list = [f'{project}_summaryStatistics.txt', f'{project}_coverage.txt',
-                                         f'{project}_snp_pairwiseMatrix.txt', f'{project}_genome_lengths.txt']
-                    logging.debug(f'copying tables for {project}')
-                    for output_file in output_files_list:
-                        if not os.path.exists(os.path.join(results_dir, 'tables')):
-                            os.mkdir(os.path.join(results_dir, 'tables'))
-                        if os.path.exists(os.path.join(results_dir, output_file)):
-                            shutil.copy(os.path.join(results_dir, output_file),
-                                        os.path.join(results_dir, 'tables', output_file))
-                except IOError as e:
-                    logging.debug(f'error for project {project}: {str(e)}')
+                fix_subset_tables(project, results_dir)
 
             summary_statistics_file = os.path.join(results_dir, 'tables',f'{project}_summaryStatistics.txt')
 
             # create output tables
-            reads_file_count = len(
-                [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
+            reads_file_count, contigs_file_count, full_genome_file_count = get_file_counts(refdir, workdir)
 
-            contigs_file_count = len([fname for fname in os.listdir(workdir) if fname.endswith('.contig')]) \
-                if os.path.exists(workdir) else 0
-            full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or
-                                                                                    fname.endswith('.fasta'))])
-            num_threads = get_config_property(project_dir, 'threads')
-            if num_threads is None:
-                num_threads = 'Unknown'
+            num_threads = get_num_threads(project_dir)
 
-            project_summary = {'# of genomes analyzed': reads_file_count + contigs_file_count + full_genome_file_count,
-                               '# of contigs': contigs_file_count,
-                               '# of reads': reads_file_count,
-                               '# of full genomes': full_genome_file_count,
-                               'reference genome used': '',
-                               'project name': project,
-                               '# of threads': num_threads,
-                               'status': '',
-                               'execution time(s)': ''
-                               }
-            # add delete project checkbox if user is not public
-            if current_user.username != 'public':
-                project_summary['delete'] = '<input name="deleteCheckBox" type="checkbox" value={0} unchecked">'.format(project)
-                run_summary_columns = ['project name', '# of genomes analyzed', '# of contigs', '# of reads',
-                                       'reference genome used', '# of threads', 'status', 'execution time(s)', 'delete']
-            else:
-                run_summary_columns = ['project name', '# of genomes analyzed', '# of contigs', '# of reads',
-                                       'reference genome used', '# of threads', 'status', 'execution time(s)']
+            exec_time = get_exec_time(project_dir)
 
-            # set project status: if the status is available from the call to the monitor container, use that
-            # otherwise, see what results files are present
-            for status in project_statuses:
-                logging.debug(f'project {project} status {status}')
-                if status['project'] == project:
-                    project_task_status = status['state']
-            if not os.path.exists(os.path.join(results_dir, f'{project}.log')):
-                project_summary['status'] = 'FAILURE'
-            else:
-                project_summary['status'] = 'SUCCESS'
+            reference_genome = get_reference_file(summary_statistics_file)
 
-            if project_task_status:
-                project_summary['status'] = project_task_status
+            project_task_status = set_project_status(project_statuses, project, reference_genome, results_dir)
 
-            if os.path.exists(os.path.join(project_dir, 'time.log')):
-                with open(os.path.join(project_dir, 'time.log'), 'r') as fp:
-                    exec_time = float(fp.readline())/1000.
-                    project_summary['execution time(s)'] = str(exec_time)
+            project_summary = set_project_summary(project, project_task_status, num_threads, reads_file_count,
+                                contigs_file_count, full_genome_file_count, exec_time, reference_genome)
+            projects_display_list.append(project_summary)
 
-            if os.path.exists(summary_statistics_file) and os.path.getsize(summary_statistics_file) > 0:
-                stats_df = pd.read_table(summary_statistics_file, header=None, index_col=0, squeeze=True)
-                logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}, ref used {stats_df.loc['Reference used']}")
-                project_summary['reference genome used'] = stats_df.loc['Reference used']
-                # project_summary['status'] = 'Finished'
-                projects_list.append(project_summary)
-            else:
-                logging.debug('no summary statistics file')
-                logging.debug(f"# reads files {reads_file_count}, # contig files {contigs_file_count}, # full genomes {full_genome_file_count}")
-                project_summary['status'] = 'FAILURE'
-                projects_list.append(project_summary)
+        run_summary_df = pd.DataFrame(projects_display_list)
 
-        run_summary_df = pd.DataFrame(projects_list)
+        # add delete project checkbox if user is not public
+        if current_user.username != 'public':
+            run_summary_columns = ['project name', '# of genomes analyzed', '# of contigs', '# of reads',
+                                   'reference genome used', '# of threads', 'status', 'execution time(s)', 'delete']
+        else:
+            run_summary_columns = ['project name', '# of genomes analyzed', '# of contigs', '# of reads',
+                                   'reference genome used', '# of threads', 'status', 'execution time(s)']
 
-        # Turn project name into a link to the display page if it's finished running
+        # Turn project name into a link to the display page if it's finished running successfully
         run_summary_df['project name'] = run_summary_df[['project name', 'status']].apply(
-            lambda x: '<a href="/display/{0}">{0}</a>'.format(x['project name']) if x['status'] != 'FAILURE' else x[
-                'project name'], axis=1)
-
+            lambda x: '<a href="/display/{0}">{0}</a>'.format(x['project name']) if (x['status'] == 'SUCCESS')
+            else x['project name'], axis=1)
 
         run_summary_df = run_summary_df[run_summary_columns]
 
