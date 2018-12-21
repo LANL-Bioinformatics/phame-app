@@ -12,6 +12,7 @@ import logging
 import pandas as pd
 from uuid import uuid4
 import ast
+from datetime import timedelta
 
 from flask import Flask, render_template, redirect, flash, url_for, request, send_file, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
@@ -683,7 +684,7 @@ def set_project_summary(project, project_status, num_threads, reads_file_count, 
                        'project name': project,
                        '# of threads': num_threads,
                        'status': project_status,
-                       'execution time(s)': exec_time
+                       'execution time(h:m:s)': exec_time
                        }
     if current_user.username != 'public':
         project_summary['delete'] = '<input name="deleteCheckBox" type="checkbox" value={0} unchecked">'.format(
@@ -712,11 +713,14 @@ def get_num_threads(project_dir):
 
 
 def get_exec_time(project_dir):
-    exec_time = '0'
+    exec_time_string = '0'
     if os.path.exists(os.path.join(project_dir, 'time.log')):
         with open(os.path.join(project_dir, 'time.log'), 'r') as fp:
-            exec_time = str(float(fp.readline()) / 1000.)
-    return exec_time
+            exec_time = float(fp.readline()) / 1000.
+            m, s = divmod(exec_time, 60)
+            h, m = divmod(m, 60)
+            exec_time_string = "%d:%02d:%02d" % (h, m, s)
+    return exec_time_string
 
 def get_reference_file(summary_statistics_file):
     if os.path.exists(summary_statistics_file) and os.path.getsize(summary_statistics_file) > 0:
@@ -802,10 +806,10 @@ def projects():
         # add delete project checkbox if user is not public
         if current_user.username != 'public':
             run_summary_columns = ['project name', '# of genomes analyzed', '# of contigs', '# of reads',
-                                   'reference genome used', '# of threads', 'status', 'execution time(s)', 'delete']
+                                   'reference genome used', '# of threads', 'status', 'execution time(h:m:s)', 'delete']
         else:
             run_summary_columns = ['project name', '# of genomes analyzed', '# of contigs', '# of reads',
-                                   'reference genome used', '# of threads', 'status', 'execution time(s)']
+                                   'reference genome used', '# of threads', 'status', 'execution time(h:m:s)']
 
         # Turn project name into a link to the display page if it's finished running successfully
         run_summary_df['project name'] = run_summary_df[['project name', 'status']].apply(
