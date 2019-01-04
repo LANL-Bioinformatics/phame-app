@@ -123,11 +123,11 @@
     </script>
 {% endblock %}
 {% block content %}
-<div><a href="{{ url_for('display', project=project) }}">back to {{ project }}</a></div>
+<div><a href="{{ url_for('display', username=username, project=project) }}">back to {{ project }}</a></div>
 
 <div>
     <h2>PhaME FastTree Visualization</h2>
-  {% set url = url_for('static',filename="trees/") %}
+  {% set url = url_for('static',filename="trees/" + username + "/") %}
         <div id='phylogram1'></div>
         <div id='controls0' class='ui-widget-content'></div>
 

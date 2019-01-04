@@ -573,17 +573,6 @@ def input():
     return render_template('input.html', title='Phame input', form=form)
 
 
-
-@app.route('/display/<project>/<tree>')
-def display_tree(project, tree):
-    """
-    Creates phylogeny tree using archeopteryx.js
-    :param project: Name of project
-    :param tree: Name of tree file (.fasttree)
-    :return:
-    """
-    return render_template('tree_output.html', tree= tree, project=project)
-
 def get_config_property(project_dir, property):
     value = None
     try:
@@ -607,18 +596,6 @@ def download(project):
     return send_file(zip_name, mimetype='zip', attachment_filename=zip_name, as_attachment=True)
 
 
-@app.route('/display_file/<project>/<filename>')
-def display_file(filename, project):
-    """
-    Create page to display text file
-    :param filename: Name of file to display
-    :param project: Project name
-    :return:
-    """
-    with open(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project,
-                                            'workdir', 'results', filename), 'r') as fp:
-        content = fp.read()
-    return render_template('content.html', text=content)
 
 #
 # @app.route('/status/<project>')
@@ -891,7 +868,7 @@ def projects(username=None):
 
         # Turn project name into a link to the display page if it's finished running successfully
         run_summary_df['project name'] = run_summary_df[['project name', 'status']].apply(
-            lambda x: '<a href="/display/{0}">{0}</a>'.format(x['project name']) if (x['status'] == 'SUCCESS')
+            lambda x: '<a href="/display/{0}/{1}">{1}</a>'.format(display_user, x['project name']) if (x['status'] == 'SUCCESS')
             else x['project name'], axis=1)
 
         run_summary_df = run_summary_df[run_summary_columns]
@@ -970,9 +947,8 @@ class Switcher(object):
         return pd.read_table(os.path.join(results_dir, '{0}_genome_lengths.txt'.format(project)), header=None)
 
 
-@app.route('/display/<project>', methods=['POST', 'GET'])
-@app.route('/display/<project>/<log_time>', methods=['POST', 'GET'])
-def display(project, log_time=None):
+@app.route('/display/<username>/<project>', methods=['POST', 'GET'])
+def display(username, project, log_time=None):
     """
     Displays output from PhaME, including summary statistics, sequence lengths and
     tree output using archeopteryx.js library
@@ -981,11 +957,11 @@ def display(project, log_time=None):
     :return: renders PhaME output page
     """
 
-    project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project)
+    project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], username, project)
     workdir = os.path.join(project_dir, 'workdir')
     results_dir = os.path.join(workdir, 'results')
     refdir = os.path.join(project_dir, 'refdir')
-    target_dir = os.path.join(os.path.dirname(__file__), 'static')
+    trees_target_dir = os.path.join(os.path.dirname(__file__), 'static','trees', username)
 
     if not os.path.exists(workdir):
         error = {'msg': 'Directory does not exist {0}'.format(workdir)}
@@ -1045,8 +1021,9 @@ def display(project, log_time=None):
                     titles_list.append('Genome Length')
 
         # Prepare tree files -- create symlinks between tree files in output directory and flask static directory
-        if not os.path.exists(target_dir):
-            os.makedirs(target_dir)
+        if not os.path.exists(trees_target_dir):
+            os.makedirs(trees_target_dir)
+        logging.debug(f'tree directory:{trees_target_dir}')
         tree_file_list = [fname for fname in os.listdir(os.path.join(results_dir, 'trees'))
                           if fname.endswith('.fasttree') or fname.endswith('.treefile')
                           or 'bestTree' in fname or 'bipartitions' in fname]
@@ -1054,7 +1031,7 @@ def display(project, log_time=None):
         tree_files = []
         for tree in tree_file_list:
             tree_split = tree.split('/')[-1]
-            target = os.path.join(target_dir, 'trees', tree_split)
+            target = os.path.join(trees_target_dir, tree_split)
             tree_files.append(tree_split)
             logging.debug('fasttree file: trees/{0}'.format(tree_split))
             source = os.path.join(results_dir, 'trees', tree_split)
@@ -1067,8 +1044,9 @@ def display(project, log_time=None):
         logging.debug(f'results dir: {results_dir}/trees/*.fastree')
 
         return render_template('display.html',
-                        tables=output_tables_list,
-                        titles=titles_list, tree_files=tree_files, project=project)
+                               username=username,
+                               tables=output_tables_list,
+                               titles=titles_list, tree_files=tree_files, project=project)
 
     except Exception as e:
         logging.exception(str(e))
@@ -1077,6 +1055,30 @@ def display(project, log_time=None):
                                titles=[], tree_files=[], project=project, file_links=[])
 
 
+
+@app.route('/display_tree/<username>/<project>/<tree>')
+def display_tree(username, project, tree):
+    """
+    Creates phylogeny tree using archeopteryx.js
+    :param project: Name of project
+    :param tree: Name of tree file (.fasttree)
+    :return:
+    """
+    return render_template('tree_output.html', username=username, tree= tree, project=project)
+
+
+@app.route('/display_file/<project>/<filename>')
+def display_file(filename, project):
+    """
+    Create page to display text file
+    :param filename: Name of file to display
+    :param project: Project name
+    :return:
+    """
+    with open(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project,
+                                            'workdir', 'results', filename), 'r') as fp:
+        content = fp.read()
+    return render_template('content.html', text=content)
 
 
 if __name__ == '__main__':
