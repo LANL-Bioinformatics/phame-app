@@ -39,7 +39,7 @@
   <div>
   <h2>Tree Visualization using archeopteryx.js</h2>
   {% for tree in tree_files %}
-    <li><a href="{{ url_for('display_tree', project=project, tree=tree) }}">{{ tree }}</a></li>
+    <li><a href="{{ url_for('display_tree', username=username, project=project, tree=tree) }}">{{ tree }}</a></li>
   {% endfor %}
   </div>
 <div>
