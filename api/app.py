@@ -71,7 +71,7 @@ def wait(task_id, project):
     :return:
     """
     try:
-        return render_template('wait.html', status_url = url_for('check_task', task_id=task_id), project=project)
+        return render_template('wait.html', status_url = url_for('check_task', task_id=task_id), project=project, username = current_user.username)
     except exc.TimeoutError as e:
         return render_template('error.html', error={'msg': str(e)})
 
@@ -917,7 +917,7 @@ def notify(project):
             logging.info('message sent to {0} for project {1} status code {2}'.format(current_user.email, project, state))
         except os.error as e:
             logging.error(str(e))
-    return redirect(url_for('display', project=project))
+    return redirect(url_for('display', username=current_user.username, project=project))
 
 class Switcher(object):
     def table_to_df_name(self, argument):
@@ -946,9 +946,9 @@ class Switcher(object):
     def df_genome_lengths(self, project, results_dir):
         return pd.read_table(os.path.join(results_dir, '{0}_genome_lengths.txt'.format(project)), header=None)
 
-
+@app.route('/display/<project>', methods=['POST', 'GET'])
 @app.route('/display/<username>/<project>', methods=['POST', 'GET'])
-def display(username, project, log_time=None):
+def display(project, username = None):
     """
     Displays output from PhaME, including summary statistics, sequence lengths and
     tree output using archeopteryx.js library
@@ -957,6 +957,8 @@ def display(username, project, log_time=None):
     :return: renders PhaME output page
     """
 
+    if not username:
+        username = current_user.username
     project_dir = os.path.join(app.config['PROJECT_DIRECTORY'], username, project)
     workdir = os.path.join(project_dir, 'workdir')
     results_dir = os.path.join(workdir, 'results')
