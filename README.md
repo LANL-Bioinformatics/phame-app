@@ -15,15 +15,9 @@
    POSTGRES_USER=<username>
    POSTGRES_PASSWORD=<password>
    ```
-<<<<<<< HEAD
 4. cd to the project root directory `phame-api`
 
    `cd phame-api`
-=======
-4. cd to the project root directory `phame_api01`
-
-   `cd phame_api01`
->>>>>>> 0069330865eeb8787cb5146126b86627b08be8eb
 
 5. Create docker containers.
 
@@ -37,8 +31,5 @@
 
    `docker-compose run --rm web /bin/bash -c "python -c  'import database; database.init_db()'"`
 
-<<<<<<< HEAD
+
 If all went well, you can go to localhost to see the phame webpage.
-=======
-If all went well, you can go to localhost:8080 to see the phame webpage.
->>>>>>> 0069330865eeb8787cb5146126b86627b08be8eb
