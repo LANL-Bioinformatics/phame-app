@@ -1,6 +1,5 @@
 version: "3"
 volumes:
-  api_data: {}
   phame_data: {}
   postgres_data_local: {}
   postgres_backup_local: {}

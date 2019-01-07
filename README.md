@@ -35,13 +35,11 @@ If all went well, you can go to localhost to see the phame webpage.
 The user input files can require a lot of storage space. Use these instructions if you want to store the users' data on 
 a data volume that is different from the main volume where the Docker container is created. 
 
-*Docker and git are required.*
-
-Go through steps 1-3 as for the local installation
-
-4. Update paths in `docker-compose-production.yml` to the volume where you want to store the users' upload files for the 
-`phame` and `web` containers. For example: `/vol_d/api/uploads:/api/static/uploads` if you want to store the upload files
-on `/vol_d`
+Go through steps 1-3 as for the local installation and then:
+    
+1. Run `mkdir -p /path/to/api/uploads`
+2. Update paths in `docker-compose-production.yml` to the volume where you want to store the users' upload files for the 
+`phame` and `web` containers.
     ```
     phame:
         volumes:
@@ -52,7 +50,8 @@ on `/vol_d`
           - phame_data:/phame_api/media
           -/path/to/api/uploads:/api/static/uploads
     ```
-
+    For example set volumes to `-/vol_d/api/uploads:/api/static/uploads` if you want to store the upload files
+on `/vol_d`
 5. Create docker containers.
 
    `docker-compose -f docker-compose-production.yml build`
