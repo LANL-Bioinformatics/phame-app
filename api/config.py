@@ -12,7 +12,6 @@ class Config(object):
     MAX_CONTENT_LENGTH = 1000 * 1024 * 1024
     UPLOAD_DIR = 'static/uploads'
     PHAME_UPLOAD_DIR = '/api/static/uploads'
-    MAX_CONTENT_LENGTH = 10000 * 1024 * 1024
     SEND_NOTIFICATIONS = False
 
 

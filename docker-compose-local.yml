@@ -47,7 +47,7 @@ services:
     hostname: web
     env_file:
       - ./.envs/.local/.postgres
-      - ./.envs/.local/.mailgun
+      - ./.envs/.local/.email
     restart: always
     volumes:
       - phame_data:/phame_api/media
@@ -58,16 +58,6 @@ services:
       - redis
       - postgres
 
-  # celery worker that makes api call
-#  worker:
-#    build:
-#      context: celery-queue
-#      dockerfile: Dockerfile
-#    volumes:
-#      - phame_data:/phame_api/media
-#      -./PhaME-1
-#    depends_on:
-#      - redis
   monitor:
     build:
       context: celery-queue
@@ -78,5 +68,6 @@ services:
     command:  -A tasks --port=5555 --broker=redis://redis:6379/0
     depends_on:
       - redis
+
   redis:
     image: redis
