@@ -48,9 +48,9 @@ Go through steps 1-3 as for the local installation and then:
     web:
         volumes:
           - phame_data:/phame_api/media
-          -/path/to/api/uploads:/api/static/uploads
+          - /path/to/api/uploads:/api/static/uploads
     ```
-    For example set volumes to `-/vol_d/api/uploads:/api/static/uploads` if you want to store the upload files
+    For example set volumes to `- /vol_d/api/uploads:/api/static/uploads` if you want to store the upload files
 on `/vol_d`
 5. Create docker containers.
 
