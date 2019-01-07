@@ -5,7 +5,7 @@
 
    ```git clone git@github.com:LANL-Bioinformatics/phame-api.git```
 
-2. create a .postegres file within the cloned directory `phame_api01/.envs/.local/.postgres`, and add following lines to it.  
+2. create a .postegres file within the cloned directory `phame-api/.envs/.local/.postgres`, and add following lines to it.  
    ```
    # PostgreSQL
    # ----------
