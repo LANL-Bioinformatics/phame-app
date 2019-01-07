@@ -80,7 +80,7 @@ on `/vol_d`
 
    `docker-compose -f docker-compose-production.yml up -d`
 
-###Monitoring tasks
+### Monitoring tasks
 Browse to `localhost:5555` to see the Flower Dashboard. Here you can see the status of the celery workers and their tasks.
 
 You can look at projects run by other users if you create an `admin` account and login to that account. Click on the 
