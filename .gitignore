@@ -1,9 +1,11 @@
 # Created by .ignore support plugin (hsz.mobi)
 ### Example user template template
 ### Example user template
+<<<<<<< HEAD
 api/static/trees
 api/static/uploads
 .envs/
+
 # IntelliJ project files
 .idea
 *.iml
