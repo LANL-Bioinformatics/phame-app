@@ -13,7 +13,7 @@ the PhaME application, the web interface, Celery and Redis queues and a PostGREs
 
    `cd phame-app`
 
-3. run `cp phame-app/.envs/.local/.postgres_template phame-app/.envs/.local/.postgres` and `cp phame-app/.envs/.local/.email_template phame-app/.envs/.local/.email`.  
+3. run `cp .envs/.local/.postgres_template phame-app/.envs/.local/.postgres` and `cp .envs/.local/.email_template phame-app/.envs/.local/.email`.  
     Edit the `.postgres` file and change the values for `POSTGRES_USER` and `POSTGRES_PASSWORD`
 
 4. Create docker containers.
