@@ -831,30 +831,33 @@ def projects(username=None):
 
         for project in projects_list:
 
-            logging.debug(f'{project}')
+            try:
+                logging.debug(f'{project}')
 
-            project_dir, workdir, results_dir, refdir = set_directories(display_user, project)
+                project_dir, workdir, results_dir, refdir = set_directories(display_user, project)
 
-            # hack to fix tables for subsetted projects
-            if re.search('_subset$', project):
-                fix_subset_tables(project, results_dir)
+                # hack to fix tables for subsetted projects
+                if re.search('_subset$', project):
+                    fix_subset_tables(project, results_dir)
 
-            summary_statistics_file = os.path.join(results_dir, 'tables',f'{project}_summaryStatistics.txt')
+                summary_statistics_file = os.path.join(results_dir, 'tables',f'{project}_summaryStatistics.txt')
 
-            # create output tables
-            reads_file_count, contigs_file_count, full_genome_file_count = get_file_counts(refdir, workdir)
+                # create output tables
+                reads_file_count, contigs_file_count, full_genome_file_count = get_file_counts(refdir, workdir)
 
-            num_threads = get_num_threads(project_dir)
+                num_threads = get_num_threads(project_dir)
 
-            exec_time = get_exec_time(project_dir)
+                exec_time = get_exec_time(project_dir)
 
-            reference_genome = get_reference_file(summary_statistics_file)
+                reference_genome = get_reference_file(summary_statistics_file)
 
-            project_task_status = set_project_status(project_statuses, project, reference_genome, results_dir)
+                project_task_status = set_project_status(project_statuses, project, reference_genome, results_dir)
 
-            project_summary = create_project_summary(project, project_task_status, num_threads, reads_file_count,
-                                contigs_file_count, full_genome_file_count, exec_time, reference_genome)
-            projects_display_list.append(project_summary)
+                project_summary = create_project_summary(project, project_task_status, num_threads, reads_file_count,
+                                    contigs_file_count, full_genome_file_count, exec_time, reference_genome)
+                projects_display_list.append(project_summary)
+            except:
+                logging.exception(f'could not display project {project}')
 
         run_summary_df = pd.DataFrame(projects_display_list)
 
