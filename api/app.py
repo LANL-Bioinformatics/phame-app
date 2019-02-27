@@ -883,12 +883,12 @@ def projects(username=None):
         return render_template('error.html', error={'msg' : f'There was a problem displaying projects: {str(e)}'})
 
 
-def send_mailgun(message, project):
-    key = os.environ['MAILGUN_KEY']
-    email_domain = 'mail.edgebioinformatics.org'
+def send_email(message, project):
+    key = os.environ['API_KEY']
+    request_url = os.environ['EMAIL_URL']
+    sender = os.environ['SENDER']
     recipient = current_user.email
     logging.info('current_user.email: {0}'.format(recipient))
-    request_url = 'https://api.mailgun.net/v3/{0}/messages'.format(email_domain)
     results_dir = os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'workdir', 'results')
     log_file = '{0}.log'.format(project)
     log_fh = open(os.path.join(results_dir, log_file),"rb").read()
@@ -897,14 +897,13 @@ def send_mailgun(message, project):
     mail_request = requests.post(request_url,
                                  auth=('api', key),
                                  files=[("attachment", log_fh),("attachment", error_fh)],
-                                 data={'from': 'donotreply@edgebioinformatics.org',
+                                 data={'from': sender,
                                        'to': recipient,
-                                       'subject': 'Project {0}'.format(project),
+                                       'subject': f'Project {project}',
                                        'text': message
                                        },
-                                 # headers={'Content-type': 'multipart/form-data;'},
                                  )
-    logging.debug('from: {0} to: {1} subject: {2} text: {3}'.format('donotreply@edgebioinformatics.org', recipient,
+    logging.debug('from: {0} to: {1} subject: {2} text: {3}'.format(sender, recipient,
                                                                    'Project {0}'.format(project), message))
     logging.debug('log file: {0}, error file: {1}'.format(log_file, error_file))
     logging.info('Status: {0}'.format(mail_request.status_code))
@@ -916,7 +915,7 @@ def notify(project):
     logging.debug(f"send notifications: {app.config['SEND_NOTIFICATIONS']}")
     if app.config['SEND_NOTIFICATIONS']:
         try:
-            state = send_mailgun('Your project {0} has finished running'.format(project), project)
+            state = send_email('Your project {0} has finished running'.format(project), project)
             logging.info('message sent to {0} for project {1} status code {2}'.format(current_user.email, project, state))
         except os.error as e:
             logging.error(str(e))
