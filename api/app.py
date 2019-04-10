@@ -248,7 +248,8 @@ def link_files(project_dir, ref_dir, work_dir, form):
                        os.path.join(ref_dir, file_name))
 
     if len(form.contigs.data) > 0:
-        os.makedirs(work_dir)
+        if not os.path.exists(ref_dir):
+            os.makedirs(work_dir)
         # symlink contig files
         for file_name in form.contigs.data:
             new_filename = os.path.splitext(file_name)[0] + '.contig'
