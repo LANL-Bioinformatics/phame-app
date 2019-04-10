@@ -253,8 +253,8 @@ def link_files(project_dir, ref_dir, work_dir, form):
         # symlink contig files
         for file_name in form.contigs.data:
             new_filename = os.path.splitext(file_name)[0] + '.contig'
-            if os.path.exists(os.path.join(ref_dir, file_name)):
-                os.remove(os.path.join(ref_dir, new_filename))
+            if os.path.exists(os.path.join(work_dir, file_name)):
+                os.remove(os.path.join(work_dir, new_filename))
             os.symlink(os.path.join(app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
                        os.path.join(work_dir, new_filename))
 
