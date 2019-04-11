@@ -319,6 +319,7 @@ def create_config_file(form):
         form_dict['reference_file'] = form.reference_file.data
     form_dict['data_type'] = get_data_type(form.data_type.data)
     content = render_template('phame.tmpl', form=form_dict)
+    logging.debug('config file for {0} created'.format(form['project']))
     with open(os.path.join(app.config['PROJECT_DIRECTORY'], current_user.username, project, 'config.ctl'), 'w') as conf:
         conf.write(content)
 
@@ -568,7 +569,7 @@ def input():
 
             # Create config file
             create_config_file(form)
-
+            logging.debug('project {0} created'.format(form.project.data))
             return redirect(url_for('runphame', project=form.project.data))
 
     return render_template('input.html', title='Phame input', form=form)
