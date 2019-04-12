@@ -793,12 +793,11 @@ def set_project_status(project_statuses, project, reference_genome, results_dir)
     for status in project_statuses:
         logging.debug(f'project {project} status {status}')
         if status['project'] == project:
-            project_task_status = status['state']
-    
-        if not os.path.exists(os.path.join(results_dir, f'{project}.log')) or reference_genome == '':
-            project_task_status = 'FAILURE'
-        else:
-            project_task_status = 'SUCCESS'
+            if not os.path.exists(os.path.join(results_dir, f'{project}.log')) or reference_genome == '':
+                project_task_status = 'FAILURE'
+            else:
+                project_task_status = status['state']
+
     return project_task_status
 
 
