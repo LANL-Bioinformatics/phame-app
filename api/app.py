@@ -708,7 +708,8 @@ def create_project_summary(project, project_status, num_threads, reads_file_coun
 
 def get_all_task_statuses():
     """
-    Make a call to the monitor container to get project status for all projects
+    Make a call to the monitor container to get the task status for all
+    projects
     :return: api call response as a json
     """
     statuses = requests.get('http://monitor:5555/api/tasks')
@@ -729,7 +730,13 @@ def get_project_statuses(display_user):
         args_list = ast.literal_eval(status['args'])
         logging.debug(f"task: {task}, {args_list[1]}, {status['state']}")
         if args_list[0] == display_user:
-            project_statuses.append({'project': args_list[1], 'state': status['state']})
+            # if project directory is empty something went wrong so set state
+            # to FAILURE
+            state = 'FAILURE' if \
+                len(os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'],
+                                            display_user, args_list[1]))) \
+                == 0 else status['state']
+            project_statuses.append({'project': args_list[1], 'state': state})
     return project_statuses
 
 
