@@ -708,8 +708,7 @@ def create_project_summary(project, project_status, num_threads, reads_file_coun
 
 def get_all_task_statuses():
     """
-    Make a call to the monitor container to get the task status for all
-    projects
+    Make a call to the monitor container to get project status for all projects
     :return: api call response as a json
     """
     statuses = requests.get('http://monitor:5555/api/tasks')
@@ -730,13 +729,7 @@ def get_project_statuses(display_user):
         args_list = ast.literal_eval(status['args'])
         logging.debug(f"task: {task}, {args_list[1]}, {status['state']}")
         if args_list[0] == display_user:
-            # if project directory is empty something went wrong so set state
-            # to FAILURE
-            state = 'FAILURE' if \
-                len(os.listdir(os.path.join(app.config['PROJECT_DIRECTORY'],
-                                            display_user, args_list[1]))) \
-                == 0 else status['state']
-            project_statuses.append({'project': args_list[1], 'state': state})
+            project_statuses.append({'project': args_list[1], 'state': status['state']})
     return project_statuses
 
 
@@ -801,7 +794,7 @@ def set_project_status(project_statuses, project, reference_genome, results_dir)
         logging.debug(f'project {project} status {status}')
         if status['project'] == project:
             project_task_status = status['state']
-    if not project_task_status:
+    
         if not os.path.exists(os.path.join(results_dir, f'{project}.log')) or reference_genome == '':
             project_task_status = 'FAILURE'
         else:
