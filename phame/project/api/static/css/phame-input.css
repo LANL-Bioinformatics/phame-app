@@ -1,0 +1,46 @@
+.flex-container-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-container-col > div {
+  background-color: #f1f1f1;
+  width: 85%;
+  text-align: left;
+  line-height: 15px;
+  justify-content: center;
+}
+.flex-container-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: left;
+}
+
+.flex-container-row > div {
+  background-color: #f1f1f1;
+  width: 100%;
+  margin: 10px;
+  text-align: left;
+  line-height: 15px;
+  font-size: 20px;
+}
+.flex-label {
+  display: grid;
+  justify-content: left;
+  font-weight: bold;
+}
+
+.flex-label > div {
+  text-align: left;
+}
+
+.flex-field {
+  display: grid;
+}
+.flex-field > div {
+  text-align: right;
+}
+
+.error {
+  color: red;
+}

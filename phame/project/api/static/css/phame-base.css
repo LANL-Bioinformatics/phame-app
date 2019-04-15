@@ -1,0 +1,13 @@
+.grid-container {
+  display: grid;
+  grid-template-columns: auto auto auto;
+
+}.grid-item1 {
+  font-size: 16px;
+  text-align: left;
+}
+.grid-item2 {
+  padding: 20px;
+  font-size: 16px;
+  text-align: right;
+}

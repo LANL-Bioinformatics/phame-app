@@ -1,7 +1,0 @@
-SRR3359589_pread	Gap_legnth	11129
-SRR5528819_pread	Gap_legnth	286
-Reference used:	KJ660347
-Reference sequence length:	18959
-Total gap length:	11264
-Core genome length:	7695
-Total SNPs:	7

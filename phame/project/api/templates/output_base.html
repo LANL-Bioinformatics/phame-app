@@ -1,0 +1,26 @@
+<html>
+    <head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/edge.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/edge-theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/edge-output.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/edge.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/project.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery.mobile.1.4.3.min.css') }}">
+
+    {% block head %}{% endblock %}
+    </head>
+    <body>
+        <hr>
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul>
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </body>
+</html>
