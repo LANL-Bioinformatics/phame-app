@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+{% block head %}
+
+  <link rel=stylesheet type=text/css href="{{ url_for('phame.static', filename='css/phame-loading.css') }}">
+  <link rel=stylesheet type=text/css href="{{ url_for('phame.static', filename='css/phame-input.css') }}">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('phame.static', filename='css/style.css') }}">
+<script>
+    function outputUpdate(cutoff) {
+          document.querySelector('#selected-cutoff').value = Math.round(cutoff * 100) / 100;
+      }
+    function showRefFileAlert() {
+      alert("Please select a file from Reference Genome");
+    }
+
+    function removeOptions(selectbox)
+    {
+        var i;
+        for(i = selectbox.options.length - 1 ; i >= 0 ; i--)
+        {
+            selectbox.remove(i);
+        }
+    }
+
+    function referenceFileUpdate() {
+      console.log("updated file list");
+      console.log('ref file options refFileUpdate():');
+
+      removeOptions(document.getElementById("reference_file"));
+      var genome_files = $('#complete_genomes').val().sort();
+      console.log(genome_files);
+      for (i = 0; i < genome_files.length; i++) {
+        console.log(genome_files[i]);
+        reference_file.options.add(new Option(genome_files[i], genome_files[i]));
+      }
+      showReferenceFile();
+
+    }
+
+    function showBootstrap() {
+        var tree_value = document.getElementById("tree").value;
+        console.log(tree_value);
+        var bootstrap = document.getElementById("bootstrapshow");
+        if (tree_value === '2' || tree_value === '3'|| tree_value === '4') {
+            bootstrap.style.display = "block";
+        } else {
+            bootstrap.style.display = "none";
+        }
+    }
+
+    function showBootstrapN() {
+        var bootstrap_value = document.getElementById("bootstrap").value;
+        console.log(bootstrap_value);
+        var bootstrapN = document.getElementById("bootstrapN");
+        if (bootstrapN.style.display === "none" && bootstrap_value === '1') {
+            bootstrapN.style.display = "block";
+        } else {
+            bootstrapN.style.display = "none";
+        }
+    }
+
+    function showReadContigInput() {
+        var data_type_value = document.getElementById("data_type-2").checked;
+        console.log('data_type-2 ' + data_type_value);
+        var reads_file = document.getElementById("reads_div");
+        var aligner_div = document.getElementById("aligner_div");
+        var reads_combo_div = document.getElementById("reads_combo_div");
+        if (data_type_value) {
+            reads_file.style.display = "block";
+            aligner_div.style.display = "block";
+            reads_combo_div.style.display = "block";
+        } else if (reads_file.style.display === "block" && !data_type_value) {
+            reads_file.style.display = "none";
+            aligner_div.style.display = "none";
+            reads_combo_div.style.display = "none";
+        }
+
+        var data_type_value1 = document.getElementById("data_type-1").checked;
+        console.log('data_type-1 ' + data_type_value1);
+        var contigs_file = document.getElementById("contigs_div");
+        if (data_type_value1) {
+            contigs_file.style.display = "block";
+        } else if (contigs_file.style.display === "block" && !data_type_value1) {
+            contigs_file.style.display = "none";
+        }
+    }
+
+    function showPOS() {
+        var do_select_value = document.getElementById("do_select").value;
+        console.log(do_select_value);
+        var show_pos = document.getElementById("pos");
+        if (show_pos.style.display === "none" && do_select_value === '1') {
+            show_pos.style.display = "block";
+        } else {
+            show_pos.style.display = "none";
+        }
+
+    }
+
+    function showReferenceFile() {
+      // Change display depending on which type of method is used for selecting reference genome
+        console.log('ref file options showRefFile()');
+        for (i=0; i<reference_file.options.length; i++) {
+          console.log(reference_file.options[i].value);
+        }
+
+        var ref_value = document.getElementById("reference").value;
+        console.log(ref_value);
+        var ref_file = document.getElementById("ref_file_div");
+        var random_ref_file = document.getElementById("random_ref_file_div");
+        // Manual selection
+        if (ref_value === '1') {
+            ref_file.style.display = "block";
+        } else {
+            ref_file.style.display = "none";
+        }
+        // Random selection
+        if ( ref_value === '0') {
+            if (reference_file.options.length === 0) {
+              random_ref_file.style.display = "none";
+            } else {
+              random_ref_file.style.display = "block";
+              console.log('len ref options ' + reference_file.options.length);
+              var idx = Math.floor(Math.random() * reference_file.options.length);
+              console.log('idx ' + idx);
+              console.log(reference_file.options[idx]);
+              document.getElementById("random_genome_file").innerHTML =reference_file.options[idx].value;
+              document.getElementById("reference_file").selectedIndex = idx.toString();
+              {#reference_file.data.value = reference_file.options[idx].value;#}
+            }
+        } else {
+            random_ref_file.style.display = "none";
+        }
+    }
+
+    function showAlert() {
+      alert("Project submitted. Your results will be displayed momentarily")
+    }
+
+    function showLoading() {
+        var loading_div = document.getElementById("loading");
+        var content_div = document.getElementById("content");
+        var project_name = document.getElementById("project").value;
+        loading_div.style.display = 'block';
+        content_div.style.display = 'none';
+        document.getElementById("project-name").innerHTML = 'running ' + project_name + '...';
+    }
+
+    function removeUploadedFiles() {
+      console.log('calling remove files');
+      $.ajax({
+          type: 'POST',
+          url: '{{ url_for("phame.remove_files") }}',
+          success: function(data, status, request) {
+            console.log('files removed');
+            document.getElementById("uploads").innerHTML = "";
+          },
+          error: function() {
+              alert('Unexpected error');
+          }
+      });
+    }
+
+    function getUploadedFilesList() {
+      console.log('calling get files list');
+      $.ajax({
+          type: 'GET',
+          url: '{{ url_for("phame.upload_files_list") }}',
+          success: function(data, status, request) {
+            for (i = 0; i < data['uploads'].length; i++) {
+              document.getElementById("uploads").innerHTML += data['uploads'][i] + "\n";
+            }
+          },
+          error: function() {
+              alert('Unexpected error');
+          }
+      });
+    }
+
+    window.onload = function() {getUploadedFilesList();}
+    </script>
+
+
+{% endblock %}
+
+{% block content %}
+<div id="loading">
+  <div id="project-name"></div>
+  <div id="show-img"></div>
+</div>
+
+<div id="content">
+    <h1>PhaME Input</h1>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul class=flashes>
+        {% for message in messages %}
+          <li>{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    <!-- Upload form -->
+    <form id="upload-form" action="{{ url_for('phame.upload') }}" method="POST" enctype="multipart/form-data">
+
+
+      <div class="flex-container-col">
+        <div class="flex-container-row">
+          <div class="flex-label">Uploaded Files</div>
+
+          <div class="flex-field"><textarea id="uploads" rows="4" cols="40" name="uploads"></textarea><p></div>
+
+        </div>
+        <div class="flex-container-row">
+              <div class="flex-label">Select files to upload.</div>
+              <div class="flex-field">
+                <div id="dropbox">
+                                Drag and Drop Files Here
+                </div>
+              </div>
+        </div>
+        <div class="flex-container-row">
+        <div class="flex-label"></div>
+          <div class="flex-field"><input id="file-picker" type="file" name="file" multiple accept=".fna,.fasta,.fastq,.contig,.gff"><p></div>
+        </div>
+
+      </div>
+
+      <fieldset id="progress" style="display: none">
+          <legend>Files Progress</legend>
+
+          <div class="progress-trough">
+              <div id="progress-bar" class="progress-bar">0%</div>
+          </div>
+      </fieldset>
+
+        <input type="submit" value="Upload!" id="upload-button" onclick="getUploadedFilesList()">
+        <input type="submit" value="Remove files" id="remove-button" onclick="removeUploadedFiles()">
+    </form>
+
+    <script type="text/javascript" src="{{ url_for('phame.static', filename='javascript/jquery-2.1.1.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('phame.static', filename='javascript/uploadr.js') }}"></script>
+
+    <p><a href="http://phame.readthedocs.io/">PhaME Documentation</a> </p>
+    <!-- Input form -->
+    <form action="" method="post" enctype="multipart/form-data" novalidate>
+
+        {% if error %}
+          <p class=error><strong>Error:</strong> {{ error }}
+        {% endif %}
+
+
+        {{ form.hidden_tag() }}
+        <!-- Project Name-->
+        <div class="flex-container-col">
+          <div class="flex-container-row">
+            <div class="flex-label">{{ form.project.label }}</div>
+            <div class="flex-field">{{ form.project(title='Project name must be unique', data_toggle="tooltip") }}</div>
+              {% for error in form.project.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+
+          </div>
+        <!-- Data -->
+        <div class="flex-container-row">
+            <div class="flex-label">{{ form.data_type.label }}</div>
+            <div class="flex-field">{{ form.data_type(title='Choose from complete(F), only Contig (C) or only Reads (R)', data_toggle="tooltip", onchange="showReadContigInput(event)") }}</div>
+            {% for error in form.data.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </div>
+        <!-- Select Complete Genomes -->
+        <div id="complete_genomes_div" style="display: block">
+            <div class="flex-container-row">
+                <div class="flex-label">{{ form.complete_genomes.label }}</div>
+                <div class="flex-field">{{ form.complete_genomes(title='Select complete genome files. Use Command-Click to select multiple genome files', data_toggle="tooltip", onchange="referenceFileUpdate()") }}</div>
+                {% for error in form.complete_genomes.errors %}
+                  <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+        </div>
+        <!-- Select Contigs -->
+        <div id="contigs_div" style="display: none;">
+            <div class="flex-container-row">
+                <div class="flex-label">{{ form.contigs.label }}</div>
+                <div class="flex-field">{{ form.contigs(title='Select contig files', data_toggle="tooltip") }}</div>
+                {% for error in form.contigs.errors %}
+                  <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+        </div>
+        <!-- Select Type of Reads -->
+        <div id="reads_combo_div" style="display: none;">
+            <div class="flex-container-row">
+                <div class="flex-label">{{ form.reads_type.label }}</div>
+                <div class="flex-field">{{ form.reads_type(title='Select Single-ended, paired-ended or both', data_toggle="tooltip") }}</div>
+                {% for error in form.reads_type.errors %}
+                  <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+        </div>
+        <!-- Select Read Files -->
+        <div id="reads_div" style="display: none;">
+            <div class="flex-container-row">
+                <div class="flex-label">{{ form.reads.label }}</div>
+                <div class="flex-field">{{ form.reads(title='Select reads files', data_toggle="tooltip") }}</div>
+                {% for error in form.reads.errors %}
+                  <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+        </div>
+        <!-- Select Aligner method -->
+        <div id="aligner_div" style="display: none;">
+            <div class="flex-container-row">
+                <div class="flex-label">{{ form.aligner.label }}</div>
+                <div class="flex-field">{{ form.aligner(title='Choose an aligner', data_toggle="tooltip") }}</div>
+                {% for error in form.aligner.errors %}
+                  <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+        </div>
+        <!-- Select method of choosing reference file -->
+        <div class="flex-container-row">
+            <div class="flex-label">{{ form.reference.label }}</div>
+            <div class="flex-field">{{ form.reference(title='Choose whether to use a random reference file, reference calculated from ANI or use a file of your choosing', data_toggle="tooltip", onchange="showReferenceFile()") }}</div>
+            {% for error in form.reference.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </div>
+        <!-- Manual reference genome selection -->
+        <div id="ref_file_div" style="display: block">
+            <div class="flex-container-row">
+                <div class="flex-label">{{ form.reference_file.label }}</div>
+                <div class="flex-field">{{ form.reference_file(title='Select a reference file', data_toggle="tooltip") }}</div>
+                {% for error in form.reference_file.errors %}
+                  <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+        </div>
+        <!-- Random reference genome display -->
+        <div id="random_ref_file_div" style="display: none">
+            <div class="flex-container-row">
+                <div class="flex-label">{{ form.reference_file.label }}</div>
+              <div class="flex-field"><div id="random_genome_file"></div></div>
+                {% for error in form.reference_file.errors %}
+                  <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+        </div>
+        <!-- Choose linear alignment cutoff value -->
+        <div class="flex-container-row">
+            <div class="flex-label">{{ form.cutoff.label }}</div>
+            <div class="flex-field">{{ form.cutoff(min=0, max=1, oninput="outputUpdate(value)",
+              title='Linear alignment (LA) coverage against reference - ignores SNPs from organism that have lower cutoff.', data_toggle="tooltip") }}
+            <output for="cutoff" id="selected-cutoff">{{ form.cutoff.data }}</output></div>
+
+            {% for error in form.cutoff.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </div>
+        <!-- Choose whether to generate SNPs from coding regions -->
+        <div class="flex-container-row">
+            <div class="flex-label">{{ form.cds_snps.label }}</div>
+            <div class="flex-field">{{ form.cds_snps(title='divides SNPs into coding and non-coding sequences, gff file is required', data_toggle="tooltip") }}</div>
+            {% for error in form.cds_snps.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </div>
+        <!-- Choose whether to build SNP database -->
+        <div class="flex-container-row">
+            <div class="flex-label">{{ form.buildSNPdb.label }}</div>
+            <div class="flex-field">{{ form.buildSNPdb(title='Build SNP database', data_toggle="tooltip") }}</div>
+            {% for error in form.buildSNPdb.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </div>
+        <!-- Select tree generation algorithm -->
+        <div class="flex-container-row">
+            <div class="flex-label">{{ form.tree.label }}</div>
+            <div class="flex-field">{{ form.tree(title='Choose tree generation algorithm', data_toggle="tooltip", onchange="showBootstrap()") }}</div>
+            {% for error in form.tree.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </div>
+        <!-- Choose whether to bootstrap -->
+        <div id="bootstrapshow" style="display:none;">
+          <div class="flex-container-row">
+              <div class="flex-label">{{ form.bootstrap.label }}</div>
+              <div class="flex-field">{{ form.bootstrap(title='Do you want to create bootstrap trees?', data_toggle="tooltip", onchange="showBootstrapN()") }}</div>
+              {% for error in form.bootstrap.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+          </div>
+        </div>
+        <!-- Choose number of bootstraps -->
+        <div id="bootstrapN" style="display:none;">
+          <div class="flex-container-row">
+              <div class="flex-label">{{ form.N.label }}</div>
+              <div class="flex-field">{{ form.N(title='Specify the number of bootstrap trees to generate', data_toggle="tooltip") }}</div>
+              {% for error in form.N.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+          </div>
+        </div>
+        <!-- Choose whether to perform selection analysis -->
+        <div class="flex-container-row">
+            <div class="flex-label">{{ form.do_select.label }}</div>
+            <div class="flex-field">{{ form.do_select(title='Do you want to do molecular evolution analysis?'
+              'Turning this option ON will significantly slow the runtime. If this option is turned ON, you must '
+              'provide the gff file for the corresponding reference genome.', data_toggle="tooltip", onchange="showPOS()") }}</div>
+            {% for error in form.do_select.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </div>
+        <!-- Select molecular analysis algorithm -->
+        <div id="pos" style="display:none;">
+          <div class="flex-container-row">
+              <div class="flex-label">{{ form.pos_select.label }}</div>
+              <div class="flex-field">{{ form.pos_select(title='Select Molecular Evolution analysis algorithm to use', data_toggle="tooltip") }}</div>
+              {% for error in form.pos_select.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+              {% endfor %}
+          </div>
+        </div>
+        <!-- Remove intermediate files? -->
+        <div class="flex-container-row">
+            <div class="flex-label">{{ form.clean.label }}</div>
+            <div class="flex-field">{{ form.clean(title='Turning this option ON will remove intermediate files', data_toggle="tooltip") }}</div>
+            {% for error in form.clean.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </div>
+        <!-- Choose number of threads -->
+        <div class="flex-container-row">
+            <div class="flex-label">{{ form.threads.label }}</div>
+            <div class="flex-field">{{ form.threads(title='Specify the number of threads to run analysis ON (between 1 and 16)', data_toggle="tooltip") }}</div>
+            {% for error in form.threads.errors %}
+              <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </div>
+      </div>
+        <p>{{ form.submit(onclick="showLoading()") }}</p>
+    </form>
+</div>
+{% endblock %}
+
