@@ -10,7 +10,7 @@ flask-wtf
 flask_debugtoolbar
 flask_cors
 itsdangerous==0.24
-Jinja2==2.10
+Jinja2==2.10.1
 kombu==4.2.0
 MarkupSafe==1.0
 pandas==0.23.1
