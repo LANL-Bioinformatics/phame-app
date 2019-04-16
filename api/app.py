@@ -711,9 +711,13 @@ def get_all_task_statuses():
     Make a call to the monitor container to get project status for all projects
     :return: api call response as a json
     """
-    statuses = requests.get('http://monitor:5555/api/tasks')
-    logging.debug(f'status: {statuses.text}')
-    logging.debug(f'status json: {statuses.json()}')
+    try:
+        statuses = requests.get('http://monitor:5555/api/tasks')
+        logging.debug(f'status: {statuses.text}')
+        logging.debug(f'status json: {statuses.json()}')
+    except requests.exceptions.ConnectionError as e:
+        logging.exception(f'Connection error {e}')
+        return None
     return statuses.json()
 
 
@@ -723,11 +727,16 @@ def get_project_statuses():
     :return: list of dicts with project names and their states
     """
     task_statuses = get_all_task_statuses()
-    logging.debug('task statuses:')
+    logging.debug(f'task statuses: {task_statuses}')
     project_statuses = []
-    for task, status in task_statuses.items():
-        args_list = ast.literal_eval(status['args'])
-        project_statuses.append({'project': args_list[1], 'state': status['state']})
+    if task_statuses:
+        for task, status in task_statuses.items():
+            try:
+                args_list = ast.literal_eval(status['args'])
+                project_statuses.append({'project': args_list[1], 'state': status['state']})
+            except ValueError as e:
+                logging.exception(f'status empty for task {task}')
+    logging.debug(f'project_statuses {project_statuses}')
     return project_statuses
 
 
@@ -790,13 +799,17 @@ def set_project_status(project_statuses, project, reference_genome, results_dir)
     project_task_status = None
     logging.debug('set project status')
     logging.debug(f'number projects: {len(project_statuses)}')
-    for status in project_statuses:
-        logging.debug(f'project {project} status {status}')
-        if status['project'] == project:
-            if not os.path.exists(os.path.join(results_dir, f'{project}.log')) or reference_genome == '':
-                project_task_status = 'FAILURE'
-            else:
-                project_task_status = status['state']
+    project_status = next((item for item in project_statuses if item["project"] == project), None)
+    logging.debug(f'project {project} status {project_status}')
+    # task failed if project.log doesn't exist or reference_genome is empty
+    if not os.path.exists(os.path.join(results_dir, f'{project}.log')) or reference_genome == '' or not os.path.exists(os.path.join(results_dir, 'trees')):
+        project_task_status = 'FAILURE'
+    # if project is not in list of statuses returned by the monitor, check for presence of tree files
+    elif not project_status and os.path.exists(os.path.join(results_dir, 'trees')) and os.path.isdir(os.path.join(results_dir, 'trees')):
+        if os.listdir(os.path.join(results_dir, 'trees')):
+            project_task_status = 'SUCCESS'
+    else:
+        project_task_status = project_status['state']
 
     return project_task_status
 
