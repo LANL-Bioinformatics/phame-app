@@ -717,7 +717,7 @@ def get_all_task_statuses():
     return statuses.json()
 
 
-def get_project_statuses(display_user):
+def get_project_statuses():
     """
     Get task statuses for the current users projects
     :return: list of dicts with project names and their states
@@ -727,9 +727,7 @@ def get_project_statuses(display_user):
     project_statuses = []
     for task, status in task_statuses.items():
         args_list = ast.literal_eval(status['args'])
-        logging.debug(f"task: {task}, {args_list[1]}, {status['state']}")
-        if args_list[0] == display_user:
-            project_statuses.append({'project': args_list[1], 'state': status['state']})
+        project_statuses.append({'project': args_list[1], 'state': status['state']})
     return project_statuses
 
 
@@ -790,6 +788,8 @@ def set_project_status(project_statuses, project, reference_genome, results_dir)
     """
 
     project_task_status = None
+    logging.debug('set project status')
+    logging.debug(f'number projects: {len(project_statuses)}')
     for status in project_statuses:
         logging.debug(f'project {project} status {status}')
         if status['project'] == project:
@@ -828,7 +828,7 @@ def projects(username=None):
         # list of projects to display
         projects_display_list = []
 
-        project_statuses = get_project_statuses(display_user)
+        project_statuses = get_project_statuses()
 
         for project in projects_list:
 
