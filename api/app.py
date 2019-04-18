@@ -746,11 +746,15 @@ def get_num_threads(project_dir):
     :param project_dir: Directory for project
     :return: number of threads
     """
-    num_threads = get_config_property(project_dir, 'threads')
-    if num_threads is None:
-        num_threads = 'Unknown'
-    return num_threads
-
+    num_threads = 0
+    try:
+        num_threads = get_config_property(project_dir, 'threads')
+        if num_threads is None:
+            num_threads = 'Unknown'
+        return num_threads
+    except ValueError as e:
+        logging.exception(f'Could not get number of threads: {e}')
+        return num_threads
 
 def get_exec_time(project_dir):
     """
@@ -759,13 +763,17 @@ def get_exec_time(project_dir):
     :return: String representation of time 'h:mm:ss'
     """
     exec_time_string = '0:00:00'
-    if os.path.exists(os.path.join(project_dir, 'time.log')):
-        with open(os.path.join(project_dir, 'time.log'), 'r') as fp:
-            exec_time = float(fp.readline()) / 1000.
-            m, s = divmod(exec_time, 60)
-            h, m = divmod(m, 60)
-            exec_time_string = "%d:%02d:%02d" % (h, m, s)
-    return exec_time_string
+    try:
+        if os.path.exists(os.path.join(project_dir, 'time.log')):
+            with open(os.path.join(project_dir, 'time.log'), 'r') as fp:
+                exec_time = float(fp.readline()) / 1000.
+                m, s = divmod(exec_time, 60)
+                h, m = divmod(m, 60)
+                exec_time_string = "%d:%02d:%02d" % (h, m, s)
+        return exec_time_string
+    except ValueError as e:
+        logging.exception(f'Could not get exec time: {e}')
+        return exec_time_string
 
 
 def get_reference_file(summary_statistics_file):
