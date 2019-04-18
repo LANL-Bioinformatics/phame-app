@@ -796,7 +796,7 @@ def set_project_status(project_statuses, project, reference_genome, results_dir)
     :return: project status ['SUCCESS', 'FAILURE', 'STARTED']
     """
 
-    project_task_status = None
+    project_task_status = 'FAILURE'
     logging.debug('set project status')
     logging.debug(f'number projects: {len(project_statuses)}')
     project_status = next((item for item in project_statuses if item["project"] == project), None)
