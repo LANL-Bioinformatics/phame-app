@@ -180,8 +180,6 @@
 
     }
 
-
-
     window.onload = function() {getUploadedFilesList();}
     </script>
 
@@ -277,7 +275,7 @@
         </div>
         <script type="text/javascript">
         $(document).ready(function() {
-            $('#multiselect').children('select').multiselect({
+            $('.multiselect').children('select').multiselect({
               includeSelectAllOption: true,
               selectAllValue: 'multiselect-all'
             });
@@ -288,7 +286,7 @@
         <div id="complete_genomes_div" style="display: block">
             <div class="flex-container-row">
                 <div class="flex-label">{{ form.complete_genomes.label }}</div>
-                <div class="flex-field" id="multiselect">{{ form.complete_genomes(title='Select complete genome files. Use Command-Click to select multiple genome files', data_toggle="tooltip", onchange="referenceFileUpdate()") }}</div>
+                <div class="flex-field multiselect">{{ form.complete_genomes(title='Select complete genome files', data_toggle="tooltip", onchange="referenceFileUpdate()") }}</div>
                 {% for error in form.complete_genomes.errors %}
                   <span style="color: red;">[{{ error }}]</span>
                 {% endfor %}
@@ -298,7 +296,7 @@
         <div id="contigs_div" style="display: none;">
             <div class="flex-container-row">
                 <div class="flex-label">{{ form.contigs.label }}</div>
-                <div class="flex-field">{{ form.contigs(title='Select contig files', data_toggle="tooltip") }}</div>
+                <div class="flex-field multiselect">{{ form.contigs(title='Select contig files', data_toggle="tooltip") }}</div>
                 {% for error in form.contigs.errors %}
                   <span style="color: red;">[{{ error }}]</span>
                 {% endfor %}
@@ -318,7 +316,7 @@
         <div id="reads_div" style="display: none;">
             <div class="flex-container-row">
                 <div class="flex-label">{{ form.reads.label }}</div>
-                <div class="flex-field">{{ form.reads(title='Select reads files', data_toggle="tooltip") }}</div>
+                <div class="flex-field multiselect">{{ form.reads(title='Select reads files', data_toggle="tooltip") }}</div>
                 {% for error in form.reads.errors %}
                   <span style="color: red;">[{{ error }}]</span>
                 {% endfor %}
