@@ -4,7 +4,10 @@
   <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/phame-loading.css') }}">
   <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/phame-input.css') }}">
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+
+
 <script>
+
     function outputUpdate(cutoff) {
           document.querySelector('#selected-cutoff').value = Math.round(cutoff * 100) / 100;
       }
@@ -174,7 +177,10 @@
               alert('Unexpected error');
           }
       });
+
     }
+
+
 
     window.onload = function() {getUploadedFilesList();}
     </script>
@@ -189,6 +195,8 @@
 </div>
 
 <div id="content">
+
+
     <h1>PhaME Input</h1>
 
     {% with messages = get_flashed_messages() %}
@@ -238,8 +246,6 @@
         <input type="submit" value="Remove files" id="remove-button" onclick="removeUploadedFiles()">
     </form>
 
-    <script type="text/javascript" src="{{ url_for('static', filename='javascript/jquery-2.1.1.min.js') }}"></script>
-    <script type="text/javascript" src="{{ url_for('static', filename='javascript/uploadr.js') }}"></script>
 
     <p><a href="http://phame.readthedocs.io/">PhaME Documentation</a> </p>
     <!-- Input form -->
@@ -269,11 +275,20 @@
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </div>
+        <script type="text/javascript">
+        $(document).ready(function() {
+            $('#multiselect').children('select').multiselect({
+              includeSelectAllOption: true,
+              selectAllValue: 'multiselect-all'
+            });
+        });
+        </script>
+
         <!-- Select Complete Genomes -->
         <div id="complete_genomes_div" style="display: block">
             <div class="flex-container-row">
                 <div class="flex-label">{{ form.complete_genomes.label }}</div>
-                <div class="flex-field">{{ form.complete_genomes(title='Select complete genome files. Use Command-Click to select multiple genome files', data_toggle="tooltip", onchange="referenceFileUpdate()") }}</div>
+                <div class="flex-field" id="multiselect">{{ form.complete_genomes(title='Select complete genome files. Use Command-Click to select multiple genome files', data_toggle="tooltip", onchange="referenceFileUpdate()") }}</div>
                 {% for error in form.complete_genomes.errors %}
                   <span style="color: red;">[{{ error }}]</span>
                 {% endfor %}
