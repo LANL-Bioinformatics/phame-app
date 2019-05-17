@@ -16,7 +16,6 @@ services:
       - 80:80
     depends_on:
       - phame
-      - client
 
  # flask app that calls shell script that runs phame
   phame-app:
