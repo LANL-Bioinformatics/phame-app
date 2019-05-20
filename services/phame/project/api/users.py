@@ -42,7 +42,7 @@ def login():
                 return redirect(url_for('users.login'))
         else:
             user = User.query.filter_by(username='public').first()
-        logging.debug(f'user {user.username}')
+        # logging.debug(f'user {user.username}')
 
         logging.debug(f"request next page {request.args.get('next')}")
         login_user(user, remember=form.remember_me.data)
@@ -52,8 +52,8 @@ def login():
             # url_for returns /input
 
             next_page = 'phame.' + url_for('phame.projects') if current_user.username == 'public' else 'phame.' + url_for('phame.input').split('/')[-1]
-            logging.debug(f'not next page {next_page}')
-        logging.debug(f"next_page split {'.'.join(next_page.split('/')[-2:])}")
+            # logging.debug(f'not next page {next_page}')
+        # logging.debug(f"next_page split {'.'.join(next_page.split('/')[-2:])}")
         # logging.debug(f"next_page split {'phame.' + url_for(next_page.split('/')[-1])}")
         return redirect(url_for('.'.join(next_page.split('/')[-2:])))
     return render_template('login.html', title='Sign In', form=form)
@@ -84,21 +84,29 @@ def register():
     }
     if form.validate_on_submit():
         try:
+            logging.debug(f'form email {form.email.data}')
             user = User.query.filter_by(email=form.email.data).first()
+            logging.debug(f'register user {user}')
             if not user:
                 user = User(username=form.username.data, email=form.email.data)
-                logging.debug(f'user {user}')
                 user.set_password(form.password.data)
                 db.session.add(user)
                 db.session.commit()
+
+                user = User.query.filter_by(email=form.email.data).first()
+                logging.debug(f'user query {user.email}')
                 flash('Congratulations, you are now a registered user!')
                 # logging.debug(f"project directory {current_app.config['PROJECT_DIRECTORY']}")
                 if not os.path.exists(os.path.join(current_app.config['PROJECT_DIRECTORY'], user.username)):
                     os.makedirs(os.path.join(current_app.config['PROJECT_DIRECTORY'], user.username))
                 if not os.path.exists(os.path.join(current_app.config['UPLOAD_DIRECTORY'], user.username)):
                     os.makedirs(os.path.join(current_app.config['UPLOAD_DIRECTORY'], user.username))
-                return redirect(url_for('users.login'))
+
+                response_object = {'status': 'success',
+                                   'message': f'{form.email.data} was added'}
+                return jsonify(response_object), 200
             else:
+                logging.debug(f'response_object {response_object}')
                 response_object['message'] = 'Sorry. That email already exists.'
                 return jsonify(response_object), 400
         except IntegrityError as e:
@@ -110,6 +118,7 @@ def register():
 
 @users_blueprint.route('/users', methods=['POST'])
 def add_user():
+
     post_data = request.get_json()
     response_object = {
         'status': 'fail',
@@ -121,6 +130,7 @@ def add_user():
     email = post_data.get('email')
     try:
         user = User.query.filter_by(email=email).first()
+        logging.debug(f'register user {user}')
         if not user:
             db.session.add(User(username=username, email=email))
             db.session.commit()

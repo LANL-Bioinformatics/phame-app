@@ -49,7 +49,7 @@ def link_files(project_dir, ref_dir, work_dir, form_dict):
     logging.debug(f"making links")
     os.makedirs(project_dir, exist_ok=True)
     logging.debug(f"length complete genomes list: {len(form_dict['complete_genomes'])}")
-    # logging.debug(f"complete genomes list: {form_dict['complete_genomes']}")
+    logging.debug(f"complete genomes list: {form_dict['complete_genomes']}")
     # logging.debug(f"genome 1: {form_dict['complete_genomes'][0]}")
     # logging.debug(f"genome 1 dict: {form_dict['complete_genomes'][0].__dict__}")
     # logging.debug(f"genome 1 filename: {form_dict['complete_genomes'][0].filename}")
@@ -58,13 +58,19 @@ def link_files(project_dir, ref_dir, work_dir, form_dict):
         if not os.path.exists(ref_dir):
             os.makedirs(ref_dir)
         # symlink complete genome files
+
+        logging.debug(f"ref_dir {ref_dir}")
+        logging.debug(f"ref_dir exists {os.path.exists(ref_dir)}")
         for upload_file in form_dict['complete_genomes']:
             logging.debug(f"upload file name {upload_file.filename}")
             if os.path.exists(os.path.join(ref_dir, upload_file.filename)):
                 os.remove(os.path.join(ref_dir, upload_file.filename))
-            # logging.debug(f"upload file {os.path.join(PHAME_UPLOAD_DIR, current_user.username, file_name)}")
+            logging.debug(f"file {os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username, upload_file.filename)}")
+            logging.debug(f"symlink file {os.path.join(ref_dir, upload_file.filename)}")
             os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username, upload_file.filename),
                        os.path.join(ref_dir, upload_file.filename))
+            logging.debug(f"upload exists {os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username, upload_file.filename)}")
+            logging.debug(f"symlink exists {os.path.exists(os.path.join(ref_dir, upload_file.filename))}")
         # form.reference_file.choices = [(a, a) for a in form.complete_genomes.data]
 
     if len(form_dict['reads_files']) > 0:
@@ -199,14 +205,15 @@ def upload():
             else:
                 return "Couldn't create upload directory: {}".format(target)
 
-    logging.debug("=== Form Data ===")
-    for key, value in list(form.items()):
-        logging.debug(key, "=>", value)
+    # logging.debug("=== Form Data ===")
+    # for key, value in list(form.items()):
+    #     logging.debug(key, "=>", value)
 
+    logging.debug(f'request files {request.files.getlist("file")}')
     for upload in request.files.getlist("file"):
-        filename = upload.filename.rsplit("/")[0]
+        filename = os.path.basename(upload.filename)
         destination = "/".join([target, filename])
-        # logging.debug("Accept incoming file:", filename)
+        logging.debug(f"Accept incoming file: {filename}")
         # logging.debug("Save it to:", destination)
         upload.save(destination)
 
