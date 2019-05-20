@@ -36,15 +36,16 @@ services:
       context: ./services/phame
       dockerfile: Dockerfile-dev
     volumes:
-#      - './services/phame:/usr/src/app'
+      - './services/phame:/usr/src/app'
       - phame_data:/phame_api/media
       - api_data:/usr/src/app/static/uploads
     expose:
       - 5000
     environment:
       - FLASK_ENV=development
+      - FLASK_APP=project/__init__.py
       - APP_SETTINGS=project.config.DevelopmentConfig
-      - DATABASE_URL=postgres://postgres:postgres@phame-db:5432/phame-app_db  # new
+      - DATABASE_URL=postgres://postgres:postgres@phame-db:5432/users_dev  # new
       - DATABASE_TEST_URL=postgres://postgres:postgres@phame-db:5432/users_test  # new
     depends_on:
       - phame-db
