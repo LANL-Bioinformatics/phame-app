@@ -72,24 +72,39 @@ def register():
     Registration for PhaME
     :return:
     """
+
     if current_user.is_authenticated:
         return redirect(url_for('users.index'))
     form = RegistrationForm()
-    logging.debug(f'form {form.__dict__}')
+    # logging.debug(f'form {form.__dict__}')
     logging.debug(f'username {form.username.data}')
+    response_object = {
+        'status': 'fail',
+        'message': 'Invalid payload'
+    }
     if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data)
-        logging.debug(f'user {user}')
-        user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
-        flash('Congratulations, you are now a registered user!')
-        logging.debug(f"project directory {current_app.config['PROJECT_DIRECTORY']}")
-        if not os.path.exists(os.path.join(current_app.config['PROJECT_DIRECTORY'], user.username)):
-            os.makedirs(os.path.join(current_app.config['PROJECT_DIRECTORY'], user.username))
-        if not os.path.exists(os.path.join(current_app.config['UPLOAD_DIRECTORY'], user.username)):
-            os.makedirs(os.path.join(current_app.config['UPLOAD_DIRECTORY'], user.username))
-        return redirect(url_for('users.login'))
+        try:
+            user = User.query.filter_by(email=form.email.data).first()
+            if not user:
+                user = User(username=form.username.data, email=form.email.data)
+                logging.debug(f'user {user}')
+                user.set_password(form.password.data)
+                db.session.add(user)
+                db.session.commit()
+                flash('Congratulations, you are now a registered user!')
+                # logging.debug(f"project directory {current_app.config['PROJECT_DIRECTORY']}")
+                if not os.path.exists(os.path.join(current_app.config['PROJECT_DIRECTORY'], user.username)):
+                    os.makedirs(os.path.join(current_app.config['PROJECT_DIRECTORY'], user.username))
+                if not os.path.exists(os.path.join(current_app.config['UPLOAD_DIRECTORY'], user.username)):
+                    os.makedirs(os.path.join(current_app.config['UPLOAD_DIRECTORY'], user.username))
+                return redirect(url_for('users.login'))
+            else:
+                response_object['message'] = 'Sorry. That email already exists.'
+                return jsonify(response_object), 400
+        except IntegrityError as e:
+            db.session.rollback()
+            return jsonify(response_object), 400
+
     return render_template('register.html', title='Register', form=form)
 
 

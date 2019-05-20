@@ -45,30 +45,6 @@ class UsersTest(BaseTestCase):
         db.session.remove()
         db.drop_all()
 
-
-    # def test_add_user_duplicate_email(self):
-    #     """Ensure error is thrown if email already exists"""
-    #     with self.client:
-    #         self.client.post(
-    #             url_for('users.register'),
-    #             data=json.dumps({
-    #                 'username': 'mark',
-    #                 'email': 'mcflynn617@gmail.com'
-    #             }),
-    #             content_type='application/json',
-    #         )
-    #         response = self.client.post(
-    #             url_for('users.register'),
-    #             data=json.dumps({
-    #                 'username': 'mark',
-    #                 'email': 'mcflynn617@gmail.com'
-    #             }),
-    #             content_type='application/json',
-    #         )
-    #         data = json.loads(response.data.decode())
-    #         self.assertEqual(response.status_code, 400)
-    #         self.assertIn('Sorry. That email already exists', data['message'])
-    #         self.assertIn('fail', data['status'])
     #
     # def test_single_user(self):
     #     """Ensure get single user behaves correctly."""
@@ -133,18 +109,6 @@ class UsersTest(BaseTestCase):
                 self.assertEquals(response.status_code, 302)
                 self.assertIn('login', response.headers['Location'])
 
-    def test_register_invalid_json(self):
-        """Ensure error is thrown if the JSON object is empty"""
-        with self.client:
-            response = self.client.post(
-                url_for('users.register'),
-                data=json.dumps({}),
-                content_type='application/json',
-            )
-            data = json.loads(response.data.decode())
-            self.assertEqual(response.status_code, 400)
-            self.assertIn('Invalid payload', data['message'])
-            self.assertIn('fail', data['status'])
 
     def test_register(self):
         PROJECT_DIRECTORY = current_app.config['PROJECT_DIRECTORY']
@@ -159,13 +123,37 @@ class UsersTest(BaseTestCase):
                                              }),
                                         content_type='application/json',)
             self.assertEquals(response.status_code, 302)
-            print(response.headers)
             # self.assertIn('login', response.headers['Location'])
             self.assertTrue(os.path.exists(os.path.join(PROJECT_DIRECTORY, 'mark')))
             self.assertTrue(os.path.exists(os.path.join(UPLOAD_DIRECTORY, 'mark')))
             user = User.query.filter_by(username='mark').first()
             self.assertEqual(user.email, 'mcflynn617@gmail.com')
 
+    def test_add_user_duplicate_email(self):
+        """Ensure error is thrown if email already exists"""
+        with self.client:
+            # self.client.post(
+            #     url_for('users.register'),
+            #     data=json.dumps({
+            #         'username': 'mark',
+            #         'email': 'mcflynn617@gmail.com',
+            #         'password': 'test1',
+            #         'password2': 'test1'
+            #     }),
+            #     content_type='application/json',
+            # )
+            response = self.client.post(url_for('users.register'),
+                                        data=json.dumps(
+                                            {'username': 'mark',
+                                             'email': 'mcflynn617@gmail.com',
+                                             'password': 'test1',
+                                             'password2': 'test1'
+                                             }),
+                                        content_type='application/json', )
+            data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 400)
+            self.assertIn('Sorry. That email already exists', data['message'])
+            self.assertIn('fail', data['status'])
     def test_login_bad_password(self):
         self.add_user('mark', 'mcflynn617@gmail.com', 'test1')
         with self.client:
