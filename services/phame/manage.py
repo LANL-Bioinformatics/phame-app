@@ -62,5 +62,7 @@ def test():
     if result.wasSuccessful():
         return 0
     return 1
+
+
 if __name__ == '__main__':
     cli()

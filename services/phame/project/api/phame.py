@@ -23,9 +23,9 @@ from project.api.forms import LoginForm, InputForm, SignupForm, RegistrationForm
 from project.api.worker import celery
 
 phame_blueprint = Blueprint('phame', __name__, template_folder='templates', static_folder='static')
-PROJECT_DIRECTORY = os.path.join('/phame_api', 'media')
-UPLOAD_DIRECTORY = os.path.join('static', 'uploads')
-PHAME_UPLOAD_DIR = os.path.join('/usr','src','app','static', 'uploads')
+# PROJECT_DIRECTORY = os.path.join('/phame_api', 'media')
+# UPLOAD_DIRECTORY = os.path.join('static', 'uploads')
+# PHAME_UPLOAD_DIR = os.path.join('/usr','src','app','static', 'uploads')
 SEND_NOTIFICATIONS = False
 logging.basicConfig(filename='api.log', level=logging.DEBUG)
 
@@ -35,162 +35,6 @@ logging.basicConfig(filename='api.log', level=logging.DEBUG)
 @phame_blueprint.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
-
-
-@phame_blueprint.route('/login', methods=['GET', 'POST'])
-def login():
-    """
-    Login for PhaME
-    If user is logged in as 'public', they are redirected to the 'projects' page where they
-    can view 'public' projects
-    :return:
-    """
-    # if current_user.is_authenticated:
-    #     return redirect(url_for('phame.projects')) if current_user.username == 'public' else redirect(url_for('phame.index'))
-    form = LoginForm()
-    if form.validate_on_submit():
-        if not form.public_login.data:
-            user = User.query.filter_by(username=form.username.data).first()
-            if user is None or not user.check_password(form.password.data):
-                flash('Invalid username or password')
-                return redirect(url_for('phame.login'))
-        else:
-            user = User.query.filter_by(username='public').first()
-        logging.debug(f'user {user.username}')
-
-        logging.debug(f"request next page {request.args.get('next')}")
-        login_user(user, remember=form.remember_me.data)
-        next_page = url_for('phame.projects') if current_user.username == 'public' else request.args.get('next')
-        logging.debug(f'next page {next_page}')
-        if not next_page or url_parse(next_page).netloc != '':
-            # url_for returns /input
-
-            next_page = 'phame.' + url_for('phame.projects') if current_user.username == 'public' else 'phame.' + url_for('phame.input').split('/')[-1]
-            logging.debug(f'not next page {next_page}')
-        logging.debug(f"next_page split {'.'.join(next_page.split('/')[-2:])}")
-        # logging.debug(f"next_page split {'phame.' + url_for(next_page.split('/')[-1])}")
-        return redirect(url_for('.'.join(next_page.split('/')[-2:])))
-    return render_template('login.html', title='Sign In', form=form)
-
-
-@phame_blueprint.route('/logout')
-def logout():
-    """Logout user"""
-    logout_user()
-    return redirect(url_for('phame.login'))
-
-
-@phame_blueprint.route('/register', methods=['GET', 'POST'])
-def register():
-    """
-    Registration for PhaME
-    :return:
-    """
-    if current_user.is_authenticated:
-        return redirect(url_for('phame.index'))
-    form = RegistrationForm()
-    if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data)
-        user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
-        flash('Congratulations, you are now a registered user!')
-        if not os.path.exists(os.path.join(PROJECT_DIRECTORY, user.username)):
-            os.mkdir(os.path.join(PROJECT_DIRECTORY, user.username))
-        if not os.path.exists(os.path.join(UPLOAD_DIRECTORY, user.username)):
-            os.makedirs(os.path.join(UPLOAD_DIRECTORY, user.username))
-        return redirect(url_for('phame.login'))
-    return render_template('register.html', title='Register', form=form)
-
-
-@phame_blueprint.route('/profile', methods=['GET', 'POST'])
-def profile():
-    if current_user.username == 'admin':
-        form = AdminForm()
-        user_list = User.query.all()
-        for a in user_list:
-            logging.debug(a.username)
-        # form.manage_username.choices = [(a.username, a.username) for a in user_list]
-        if request.method == 'POST':
-            return redirect(url_for('phame.projects', username=form.manage_username.data))
-        return render_template('admin.html', user=current_user, form=form)
-    else:
-        return render_template('profile.html', user=current_user)
-
-
-
-@phame_blueprint.route('/ping', methods=['GET'])
-def ping_pong():
-    return jsonify({
-        'status': 'success',
-        'message': 'pong!'
-    })
-
-@phame_blueprint.route('/users', methods=['POST'])
-def add_user():
-    post_data = request.get_json()
-    response_object = {
-        'status': 'fail',
-        'message': 'Invalid payload'
-    }
-    if not post_data:
-        return jsonify(response_object), 400
-    username = post_data.get('username')
-    email = post_data.get('email')
-    try:
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            db.session.add(User(username=username, email=email))
-            db.session.commit()
-            response_object = {
-                'status': 'success',
-                'message': f'{email} was added!'
-            }
-            return jsonify(response_object), 201
-        else:
-            response_object['message'] = 'Sorry. That email already exists.'
-            return jsonify(response_object), 400
-    except IntegrityError as e:
-        db.session.rollback()
-        return jsonify(response_object), 400
-
-@phame_blueprint.route('/users/<user_id>', methods=['GET'])
-def get_single_user(user_id):
-    """Get single user details"""
-    response_object = {
-        'status': 'fail',
-        'message': 'User does not exist'
-    }
-    try:
-        user = User.query.filter_by(id=user_id).first()
-        if not user:
-            return jsonify(response_object), 404
-        else:
-            response_object = {
-                'status': 'success',
-                'data': {
-                    'id': user.id,
-                    'username': user.username,
-                    'email': user.email,
-                    'active': user.active
-                }
-            }
-        return jsonify(response_object), 200
-    except ValueError:
-        return jsonify(response_object), 404
-    except DataError:
-        return jsonify(response_object), 404
-
-@phame_blueprint.route('/users', methods=['GET'])
-def get_all_users():
-    """Get all users"""
-    response_object = {
-        'status': 'success',
-        'data': {
-            'users': [user.to_json() for user in User.query.all()]
-        }
-    }
-    return jsonify(response_object), 200
 
 
 def link_files(project_dir, ref_dir, work_dir, form_dict):
@@ -219,7 +63,7 @@ def link_files(project_dir, ref_dir, work_dir, form_dict):
             if os.path.exists(os.path.join(ref_dir, upload_file.filename)):
                 os.remove(os.path.join(ref_dir, upload_file.filename))
             # logging.debug(f"upload file {os.path.join(PHAME_UPLOAD_DIR, current_user.username, file_name)}")
-            os.symlink(os.path.join(PHAME_UPLOAD_DIR, current_user.username, upload_file.filename),
+            os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username, upload_file.filename),
                        os.path.join(ref_dir, upload_file.filename))
         # form.reference_file.choices = [(a, a) for a in form.complete_genomes.data]
 
@@ -228,7 +72,7 @@ def link_files(project_dir, ref_dir, work_dir, form_dict):
         for file_name in form_dict['reads']:
             if os.path.exists(os.path.join(ref_dir, file_name)):
                 os.remove(os.path.join(ref_dir, file_name))
-            os.symlink(os.path.join(PHAME_UPLOAD_DIR, current_user.username, file_name),
+            os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
                        os.path.join(ref_dir, file_name))
 
     if len(form_dict['contigs_files']) > 0:
@@ -238,9 +82,10 @@ def link_files(project_dir, ref_dir, work_dir, form_dict):
             new_filename = os.path.splitext(file_name)[0] + '.contig'
             if os.path.exists(os.path.join(ref_dir, file_name)):
                 os.remove(os.path.join(ref_dir, new_filename))
-            os.symlink(os.path.join(PHAME_UPLOAD_DIR, current_user.username, file_name),
+            os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
                        os.path.join(work_dir, new_filename))
     logging.debug(f"done making links")
+
 
 def project_setup(form_dict):
     """
@@ -248,7 +93,7 @@ def project_setup(form_dict):
     :param form: Input form
     :return: project and reference directory paths
     """
-    project_dir = os.path.join(PROJECT_DIRECTORY, current_user.username, form_dict['project'])
+    project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, form_dict['project'])
     ref_dir = os.path.join(project_dir, 'refdir')
     work_dir = os.path.join(project_dir, 'workdir')
     logging.debug(f'ref directory: {ref_dir}')
@@ -307,24 +152,24 @@ def create_config_file(form_dict):
     #     form_dict['reference_file'] = form.reference_file.data
     form_dict['data_type'] = get_data_type(form_dict['data_type'])
     content = render_template('phame.tmpl', form=form_dict)
-    logging.debug(f"project path {os.path.join(PROJECT_DIRECTORY, current_user.username, project)}")
-    with open(os.path.join(PROJECT_DIRECTORY, current_user.username, project, 'config.ctl'), 'w') as conf:
+    logging.debug(f"project path {os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)}")
+    with open(os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project, 'config.ctl'), 'w') as conf:
         conf.write(content)
 
 
 @phame_blueprint.route('/files', methods=['GET'])
 def upload_files_list():
-    file_list = os.listdir(os.path.join(UPLOAD_DIRECTORY, current_user.username))
+    file_list = os.listdir(os.path.join(current_app.config['UPLOAD_DIRECTORY'], current_user.username))
     return jsonify({'uploads':sorted(file_list)})
 
 
 @phame_blueprint.route('/remove', methods=['POST'])
 def remove_files():
     """Remove all of user's uploaded files"""
-    file_list = os.listdir(os.path.join(UPLOAD_DIRECTORY, current_user.username))
+    file_list = os.listdir(os.path.join(current_app.config['UPLOAD_DIRECTORY'], current_user.username))
     for file_name in file_list:
-        os.remove(os.path.join(UPLOAD_DIRECTORY, current_user.username, file_name))
-    file_list = os.listdir(os.path.join(UPLOAD_DIRECTORY, current_user.username))
+        os.remove(os.path.join(current_app.config['UPLOAD_DIRECTORY'], current_user.username, file_name))
+    file_list = os.listdir(os.path.join(current_app.config['UPLOAD_DIRECTORY'], current_user.username))
     return jsonify({'uploads': sorted(file_list)})
 
 
@@ -343,7 +188,7 @@ def upload():
         is_ajax = True
 
     # Target folder for these uploads.
-    target = os.path.join(UPLOAD_DIRECTORY, current_user.username)
+    target = os.path.join(current_app.config['UPLOAD_DIRECTORY'], current_user.username)
     if not os.path.exists(target):
         logging.debug(f'creating directory {target}')
         try:
@@ -487,7 +332,7 @@ def set_directories(display_user, project):
     :param project: Project name
     :return: Full paths to project, work, results and reference directories
     """
-    project_dir = os.path.join(PROJECT_DIRECTORY, display_user, project)
+    project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], display_user, project)
     workdir = os.path.join(project_dir, 'workdir')
     results_dir = os.path.join(workdir, 'results')
     refdir = os.path.join(project_dir, 'refdir')
@@ -571,7 +416,7 @@ def delete_projects():
     projects = form.to_dict(flat=False)
     for project in projects['deleteCheckBox']:
         logging.debug(f'removing project: {project}')
-        shutil.rmtree(os.path.join(PROJECT_DIRECTORY, current_user.username, f'{project}'))
+        shutil.rmtree(os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, f'{project}'))
     return redirect(url_for('phame.projects'))
 
 
@@ -590,7 +435,9 @@ def projects(username=None):
 
         logging.debug(f'display_user {display_user}')
         # list of all projects for this user
-        projects_list = [project for project in os.listdir(os.path.join(PROJECT_DIRECTORY, display_user))]
+        if not os.path.exists(os.path.join(current_app.config['PROJECT_DIRECTORY'], display_user)):
+            os.makedirs(os.path.join(current_app.config['PROJECT_DIRECTORY'], display_user))
+        projects_list = [project for project in os.listdir(os.path.join(current_app.config['PROJECT_DIRECTORY'], display_user))]
 
         if len(projects_list) == 0 and current_user.username != 'public':
             return redirect(url_for('phame.input'))
@@ -655,7 +502,7 @@ def projects(username=None):
         return render_template('error.html', error={'msg' : f'There was a problem displaying projects: {str(e)}'})
 
 def temp_upload(form_dict):
-    target = os.path.join(UPLOAD_DIRECTORY, current_user.username)
+    target = os.path.join(current_app.config['UPLOAD_DIRECTORY'], current_user.username)
     if not os.path.exists(target):
         logging.debug(f'creating directory {target}')
         os.mkdir(target)
@@ -704,9 +551,9 @@ def input():
         return redirect(url_for('phame.projects'))
 
     form = InputForm()
-    if not os.path.exists(os.path.join(UPLOAD_DIRECTORY, current_user.username)):
-        os.makedirs(os.path.join(UPLOAD_DIRECTORY, current_user.username))
-    files_list = sorted(os.listdir(os.path.join(UPLOAD_DIRECTORY, current_user.username)))
+    if not os.path.exists(os.path.join(current_app.config['UPLOAD_DIRECTORY'], current_user.username)):
+        os.makedirs(os.path.join(current_app.config['UPLOAD_DIRECTORY'], current_user.username))
+    files_list = sorted(os.listdir(os.path.join(current_app.config['UPLOAD_DIRECTORY'], current_user.username)))
     form.reference_file.choices = []
     form.complete_genomes.choices = [(a, a) for a in files_list if (a.endswith('fna') or a.endswith('fasta') or a.endswith('gff'))]
     form.contigs.choices = [(a, a) for a in files_list if a.endswith('contig')]
@@ -775,9 +622,9 @@ def get_config_property(project_dir, property):
 @login_required
 def subset(project):
     form = SubsetForm()
-    project_path = os.path.join(PROJECT_DIRECTORY, current_user.username, project)
+    project_path = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)
     new_project = project+'_subset'
-    new_project_path = os.path.join(PROJECT_DIRECTORY, current_user.username, new_project)
+    new_project_path = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, new_project)
 
     ref_dir_files = sorted(os.listdir(os.path.join(project_path, 'refdir')))
 
@@ -849,14 +696,14 @@ def subset(project):
         for file_name in form.subset_files.data:
 
             logging.debug(f'file {file_name}')
-            os.symlink(os.path.join(PHAME_UPLOAD_DIR, current_user.username, file_name),
+            os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
                        os.path.join(new_project_path, 'refdir', file_name))
                 # os.symlink(os.path.join(project_path, 'refdir', file_name), os.path.join(new_project_path, 'refdir', file_name))
 
         # symlink contig files
         for file_name in os.listdir(os.path.join(project_path, 'workdir')):
             if file_name.endswith('.contig'):
-                os.symlink(os.path.join(PHAME_UPLOAD_DIR, current_user.username, file_name),
+                os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
                            os.path.join(new_project_path, 'workdir', file_name))
 
         if form.validate_on_submit():
@@ -888,11 +735,11 @@ def zip_output_files(project):
     :param project: name of project
     :return: zip_name: name of zip file
     """
-    zip_name = os.path.join(PROJECT_DIRECTORY, current_user.username, project, '{0}.zip'.format(project))
+    zip_name = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project, '{0}.zip'.format(project))
     with zipfile.ZipFile(zip_name,  'w', zipfile.ZIP_DEFLATED) as zipf:
-        for root, dirs, files in os.walk(os.path.join(PROJECT_DIRECTORY, current_user.username, project, 'workdir', 'results')):
+        for root, dirs, files in os.walk(os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project, 'workdir', 'results')):
             for file in files:
-                zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(PROJECT_DIRECTORY, current_user.username, project, '..')))
+                zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project, '..')))
     return zip_name
 
 
@@ -953,7 +800,7 @@ def get_log(project):
     :param project: Project name
     :return: json of log file
     """
-    log_file = os.path.join(PROJECT_DIRECTORY, current_user.username, project, 'workdir', 'results', f'{project}.log')
+    log_file = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project, 'workdir', 'results', f'{project}.log')
     if not os.path.exists(log_file):
         return jsonify({'log': 'null'})
     with open(log_file, 'rb') as f:
@@ -966,7 +813,7 @@ def get_log(project):
 
 @phame_blueprint.route('/num_results_files/<project>', methods=['GET'])
 def num_results_files(project):
-    results_dir = os.path.join(PROJECT_DIRECTORY, current_user.username, project, 'workdir', 'results')
+    results_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project, 'workdir', 'results')
     num_files = len(os.listdir(results_dir)) if os.path.exists(results_dir) else 0
     return jsonify({'num_files':num_files})
 
@@ -977,7 +824,7 @@ def send_mailgun(message, project):
     recipient = current_user.email
     logging.info('current_user.email: {0}'.format(recipient))
     request_url = 'https://api.mailgun.net/v3/{0}/messages'.format(email_domain)
-    results_dir = os.path.join(PROJECT_DIRECTORY, current_user.username, project, 'workdir', 'results')
+    results_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project, 'workdir', 'results')
     log_file = '{0}.log'.format(project)
     log_fh = open(os.path.join(results_dir, log_file),"rb").read()
     error_file = '{0}.error'.format(project)
@@ -1023,7 +870,7 @@ def display(project, username = None):
 
     if not username:
         username = current_user.username
-    project_dir = os.path.join(PROJECT_DIRECTORY, username, project)
+    project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], username, project)
     workdir = os.path.join(project_dir, 'workdir')
     results_dir = os.path.join(workdir, 'results')
     refdir = os.path.join(project_dir, 'refdir')
@@ -1141,7 +988,7 @@ def display_file(filename, project):
     :param project: Project name
     :return:
     """
-    with open(os.path.join(PROJECT_DIRECTORY, current_user.username, project,
+    with open(os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project,
                                             'workdir', 'results', filename), 'r') as fp:
         content = fp.read()
     return render_template('content.html', text=content)

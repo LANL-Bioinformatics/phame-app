@@ -82,6 +82,7 @@ class RegistrationForm(FlaskForm):
         if user is not None:
             raise ValidationError('Please use a different email address.')
 
+
 class AdminForm(FlaskForm):
     manage_username = SelectField('Username to view')
     # manage_username = QuerySelectField(query_factory=lambda: User.query.all())

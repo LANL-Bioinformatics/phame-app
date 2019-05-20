@@ -64,7 +64,16 @@
               <div class="collapse navbar-collapse" id="myNavbar">
                 <ul class="nav navbar-nav navbar-right">
             <li><a href="{{ url_for('phame.index') }}"><span class="glyphicon glyphicon-home"></span>Home</a></li>
-            <li><a href="{{ url_for('phame.login') }}"><span class="glyphicon glyphicon-log-in"></span>Login</a></li>
+                  {% if current_user.username %}
+            <li><a href="{{ url_for('users.logout') }}"><span class="glyphicon glyphicon-log-out"></span>Logout</a></li>
+            {% else %}
+            <li><a href="{{ url_for('users.login') }}"><span class="glyphicon glyphicon-log-in"></span>Login</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('phame.input') }}"><span class="glyphicon glyphicon-tree-conifer"></span>Input</a></li>
+            <li><a href="{{ url_for('phame.projects') }}"><span class="glyphicon glyphicon-th-list"></span>Projects</a></li>
+            {% if current_user.username %}
+              <li><a href="{{ url_for('users.profile') }}"><p class="navbar-text" style="color:white";><span class="glyphicon glyphicon-user"></span>{{ current_user.username}}</p></a>/li>
+            {% endif %}
 
 
 

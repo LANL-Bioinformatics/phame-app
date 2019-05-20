@@ -31,7 +31,9 @@ def create_app(script_info=None):
 
     # register blueprints
     from project.api.phame import phame_blueprint
+    from project.api.users import users_blueprint
     app.register_blueprint(phame_blueprint, url_prefix='/phame')
+    app.register_blueprint(users_blueprint, url_prefix='/users')
 
     # shell context for flask cli
     @app.shell_context_processor
