@@ -37,6 +37,26 @@ def index():
     return render_template('index.html')
 
 
+def symlink_uploaded_file(dest_dir, upload_file, source_file=None):
+    if not source_file:
+        source_file = upload_file
+    logging.debug(f"upload file name {upload_file}")
+    logging.debug(f"dest_dir {dest_dir}")
+    dest_file_path = os.path.join(dest_dir, upload_file)
+    source_file_path = os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username, source_file)
+    if os.path.exists(dest_file_path):
+        os.remove(dest_file_path)
+    logging.debug(f"file {source_file_path}")
+    logging.debug(f"symlink file {dest_file_path}")
+    try:
+        os.symlink(source_file_path, dest_file_path)
+        # logging.debug(f"upload exists {os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username,
+        #                                             upload_file.filename)}")
+        logging.debug(f"symlink exists {os.path.exists(dest_file_path)}")
+    except FileNotFoundError as e:
+        logging.debug(f'file {dest_file_path} not found: {e}')
+
+
 def link_files(project_dir, ref_dir, work_dir, form_dict):
     """
     Symlink files in user's upload directory in web container to project directory in PhaME container
@@ -46,10 +66,10 @@ def link_files(project_dir, ref_dir, work_dir, form_dict):
     :param form: Input form
     :return:
     """
-    logging.debug(f"making links")
+    # logging.debug(f"making links")
     os.makedirs(project_dir, exist_ok=True)
-    logging.debug(f"length complete genomes list: {len(form_dict['complete_genomes'])}")
-    logging.debug(f"complete genomes list: {form_dict['complete_genomes']}")
+    # logging.debug(f"length complete genomes list: {len(form_dict['complete_genomes'])}")
+    # logging.debug(f"complete genomes list: {form_dict['complete_genomes']}")
     # logging.debug(f"genome 1: {form_dict['complete_genomes'][0]}")
     # logging.debug(f"genome 1 dict: {form_dict['complete_genomes'][0].__dict__}")
     # logging.debug(f"genome 1 filename: {form_dict['complete_genomes'][0].filename}")
@@ -59,37 +79,23 @@ def link_files(project_dir, ref_dir, work_dir, form_dict):
             os.makedirs(ref_dir)
         # symlink complete genome files
 
-        logging.debug(f"ref_dir {ref_dir}")
-        logging.debug(f"ref_dir exists {os.path.exists(ref_dir)}")
+        # logging.debug(f"ref_dir {ref_dir}")
+        # logging.debug(f"ref_dir exists {os.path.exists(ref_dir)}")
         for upload_file in form_dict['complete_genomes']:
-            logging.debug(f"upload file name {upload_file.filename}")
-            if os.path.exists(os.path.join(ref_dir, upload_file.filename)):
-                os.remove(os.path.join(ref_dir, upload_file.filename))
-            logging.debug(f"file {os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username, upload_file.filename)}")
-            logging.debug(f"symlink file {os.path.join(ref_dir, upload_file.filename)}")
-            os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username, upload_file.filename),
-                       os.path.join(ref_dir, upload_file.filename))
-            logging.debug(f"upload exists {os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username, upload_file.filename)}")
-            logging.debug(f"symlink exists {os.path.exists(os.path.join(ref_dir, upload_file.filename))}")
-        # form.reference_file.choices = [(a, a) for a in form.complete_genomes.data]
+            symlink_uploaded_file(ref_dir, upload_file.filename)
 
     if len(form_dict['reads_files']) > 0:
         # symlink reads files
-        for file_name in form_dict['reads']:
-            if os.path.exists(os.path.join(ref_dir, file_name)):
-                os.remove(os.path.join(ref_dir, file_name))
-            os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
-                       os.path.join(ref_dir, file_name))
+        for file_name in form_dict['reads_files']:
+           symlink_uploaded_file(ref_dir, file_name.filename)
 
     if len(form_dict['contigs_files']) > 0:
         os.makedirs(work_dir)
         # symlink contig files
-        for file_name in form_dict['contigs']:
-            new_filename = os.path.splitext(file_name)[0] + '.contig'
-            if os.path.exists(os.path.join(ref_dir, file_name)):
-                os.remove(os.path.join(ref_dir, new_filename))
-            os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username, file_name),
-                       os.path.join(work_dir, new_filename))
+        for file_name in form_dict['contigs_files']:
+            new_filename = os.path.splitext(file_name.filename)[0] + '.contig'
+            logging.debug(f'contig file {new_filename}')
+            symlink_uploaded_file(work_dir, new_filename, source_file=file_name.filename)
     logging.debug(f"done making links")
 
 
@@ -152,13 +158,13 @@ def create_config_file(form_dict):
 
     # form_dict.pop('csrf_token')
     form_dict['ref_dir'] = '../{0}/refdir/'.format(project)
-    form_dict['work_dir'] = '../{0}/workdir'.format(project)
-    logging.debug(f"data type {form_dict['data_type']}")
+    form_dict['work_dir'] = '../{0}/workdir/'.format(project)
+    # logging.debug(f"data type {form_dict['data_type']}")
     # if len(form.reference_file.data) > 0:
     #     form_dict['reference_file'] = form.reference_file.data
     form_dict['data_type'] = get_data_type(form_dict['data_type'])
     content = render_template('phame.tmpl', form=form_dict)
-    logging.debug(f"project path {os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)}")
+    # logging.debug(f"project path {os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)}")
     with open(os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project, 'config.ctl'), 'w') as conf:
         conf.write(content)
 
@@ -186,7 +192,7 @@ def upload():
 
     # Create a unique "session ID" for this particular batch of uploads.
     upload_key = str(uuid4())
-    logging.debug(f'upload key {upload_key}')
+    # logging.debug(f'upload key {upload_key}')
 
     # Is the upload using Ajax, or a direct POST by the form?
     is_ajax = False
@@ -196,7 +202,7 @@ def upload():
     # Target folder for these uploads.
     target = os.path.join(current_app.config['UPLOAD_DIRECTORY'], current_user.username)
     if not os.path.exists(target):
-        logging.debug(f'creating directory {target}')
+        # logging.debug(f'creating directory {target}')
         try:
             os.mkdir(target)
         except:
@@ -209,11 +215,11 @@ def upload():
     # for key, value in list(form.items()):
     #     logging.debug(key, "=>", value)
 
-    logging.debug(f'request files {request.files.getlist("file")}')
+    # logging.debug(f'request files {request.files.getlist("file")}')
     for upload in request.files.getlist("file"):
         filename = os.path.basename(upload.filename)
         destination = "/".join([target, filename])
-        logging.debug(f"Accept incoming file: {filename}")
+        # logging.debug(f"Accept incoming file: {filename}")
         # logging.debug("Save it to:", destination)
         upload.save(destination)
 
@@ -615,11 +621,10 @@ def input():
 def get_config_property(project_dir, property):
     value = None
     try:
-        with open(os.path.join(project_dir, 'config.ctl'), 'r') as fp:
-            lines = fp.readlines()
-            for line in lines:
-                if re.search(property, line):
-                    value = line.split('=')[1].split()[0].strip()
+        config_df = pd.read_csv(os.path.join(project_dir, 'config.ctl'), sep='=', header=None, names=['field', 'val'])
+        config_df = config_df.loc[pd.notna(config_df['val']), :]
+        config_df['field'] = config_df['field'].apply(lambda x: x.strip())
+        value = config_df[config_df['field']==property]['val'].values[0].strip().split('#')[0].strip()
     except IOError as e:
         logging.exception(f'Cannot get config property {property} for project directory {project_dir}')
     return value
