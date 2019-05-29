@@ -11,7 +11,7 @@ class BaseConfig:
     DEBUG_TB_ENABLED = False
     DEBUG_TB_INTERCEPT_REDIRECTS = False
     MAX_CONTENT_LENGTH = 1000 * 1024 * 1024
-    PROJECT_DIRECTORY = os.path.join('/usr','src','app', 'phame_api', 'media')
+    PROJECT_DIRECTORY = os.path.join('/phame_api', 'media')
     UPLOAD_DIRECTORY = os.path.join('static', 'uploads')
     PHAME_UPLOAD_DIR = os.path.join('/usr','src','app','static', 'uploads')
 
