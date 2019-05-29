@@ -80,8 +80,8 @@ def link_files(project_dir, ref_dir, work_dir, form_dict):
         # symlink complete genome files
 
         # logging.debug(f"ref_dir {ref_dir}")
-        # logging.debug(f"ref_dir exists {os.path.exists(ref_dir)}")
         for upload_file in form_dict['complete_genomes']:
+            logging.debug(f"upload_file {upload_file}")
             symlink_uploaded_file(ref_dir, upload_file.filename)
 
     if len(form_dict['reads_files']) > 0:
@@ -581,6 +581,7 @@ def input():
             error = 'Please enter a project name'
             return render_template('input.html', title='Phame input', form=form, error=error)
         logging.debug(f'form {request.form.to_dict()}')
+        logging.debug(f'files {request.files.getlist("complete_genomes")}')
         project_dir, ref_dir = project_setup(request.form.to_dict())
         logging.debug(f'ref file {form.reference_file.data}')
         if project_dir is None:
