@@ -16,7 +16,7 @@ class TestBaseConfig(TestCase):
         return app
     def test_paths(self):
         self.assertEqual(current_app.config['PROJECT_DIRECTORY'],
-                         os.path.join('/', 'usr', 'src', 'app', 'phame_api', 'media'))
+                         os.path.join('/', 'phame_api', 'media'))
         self.assertEqual(current_app.config['UPLOAD_DIRECTORY'],
                          os.path.join('static', 'uploads'))
 

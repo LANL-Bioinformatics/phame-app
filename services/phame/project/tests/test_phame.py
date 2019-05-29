@@ -9,6 +9,7 @@ from flask_login import login_user, current_user
 from flask import current_app, url_for
 from project.tests.base import BaseTestCase
 from project import db, create_app
+from project.api.forms import InputForm
 from project.api.models import User
 from project.api.phame import link_files, get_data_type, symlink_uploaded_file, project_setup, get_config_property, \
     create_config_file, get_num_threads, get_exec_time, set_directories, get_file_counts, create_project_summary
@@ -87,16 +88,19 @@ class PhameTest(BaseTestCase):
                 os.remove(file_name)
 
     def create_config_file(self):
-        form_dict = dict(project='test1', ref_dir=self.ref_dir, work_dir=self.work_dir, reference='1',
+        requests = Mock()
+        form = InputForm(project='test1', ref_dir=self.ref_dir, work_dir=self.work_dir, reference='1',
                          reference_file='KJ660347.fasta', cds_snps='0', buildSNPdb='1', first_time='1', data_type='4',
                          reads='1', aligner='bowtie', tree='1', bootstrap='1', N='100', pos_select='2', code='0',
                          clean='0', threads='2', cutoff='0.2')
+        print(form)
+        # requests.post.side_effect = form
         current_app.config['PROJECT_DIRECTORY'] = '/test'
         self.add_user()
         os.makedirs(self.project_dir, exist_ok=True)
         with self.client:
             self.login()
-            create_config_file(form_dict)
+            create_config_file(form)
 
     def upload_files(self):
         self.add_user()

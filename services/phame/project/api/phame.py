@@ -57,7 +57,7 @@ def symlink_uploaded_file(dest_dir, upload_file, source_file=None):
         logging.debug(f'file {dest_file_path} not found: {e}')
 
 
-def link_files(project_dir, ref_dir, work_dir, form_dict):
+def link_files(project_dir, ref_dir, work_dir, form):
     """
     Symlink files in user's upload directory in web container to project directory in PhaME container
     :param project_dir: Path to project directory
@@ -74,53 +74,53 @@ def link_files(project_dir, ref_dir, work_dir, form_dict):
     # logging.debug(f"genome 1 dict: {form_dict['complete_genomes'][0].__dict__}")
     # logging.debug(f"genome 1 filename: {form_dict['complete_genomes'][0].filename}")
     # logging.debug(f"phame upload dir {PHAME_UPLOAD_DIR}")
-    if len(form_dict['complete_genomes']) > 0:
+    if len(form.complete_genomes.data) > 0:
         if not os.path.exists(ref_dir):
             os.makedirs(ref_dir)
         # symlink complete genome files
 
         # logging.debug(f"ref_dir {ref_dir}")
-        for upload_file in form_dict['complete_genomes']:
+        for upload_file in form.complete_genomes.data:
             logging.debug(f"upload_file {upload_file}")
-            symlink_uploaded_file(ref_dir, upload_file.filename)
-
-    if len(form_dict['reads_files']) > 0:
+            symlink_uploaded_file(ref_dir, upload_file)
+        form.reference_file.choices = [(a, a) for a in form.complete_genomes.data]
+    if len(form.reads.data) > 0:
         # symlink reads files
-        for file_name in form_dict['reads_files']:
-           symlink_uploaded_file(ref_dir, file_name.filename)
+        for file_name in form.reads.data:
+           symlink_uploaded_file(ref_dir, file_name)
 
-    if len(form_dict['contigs_files']) > 0:
+    if len(form.contigs.data) > 0:
         os.makedirs(work_dir)
         # symlink contig files
-        for file_name in form_dict['contigs_files']:
-            new_filename = os.path.splitext(file_name.filename)[0] + '.contig'
+        for file_name in form.contigs.data:
+            new_filename = os.path.splitext(file_name)[0] + '.contig'
             logging.debug(f'contig file {new_filename}')
-            symlink_uploaded_file(work_dir, new_filename, source_file=file_name.filename)
+            symlink_uploaded_file(work_dir, new_filename, source_file=file_name)
     logging.debug(f"done making links")
 
 
-def project_setup(form_dict):
+def project_setup(form):
     """
     Checks if project exists and calls function to create symlinks
     :param form: Input form
     :return: project and reference directory paths
     """
-    logging.debug(f"project {form_dict['project']}")
-    project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, form_dict['project'])
+    logging.debug(f"project {form.project.data}")
+    project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, form.project.data)
     ref_dir = os.path.join(project_dir, 'refdir')
     work_dir = os.path.join(project_dir, 'workdir')
     logging.debug(f'ref directory: {ref_dir}')
     # logging.debug(f'reference file: {form.reference_file.data}')
     # logging.debug(f'reference file: {form.project.data}')
 
-    logging.debug(os.path.exists(os.path.join(work_dir, 'results', f"{form_dict['project']}.log")))
+    logging.debug(os.path.exists(os.path.join(work_dir, 'results', f"{form.project.data}.log")))
     # project name for projects that have successfully completed must be unique
-    if os.path.exists(os.path.join(work_dir, 'results', f"{form_dict['project']}.log")) \
-            or (form_dict['reference'] == 'Given' and len(form_dict['reference_file']) == 0):
-        logging.debug(f"project {form_dict['project']} exists")
+    if os.path.exists(os.path.join(work_dir, 'results', f"{form.project.data}.log")) \
+            or (form.reference.data == 'Given' and len(form.reference_file.data) == 0):
+        logging.debug(f"project {form.project.data} exists")
         return None, None
     logging.debug('done project setup')
-    link_files(project_dir, ref_dir, work_dir, form_dict)
+    link_files(project_dir, ref_dir, work_dir, form)
     return project_dir, ref_dir
 
 
@@ -148,23 +148,30 @@ def get_data_type(options_list):
         return str(sum([int(x) + 1 for x in options_list]))
 
 
-def create_config_file(form_dict):
+def create_config_file(form):
     """
     create PhaME config.ctl file
     :param form:
     :return:
     """
+
+    logging.debug(f'form {form}')
+    logging.debug(f'form.__dict__ {form.__dict__}')
+    logging.debug(f'request form {request.form}')
+    form_dict = request.form.to_dict()
     logging.debug(f'form dict {form_dict}')
-    project = form_dict['project']
+    # if 'csrf_token' in form_dict.keys():
+    #     form_dict.pop('csrf_token')
+    project = form.project.data
 
     # form_dict.pop('csrf_token')
-    form_dict['ref_dir'] = '../{0}/refdir/'.format(project)
-    form_dict['work_dir'] = '../{0}/workdir/'.format(project)
+    form.ref_dir.data = f'../{project}/refdir/'
+    form.work_dir.data = f'../{project}/workdir/'
     # logging.debug(f"data type {form_dict['data_type']}")
     # if len(form.reference_file.data) > 0:
     #     form_dict['reference_file'] = form.reference_file.data
-    form_dict['data_type'] = get_data_type(form_dict['data_type'])
-    content = render_template('phame.tmpl', form=form_dict)
+    form.data_type.data = get_data_type(form.data_type.data)
+    content = render_template('phame.tmpl', form=form)
     # logging.debug(f"project path {os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)}")
     with open(os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project, 'config.ctl'), 'w') as conf:
         conf.write(content)
@@ -580,9 +587,8 @@ def input():
         if len(form.project.data) == 0:
             error = 'Please enter a project name'
             return render_template('input.html', title='Phame input', form=form, error=error)
-        logging.debug(f'form {request.form.to_dict()}')
-        logging.debug(f'files {request.files.getlist("complete_genomes")}')
-        project_dir, ref_dir = project_setup(request.form.to_dict())
+        logging.debug(f'form {form.complete_genomes.data}')
+        project_dir, ref_dir = project_setup(form)
         logging.debug(f'ref file {form.reference_file.data}')
         if project_dir is None:
             # project creation failed because there is an existing project that successfully completed
