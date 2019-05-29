@@ -105,6 +105,7 @@ def project_setup(form_dict):
     :param form: Input form
     :return: project and reference directory paths
     """
+    logging.debug(f"project {form_dict['project']}")
     project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, form_dict['project'])
     ref_dir = os.path.join(project_dir, 'refdir')
     work_dir = os.path.join(project_dir, 'workdir')
@@ -200,9 +201,9 @@ def upload():
         is_ajax = True
 
     # Target folder for these uploads.
-    target = os.path.join(current_app.config['UPLOAD_DIRECTORY'], current_user.username)
+    target = os.path.join(current_app.config['PHAME_UPLOAD_DIR'], current_user.username)
+    logging.debug(f'target directory {target}')
     if not os.path.exists(target):
-        # logging.debug(f'creating directory {target}')
         try:
             os.mkdir(target)
         except:
@@ -415,9 +416,10 @@ def create_project_summary(project, project_status, num_threads, reads_file_coun
                        'status': project_status,
                        'execution time(h:m:s)': exec_time
                        }
+    logging.debug(f'project {project}')
+    logging.debug(f'current user username {current_user.username}')
     if current_user.username != 'public':
-        project_summary['delete'] = '<input name="deleteCheckBox" type="checkbox" value={0} unchecked">'.format(
-            project)
+        project_summary['delete'] = f'<input name="deleteCheckBox" type="checkbox" value={project} unchecked">'
     return project_summary
 
 
@@ -578,7 +580,8 @@ def input():
         if len(form.project.data) == 0:
             error = 'Please enter a project name'
             return render_template('input.html', title='Phame input', form=form, error=error)
-        project_dir, ref_dir = project_setup(form)
+        logging.debug(f'form {request.form.to_dict()}')
+        project_dir, ref_dir = project_setup(request.form.to_dict())
         logging.debug(f'ref file {form.reference_file.data}')
         if project_dir is None:
             # project creation failed because there is an existing project that successfully completed

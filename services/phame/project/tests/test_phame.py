@@ -11,7 +11,7 @@ from project.tests.base import BaseTestCase
 from project import db, create_app
 from project.api.models import User
 from project.api.phame import link_files, get_data_type, symlink_uploaded_file, project_setup, get_config_property, \
-    create_config_file, get_num_threads, get_exec_time, set_directories, get_file_counts
+    create_config_file, get_num_threads, get_exec_time, set_directories, get_file_counts, create_project_summary
 
 
 app = create_app()
@@ -50,7 +50,7 @@ class PhameTest(BaseTestCase):
         pssword = password if password else  'test1'
         pssword2 = password if password else 'test1'
         with self.client:
-            response = self.client.post('/users/register',
+            response = self.client.post(url_for('users.register'),
                                         data=json.dumps(
                                             {'username': usr,
                                              'email': eml,
@@ -61,9 +61,11 @@ class PhameTest(BaseTestCase):
         user = User.query.filter_by(username=usr).first()
         return user
 
-    def login(self):
+    def login(self, username=None, password=None):
+        username = username if username else 'mark'
+        password = password if password else 'test1'
         self.client.post(url_for('users.login'), data=json.dumps(
-            {'username': 'mark', 'password': 'test1'}),
+            {'username': username, 'password': password}),
                          content_type='application/json', )
 
     def create_file_paths(self):
@@ -98,11 +100,13 @@ class PhameTest(BaseTestCase):
 
     def upload_files(self):
         self.add_user()
-        data = dict(file=[open(os.path.join('project', 'tests', 'fixtures', 'KJ660347.fasta'), 'rb'),
-                          open(os.path.join('project', 'tests', 'fixtures', 'KJ660347.gff'), 'rb')])
+        file_list, fname_list = [], []
+        for f in os.listdir(os.path.join('project', 'tests', 'fixtures')):
+            file_list.append(open(os.path.join('project', 'tests', 'fixtures', f), 'rb'))
+            fname_list.append(f)
+        data = dict(file=file_list)
         files = self.create_paths(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], 'mark'),
-                                  ['KJ660347.fasta', 'KJ660347.gff'])
-        print(current_app.config['PHAME_UPLOAD_DIR'])
+                                  fname_list)
         with self.client:
             self.login()
             self.client.post(url_for('phame.upload'), data=data,
@@ -397,9 +401,76 @@ class PhameTest(BaseTestCase):
         os.makedirs(self.work_dir)
         os.makedirs(os.path.join(self.work_dir, 'results'))
         files = self.upload_files()
+        os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], 'mark', 'KJ660347.fasta'),
+                   os.path.join(self.ref_dir, 'KJ660347.fasta'))
+        os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], 'mark', 'SRR3359589_R1.fastq'),
+                   os.path.join(self.ref_dir, 'SRR3359589_R1.fastq'))
+        os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], 'mark', 'KJ660347.fasta'),
+                   os.path.join(self.work_dir, 'KJ660347.contig'))
         reads_file_count, contigs_file_count, full_genome_file_count = get_file_counts(self.ref_dir, self.work_dir)
-        self.assertEqual(full_genome_file_count, 2)
+        self.assertEqual(full_genome_file_count, 1)
+        self.assertEqual(reads_file_count, 1)
+        self.assertEqual(contigs_file_count, 1)
         self.remove_files(files)
+        self.remove_files([os.path.join(self.ref_dir, 'KJ660347.fasta'),
+                           os.path.join(self.ref_dir, 'SRR3359589_R1.fastq'),
+                           os.path.join(self.work_dir, 'KJ660347.contig')
+                           ])
+
+    def test_create_project_summary(self):
+        self.add_user()
+        with self.client:
+            self.login()
+            project_summary = create_project_summary('test1', 'finished', 2, 8, 4, 4, '12:00:00', 'KJ660347.fasta')
+        self.assertEqual(project_summary['# of genomes analyzed'], 16)
+        self.assertEqual(project_summary['# of contigs'], 4)
+        self.assertEqual(project_summary['# of reads'], 8)
+        self.assertEqual(project_summary['# of full genomes'], 4)
+        self.assertEqual(project_summary['reference genome used'], 'KJ660347.fasta')
+        self.assertEqual(project_summary['project name'], 'test1')
+        self.assertEqual(project_summary['# of threads'], 2)
+        self.assertEqual(project_summary['status'], 'finished')
+        self.assertEqual(project_summary['execution time(h:m:s)'], '12:00:00')
+        self.assertEqual(project_summary['delete'], '<input name="deleteCheckBox" type="checkbox" value=test1 unchecked">')
+
+    def test_create_project_summary_public(self):
+        self.add_user(username='public', email='public@example.com', password='public')
+        with self.client:
+            self.login(username='public', password='public')
+            project_summary = create_project_summary('test1', 'finished', 2, 8, 4, 4, '12:00:00', 'KJ660347.fasta')
+        self.assertEqual(project_summary['# of genomes analyzed'], 16)
+        self.assertEqual(project_summary['# of contigs'], 4)
+        self.assertEqual(project_summary['# of reads'], 8)
+        self.assertEqual(project_summary['# of full genomes'], 4)
+        self.assertEqual(project_summary['reference genome used'], 'KJ660347.fasta')
+        self.assertEqual(project_summary['project name'], 'test1')
+        self.assertEqual(project_summary['# of threads'], 2)
+        self.assertEqual(project_summary['status'], 'finished')
+        self.assertEqual(project_summary['execution time(h:m:s)'], '12:00:00')
+        self.assertFalse('delete' in project_summary.keys())
+
+    def test_delete_projects(self):
+        os.makedirs(self.ref_dir)
+        os.makedirs(self.work_dir)
+        os.makedirs(os.path.join(self.work_dir, 'results'))
+        files = self.upload_files()
+        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        with self.client:
+            self.login()
+            symlinked_files = []
+            for f in os.listdir(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], 'mark')):
+                symlink_uploaded_file(self.ref_dir, f)
+                symlinked_files.append(os.path.join(self.ref_dir, f))
+            self.assertTrue(os.path.exists(symlinked_files[0]))
+            response = self.client.post(url_for('phame.delete_projects'), data=dict(deleteCheckBox=['test1']))
+            self.assertEqual(response.status_code, 302)
+            self.assertTrue(os.path.exists(files[0]))
+            for f in symlinked_files:
+                self.assertFalse(os.path.exists(f))
+
+    # def test_projects(self):
+
+
 
 if __name__ == '__main__':
     unittest.main()
