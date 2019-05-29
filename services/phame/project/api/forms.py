@@ -1,7 +1,7 @@
 import os
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, FileField, MultipleFileField, IntegerField, \
-    FloatField, SelectField, StringField, widgets, SelectMultipleField, validators
+    FloatField, SelectField, StringField, widgets, SelectMultipleField, validators, HiddenField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.fields.html5 import DecimalRangeField
 from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
@@ -42,6 +42,8 @@ class InputForm(FlaskForm):
     boolean_choices = [('0', 'no'), ('1', 'yes')]
     project = StringField(u'Project Name', [DataRequired(message='Please enter a unique name for this project')], description='Choose a unique project name')
     data_type = MultiCheckboxField(u'Data', choices=[('0', 'Complete'), ('1', 'Contig'), ('2', 'Read')], default='0')
+    ref_dir = HiddenField('ref_dir')
+    work_dir = HiddenField('ref_dir')
     complete_genomes = SelectMultipleField(u'Select Complete Genomes')
     contigs = SelectMultipleField(u'Select Contigs')
     reads_type = SelectField(u'Type of Reads',choices=[('0', 'single reads'), ('1', 'paired reads'), ('2', 'both')], default='2')
