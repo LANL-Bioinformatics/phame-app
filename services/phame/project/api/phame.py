@@ -87,12 +87,14 @@ def link_files(project_dir, ref_dir, work_dir, form):
     if len(form.reads.data) > 0:
         # symlink reads files
         for file_name in form.reads.data:
-           symlink_uploaded_file(ref_dir, file_name)
+            logging.debug(f"read {file_name}")
+            symlink_uploaded_file(ref_dir, file_name)
 
     if len(form.contigs.data) > 0:
         os.makedirs(work_dir)
         # symlink contig files
         for file_name in form.contigs.data:
+            logging.debug(f"contig {file_name}")
             new_filename = os.path.splitext(file_name)[0] + '.contig'
             logging.debug(f'contig file {new_filename}')
             symlink_uploaded_file(work_dir, new_filename, source_file=file_name)
@@ -148,30 +150,28 @@ def get_data_type(options_list):
         return str(sum([int(x) + 1 for x in options_list]))
 
 
-def create_config_file(form):
+def create_config_file(form_dict):
     """
     create PhaME config.ctl file
     :param form:
     :return:
     """
 
-    logging.debug(f'form {form}')
-    logging.debug(f'form.__dict__ {form.__dict__}')
-    logging.debug(f'request form {request.form}')
-    form_dict = request.form.to_dict()
+
     logging.debug(f'form dict {form_dict}')
-    # if 'csrf_token' in form_dict.keys():
-    #     form_dict.pop('csrf_token')
-    project = form.project.data
+    if 'csrf_token' in form_dict.keys():
+        form_dict.pop('csrf_token')
+    project = form_dict['project']
 
     # form_dict.pop('csrf_token')
-    form.ref_dir.data = f'../{project}/refdir/'
-    form.work_dir.data = f'../{project}/workdir/'
+    form_dict['ref_dir'] = f'../{project}/refdir/'
+    form_dict['work_dir'] = f'../{project}/workdir/'
     # logging.debug(f"data type {form_dict['data_type']}")
     # if len(form.reference_file.data) > 0:
     #     form_dict['reference_file'] = form.reference_file.data
-    form.data_type.data = get_data_type(form.data_type.data)
-    content = render_template('phame.tmpl', form=form)
+    form_dict['data_type'] = get_data_type(form_dict['data_type'])
+    content = render_template('phame.tmpl', form=form_dict)
+    logging.debug(f'content {content}')
     # logging.debug(f"project path {os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)}")
     with open(os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project, 'config.ctl'), 'w') as conf:
         conf.write(content)
@@ -587,7 +587,9 @@ def input():
         if len(form.project.data) == 0:
             error = 'Please enter a project name'
             return render_template('input.html', title='Phame input', form=form, error=error)
-        logging.debug(f'form {form.complete_genomes.data}')
+        logging.debug(f'form {request.form}')
+        logging.debug(f'form flat {request.form.to_dict(flat=False)}')
+        logging.debug(f'form {request.form.to_dict()}')
         project_dir, ref_dir = project_setup(form)
         logging.debug(f'ref file {form.reference_file.data}')
         if project_dir is None:
@@ -621,7 +623,7 @@ def input():
 
 
             # Create config file
-            create_config_file(form)
+            create_config_file(request.form.to_dict())
 
             return redirect(url_for('phame.runphame', project=form.project.data))
 

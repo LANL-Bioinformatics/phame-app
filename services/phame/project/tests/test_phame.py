@@ -89,7 +89,7 @@ class PhameTest(BaseTestCase):
 
     def create_config_file(self):
         requests = Mock()
-        form = InputForm(project='test1', ref_dir=self.ref_dir, work_dir=self.work_dir, reference='1',
+        form = dict(project='test1', ref_dir=self.ref_dir, work_dir=self.work_dir, reference='1',
                          reference_file='KJ660347.fasta', cds_snps='0', buildSNPdb='1', first_time='1', data_type='4',
                          reads='1', aligner='bowtie', tree='1', bootstrap='1', N='100', pos_select='2', code='0',
                          clean='0', threads='2', cutoff='0.2')
@@ -159,11 +159,11 @@ class PhameTest(BaseTestCase):
         for f in os.listdir(os.path.join('project', 'tests', 'fixtures')):
             fo = FileObj(f)
             if f.endswith('.fna') or f.endswith('.gff'):
-                complete_genomes_list.append(fo)
+                complete_genomes_list.append(f)
             if f.endswith('.fasta'):
-                contigs_list.append(fo)
+                contigs_list.append(f)
             if f.endswith('.fastq'):
-                reads_list.append(fo)
+                reads_list.append(f)
             upload_files.append(open(os.path.join('project', 'tests', 'fixtures', f), 'rb'))
 
         try:
@@ -180,16 +180,16 @@ class PhameTest(BaseTestCase):
                     os.path.join(current_app.config['UPLOAD_DIRECTORY'], 'mark',
                                  'KJ660347.gff'))))
                 self.assertTrue(os.path.exists(os.path.join(current_app.config['UPLOAD_DIRECTORY'], 'mark', 'KJ660347.fasta')))
-                form_dict = dict(complete_genomes=complete_genomes_list, reads_files=reads_list,
-                                 contigs_files=contigs_list)
+                form_dict = InputForm(complete_genomes=complete_genomes_list, reads=reads_list,
+                                 contigs=contigs_list)
                 link_files(self.project_dir, self.ref_dir, self.work_dir, form_dict)
                 self.assertTrue(os.path.exists(self.project_dir))
-                self.assertTrue(os.path.islink(os.path.join(self.ref_dir, 'SRR3359589_R1.fastq')))
-                self.assertTrue(os.path.exists(os.path.join(self.ref_dir, 'SRR3359589_R1.fastq')))
-                self.assertTrue(os.path.islink(os.path.join(self.ref_dir, 'ZEBOV_2002_Ilembe.fna')))
                 self.assertTrue(os.path.exists(os.path.join(self.ref_dir, 'ZEBOV_2002_Ilembe.fna')))
+                self.assertTrue(os.path.islink(os.path.join(self.ref_dir, 'ZEBOV_2002_Ilembe.fna')))
                 self.assertTrue(os.path.exists(os.path.join(self.work_dir, 'KJ660347.contig')))
                 self.assertTrue(os.path.islink(os.path.join(self.work_dir, 'KJ660347.contig')))
+                self.assertTrue(os.path.islink(os.path.join(self.ref_dir, 'SRR3359589_R1.fastq')))
+                self.assertTrue(os.path.exists(os.path.join(self.ref_dir, 'SRR3359589_R1.fastq')))
         finally:
             self.remove_files(server_file_paths)
 
@@ -272,7 +272,7 @@ class PhameTest(BaseTestCase):
     @patch('project.api.phame.link_files')
     def test_project_setup(self, mock_link):
         current_app.config['PROJECT_DIRECTORY'] = '/test'
-        form_dict = dict(project='test1', reference='Random', reference_file=[])
+        form_dict = InputForm(project='test1', reference='Random', reference_file=[])
         self.add_user()
         with self.client:
             self.login()
@@ -287,7 +287,7 @@ class PhameTest(BaseTestCase):
         os.makedirs(os.path.join(current_app.config['PROJECT_DIRECTORY'], 'mark', 'test1', 'workdir', 'results'), exist_ok=True)
         with open(os.path.join(current_app.config['PROJECT_DIRECTORY'], 'mark',  'test1', 'workdir', 'results', 'test1.log'), 'wb') as fp:
             fp.write(b'test')
-        form_dict = dict(project='test1', reference='Random', reference_file=[])
+        form_dict = InputForm(project='test1', reference='Random', reference_file=[])
         self.add_user()
         with self.client:
             self.login()
@@ -296,16 +296,9 @@ class PhameTest(BaseTestCase):
         self.assertEqual(proj_dir, None)
         self.assertEqual(ref_dir, None)
         os.remove(os.path.join(current_app.config['PROJECT_DIRECTORY'], 'mark',  'test1', 'workdir', 'results', 'test1.log'))
-        form_dict = dict(project='test1', reference='Given', reference_file=[])
-        with self.client:
-            self.login()
-            proj_dir, ref_dir = project_setup(form_dict)
-        self.assertEqual(mock_link.call_count, 0)
-        self.assertEqual(proj_dir, None)
-        self.assertEqual(ref_dir, None)
 
     def test_create_config_file(self):
-        form_dict = dict(project='test1', ref_dir=self.ref_dir, work_dir=self.work_dir, reference='1',
+        form = dict(project='test1', ref_dir=self.ref_dir, work_dir=self.work_dir, reference='1',
                          reference_file='KJ660347.fasta', cds_snps='0', buildSNPdb='1', first_time='1', data_type='4',
                          reads='1', aligner='bowtie', tree='1', bootstrap='1', N='100', pos_select='2', code='0',
                          clean='0', threads='2', cutoff='0.2')
@@ -314,7 +307,7 @@ class PhameTest(BaseTestCase):
         os.makedirs(self.project_dir, exist_ok=True)
         with self.client:
             self.login()
-            create_config_file(form_dict)
+            create_config_file(form)
         config_df = pd.read_csv(os.path.join(self.project_dir, 'config.ctl'), sep='=', header=None, names=['field', 'val'])
         config_df = config_df.loc[pd.notna(config_df['val']), :]
         config_df['field'] = config_df['field'].apply(lambda x: x.strip())
