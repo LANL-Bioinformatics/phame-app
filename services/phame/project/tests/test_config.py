@@ -14,6 +14,7 @@ class TestBaseConfig(TestCase):
     def create_app(self):
         app.config.from_object('project.config.BaseConfig')
         return app
+
     def test_paths(self):
         self.assertEqual(current_app.config['PROJECT_DIRECTORY'],
                          os.path.join('/', 'phame_api', 'media'))

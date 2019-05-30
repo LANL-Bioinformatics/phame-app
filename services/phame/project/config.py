@@ -3,6 +3,7 @@
 import os
 basedir = os.path.dirname(os.path.dirname(__file__))
 
+
 class BaseConfig:
     """Base configuration"""
     TESTING = False
@@ -13,7 +14,7 @@ class BaseConfig:
     MAX_CONTENT_LENGTH = 1000 * 1024 * 1024
     PROJECT_DIRECTORY = os.path.join('/phame_api', 'media')
     UPLOAD_DIRECTORY = os.path.join('static', 'uploads')
-    PHAME_UPLOAD_DIR = os.path.join('/usr','src','app','static', 'uploads')
+    PHAME_UPLOAD_DIR = os.path.join('/usr', 'src', 'app', 'static', 'uploads')
     SEND_NOTIFICATIONS = False
 
 

@@ -1,17 +1,8 @@
 import os
-import requests
-import zipfile
-import shutil
-from tempfile import mkstemp
 import logging
-import json
-import re
-import pandas as pd
-from uuid import uuid4
-import celery.states as states
-import ast
-from sqlalchemy.exc import IntegrityError, DataError, TimeoutError
-from flask import Blueprint, jsonify, request, render_template, redirect, url_for, flash, send_file, current_app
+from sqlalchemy.exc import IntegrityError, DataError
+from flask import Blueprint, jsonify, request, render_template, redirect, \
+    url_for, flash, current_app
 
 from werkzeug.urls import url_parse
 from flask_login import current_user, login_user, logout_user, login_required
@@ -27,12 +18,15 @@ users_blueprint = Blueprint('users', __name__, template_folder='templates', stat
 def login():
     """
     Login for PhaME
-    If user is logged in as 'public', they are redirected to the 'projects' page where they
+    If user is logged in as 'public', they are redirected to the 'projects'
+    page where they
     can view 'public' projects
     :return:
     """
     # if current_user.is_authenticated:
-    #     return redirect(url_for('phame.projects')) if current_user.username == 'public' else redirect(url_for('phame.index'))
+    #     return redirect(url_for('phame.projects')) if
+    #     current_user.username == 'public' else
+    #     redirect(url_for('phame.index'))
     form = LoginForm()
     if form.validate_on_submit():
         if not form.public_login.data:
@@ -46,15 +40,17 @@ def login():
 
         # logging.debug(f"request next page {request.args.get('next')}")
         login_user(user, remember=form.remember_me.data)
-        next_page = url_for('phame.projects') if current_user.username == 'public' else request.args.get('next')
+        next_page = url_for('phame.projects') if \
+            current_user.username == 'public' else request.args.get('next')
         # logging.debug(f'next page {next_page}')
         if not next_page or url_parse(next_page).netloc != '':
             # url_for returns /input
 
-            next_page = 'phame.' + url_for('phame.projects') if current_user.username == 'public' else 'phame.' + url_for('phame.input').split('/')[-1]
+            next_page = 'phame.' + url_for('phame.projects') if \
+                current_user.username == 'public' else \
+                'phame.' + url_for('phame.input').split('/')[-1]
             # logging.debug(f'not next page {next_page}')
-        # logging.debug(f"next_page split {'.'.join(next_page.split('/')[-2:])}")
-        # logging.debug(f"next_page split {'phame.' + url_for(next_page.split('/')[-1])}")
+
         return redirect(url_for('.'.join(next_page.split('/')[-2:])))
     return render_template('login.html', title='Sign In', form=form)
 
@@ -97,18 +93,23 @@ def register():
                 user = User.query.filter_by(email=form.email.data).first()
                 # logging.debug(f'user query {user.email}')
                 flash('Congratulations, you are now a registered user!')
-                # logging.debug(f"project directory {current_app.config['PROJECT_DIRECTORY']}")
-                if not os.path.exists(os.path.join(current_app.config['PROJECT_DIRECTORY'], user.username)):
-                    os.makedirs(os.path.join(current_app.config['PROJECT_DIRECTORY'], user.username))
-                if not os.path.exists(os.path.join(current_app.config['UPLOAD_DIRECTORY'], user.username)):
-                    os.makedirs(os.path.join(current_app.config['UPLOAD_DIRECTORY'], user.username))
+                if not os.path.exists(os.path.join(
+                    current_app.config['PROJECT_DIRECTORY'], user.username)):
+                    os.makedirs(os.path.join(
+                        current_app.config['PROJECT_DIRECTORY'],
+                        user.username))
+                if not os.path.exists(os.path.join(
+                    current_app.config['UPLOAD_DIRECTORY'], user.username)):
+                    os.makedirs(os.path.join(
+                        current_app.config['UPLOAD_DIRECTORY'], user.username))
 
                 response_object = {'status': 'success',
                                    'message': f'{form.email.data} was added'}
                 return jsonify(response_object), 200
             else:
                 logging.debug(f'response_object {response_object}')
-                response_object['message'] = 'Sorry. That email already exists.'
+                response_object['message'] = \
+                    'Sorry. That email already exists.'
                 return jsonify(response_object), 400
         except IntegrityError as e:
             db.session.rollback()
@@ -155,13 +156,12 @@ def profile():
         user_list = User.query.all()
         for a in user_list:
             logging.debug(a.username)
-        # form.manage_username.choices = [(a.username, a.username) for a in user_list]
         if request.method == 'POST':
-            return redirect(url_for('phame.projects', username=form.manage_username.data))
+            return redirect(url_for('phame.projects',
+                                    username=form.manage_username.data))
         return render_template('admin.html', user=current_user, form=form)
     else:
         return render_template('profile.html', user=current_user)
-
 
 
 @users_blueprint.route('/ping', methods=['GET'])
@@ -170,7 +170,6 @@ def ping_pong():
         'status': 'success',
         'message': 'pong!'
     })
-
 
 
 @users_blueprint.route('/users/<user_id>', methods=['GET'])

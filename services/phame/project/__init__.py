@@ -12,7 +12,7 @@ login_manager = LoginManager()
 toolbar = DebugToolbarExtension()
 cors = CORS()
 
-# new
+
 def create_app(script_info=None):
 
     # instantiate the app
@@ -42,7 +42,9 @@ def create_app(script_info=None):
 
     return app
 
+
 from project.api.models import User
+
 
 @login_manager.user_loader
 def load_user(user_id):
