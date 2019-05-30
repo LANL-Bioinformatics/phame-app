@@ -70,8 +70,8 @@ class PhameTest(BaseTestCase):
         username = username if username else 'mark'
         password = password if password else 'test1'
         self.client.post(url_for('users.login'), data=json.dumps(
-            {'username': username, 'password': password}),
-                         content_type='application/json', )
+            {'username': username,
+             'password': password}), content_type='application/json', )
 
     def create_file_paths(self):
         test_file = os.path.join(current_app.config['UPLOAD_DIRECTORY'],
@@ -318,7 +318,7 @@ class PhameTest(BaseTestCase):
                                  'mark', 'test1', 'workdir', 'results'),
                     exist_ok=True)
         with open(os.path.join(current_app.config['PROJECT_DIRECTORY'],
-                               'mark',  'test1', 'workdir', 'results',
+                               'mark', 'test1', 'workdir', 'results',
                                'test1.log'), 'wb') as fp:
             fp.write(b'test')
         form_dict = InputForm(project='test1', reference='Random',

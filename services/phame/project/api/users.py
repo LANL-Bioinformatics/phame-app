@@ -1,17 +1,18 @@
 import os
 import logging
 from sqlalchemy.exc import IntegrityError, DataError
-from flask import Blueprint, jsonify, request, render_template, redirect, \
-    url_for, flash, current_app
+from flask import Blueprint, jsonify, request, render_template, \
+    redirect, url_for, flash, current_app
 
 from werkzeug.urls import url_parse
-from flask_login import current_user, login_user, logout_user, login_required
+from flask_login import current_user, login_user, logout_user
 from project import db
 from project.api.models import User
-from project.api.forms import LoginForm, InputForm, SignupForm, RegistrationForm, SubsetForm, AdminForm
+from project.api.forms import LoginForm, RegistrationForm, AdminForm
 
 
-users_blueprint = Blueprint('users', __name__, template_folder='templates', static_folder='static')
+users_blueprint = Blueprint('users', __name__, template_folder='templates',
+                            static_folder='static')
 
 
 @users_blueprint.route('/login', methods=['GET', 'POST'])
@@ -85,7 +86,8 @@ def register():
             user = User.query.filter_by(email=form.email.data).first()
             # logging.debug(f'register user {user}')
             if not user:
-                user = User(username=form.username.data, email=form.email.data)
+                user = User(username=form.username.data,
+                            email=form.email.data)
                 user.set_password(form.password.data)
                 db.session.add(user)
                 db.session.commit()
@@ -94,14 +96,17 @@ def register():
                 # logging.debug(f'user query {user.email}')
                 flash('Congratulations, you are now a registered user!')
                 if not os.path.exists(os.path.join(
-                    current_app.config['PROJECT_DIRECTORY'], user.username)):
+                        current_app.config['PROJECT_DIRECTORY'],
+                        user.username)):
                     os.makedirs(os.path.join(
                         current_app.config['PROJECT_DIRECTORY'],
                         user.username))
                 if not os.path.exists(os.path.join(
-                    current_app.config['UPLOAD_DIRECTORY'], user.username)):
+                        current_app.config['UPLOAD_DIRECTORY'],
+                        user.username)):
                     os.makedirs(os.path.join(
-                        current_app.config['UPLOAD_DIRECTORY'], user.username))
+                        current_app.config['UPLOAD_DIRECTORY'],
+                        user.username))
 
                 response_object = {'status': 'success',
                                    'message': f'{form.email.data} was added'}
@@ -111,7 +116,7 @@ def register():
                 response_object['message'] = \
                     'Sorry. That email already exists.'
                 return jsonify(response_object), 400
-        except IntegrityError as e:
+        except IntegrityError:
             db.session.rollback()
             return jsonify(response_object), 400
 
@@ -144,7 +149,7 @@ def add_user():
         else:
             response_object['message'] = 'Sorry. That email already exists.'
             return jsonify(response_object), 400
-    except IntegrityError as e:
+    except IntegrityError:
         db.session.rollback()
         return jsonify(response_object), 400
 

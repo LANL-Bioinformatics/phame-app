@@ -11,16 +11,11 @@ import pandas as pd
 from uuid import uuid4
 import celery.states as states
 import ast
-from sqlalchemy.exc import IntegrityError, DataError, TimeoutError
+from sqlalchemy.exc import TimeoutError
 from flask import Blueprint, jsonify, request, render_template, redirect, \
     url_for, flash, send_file, current_app
-
-from werkzeug.urls import url_parse
-from flask_login import current_user, login_user, logout_user, login_required
-from project import db
-from project.api.models import User
-from project.api.forms import LoginForm, InputForm, SignupForm, \
-    RegistrationForm, SubsetForm, AdminForm
+from flask_login import current_user, login_required
+from project.api.forms import InputForm, SubsetForm
 
 from project.api.worker import celery
 
@@ -31,7 +26,6 @@ phame_blueprint = Blueprint('phame', __name__, template_folder='templates',
 # PHAME_UPLOAD_DIR = os.path.join('/usr','src','app','static', 'uploads')
 
 logging.basicConfig(filename='api.log', level=logging.DEBUG)
-
 
 
 @phame_blueprint.route('/', methods=['GET'])
@@ -119,10 +113,12 @@ def project_setup(form):
     logging.debug(os.path.exists(os.path.join(work_dir, 'results',
                                               f"{form.project.data}.log")))
     # project name for projects that have successfully completed must be unique
-    if os.path.exists(os.path.join(work_dir, 'results',
-                                   f"{form.project.data}.log")) \
-            or (form.reference.data == 'Given' and
-                len(form.reference_file.data) == 0):
+    if os.path.exists(os.path.join(work_dir,
+                                   'results',
+                                   f"{form.project.data}.log")
+                      ) or (
+            form.reference.data == 'Given' and len(
+            form.reference_file.data) == 0):
         logging.debug(f"project {form.project.data} exists")
         return None, None
     logging.debug('done project setup')
@@ -162,8 +158,6 @@ def create_config_file(form_dict):
     :param form:
     :return:
     """
-
-
     logging.debug(f'form dict {form_dict}')
     if 'csrf_token' in form_dict.keys():
         form_dict.pop('csrf_token')
@@ -189,7 +183,7 @@ def create_config_file(form_dict):
 def upload_files_list():
     file_list = os.listdir(os.path.join(current_app.config['UPLOAD_DIRECTORY'],
                                         current_user.username))
-    return jsonify({'uploads':sorted(file_list)})
+    return jsonify({'uploads': sorted(file_list)})
 
 
 @phame_blueprint.route('/remove', methods=['POST'])
@@ -226,7 +220,7 @@ def upload():
     if not os.path.exists(target):
         try:
             os.mkdir(target)
-        except:
+        except IOError:
             if is_ajax:
                 return ajax_response(False,
                                      f"Couldn't create upload directory: "
@@ -328,8 +322,8 @@ def get_reference_file(summary_statistics_file):
     :param summary_statistics_file: Path to summary statistics file
     :return: Reference genome file name
     """
-    if os.path.exists(summary_statistics_file) and \
-        os.path.getsize(summary_statistics_file) > 0:
+    if os.path.exists(summary_statistics_file) and os.path.getsize(
+            summary_statistics_file) > 0:
         stats_df = pd.read_table(summary_statistics_file, header=None,
                                  index_col=0, squeeze=True)
 
@@ -361,8 +355,9 @@ def set_project_status(project_statuses, project, reference_genome,
         if status['project'] == project:
             project_task_status = status['state']
     if not project_task_status:
-        if not os.path.exists(os.path.join(results_dir, f'{project}.log')) or \
-            reference_genome == '':
+        if not os.path.exists(
+                os.path.join(results_dir,
+                             f'{project}.log')) or reference_genome == '':
             project_task_status = 'FAILURE'
         else:
             project_task_status = 'SUCCESS'
@@ -415,15 +410,15 @@ def get_file_counts(refdir, workdir):
     :return: Number of full, contig and read files
     """
     reads_file_count = len(
-        [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or
-                                                   fname.endswith('.fastq'))])
+        [fname for fname in os.listdir(refdir) if (
+            fname.endswith('.fq') or fname.endswith('.fastq'))])
 
     contigs_file_count = len([fname for fname in os.listdir(workdir) if
                               fname.endswith('.contig')]) \
         if os.path.exists(workdir) else 0
     full_genome_file_count = len([fname for fname in os.listdir(refdir) if
-                                  (fname.endswith('.fna') or
-                                   fname.endswith('.fasta'))])
+                                  (fname.endswith('.fna') or fname.endswith(
+                                      '.fasta'))])
     return reads_file_count, contigs_file_count, full_genome_file_count
 
 
@@ -444,18 +439,17 @@ def create_project_summary(project, project_status, num_threads,
     :param reference_genome: Reference genome file
     :return: project_summary dict
     """
-    project_summary = {'# of genomes analyzed': full_genome_file_count +
-                                                contigs_file_count +
-                                                reads_file_count,
-                       '# of contigs': contigs_file_count,
-                       '# of reads': reads_file_count,
-                       '# of full genomes': full_genome_file_count,
-                       'reference genome used': reference_genome,
-                       'project name': project,
-                       '# of threads': num_threads,
-                       'status': project_status,
-                       'execution time(h:m:s)': exec_time
-                       }
+    project_summary = \
+        {'# of genomes analyzed':
+            full_genome_file_count + contigs_file_count + reads_file_count,
+         '# of contigs': contigs_file_count,
+         '# of reads': reads_file_count,
+         '# of full genomes': full_genome_file_count,
+         'reference genome used': reference_genome,
+         'project name': project,
+         '# of threads': num_threads,
+         'status': project_status,
+         'execution time(h:m:s)': exec_time}
     logging.debug(f'project {project}')
     logging.debug(f'current user username {current_user.username}')
     if current_user.username != 'public':
@@ -489,14 +483,15 @@ def projects(username=None):
     try:
         pd.set_option('display.max_colwidth', 1000)
 
-        display_user = username if username and \
-                                   current_user.username == 'admin' else \
+        display_user = \
+            username if username and current_user.username == 'admin' else \
             current_user.username
 
         logging.debug(f'display_user {display_user}')
         # list of all projects for this user
-        if not os.path.exists(os.path.join(
-            current_app.config['PROJECT_DIRECTORY'], display_user)):
+        if not os.path.exists(
+                os.path.join(current_app.config['PROJECT_DIRECTORY'],
+                             display_user)):
             os.makedirs(os.path.join(current_app.config['PROJECT_DIRECTORY'],
                                      display_user))
         projects_list = [project for project in
@@ -550,7 +545,8 @@ def projects(username=None):
                                                      project_task_status,
                                                      num_threads,
                                                      reads_file_count,
-                                contigs_file_count, full_genome_file_count,
+                                                     contigs_file_count,
+                                                     full_genome_file_count,
                                                      exec_time,
                                                      reference_genome)
             projects_display_list.append(project_summary)
@@ -559,10 +555,11 @@ def projects(username=None):
 
         # add delete project checkbox if user is not public
         if current_user.username != 'public':
-            run_summary_columns = ['project name', '# of genomes analyzed',
-                                   '# of contigs', '# of reads',
-                                   'reference genome used', '# of threads',
-                                   'status', 'execution time(h:m:s)', 'delete']
+            run_summary_columns = \
+                ['project name', '# of genomes analyzed',
+                 '# of contigs', '# of reads',
+                 'reference genome used', '# of threads',
+                 'status', 'execution time(h:m:s)', 'delete']
         else:
             run_summary_columns = ['project name', '# of genomes analyzed',
                                    '# of contigs', '# of reads',
@@ -585,46 +582,10 @@ def projects(username=None):
                                    index=False))
     except Exception as e:
         logging.exception(str(e))
-        return render_template('error.html', error=
-        {'msg' : f'There was a problem displaying projects: {str(e)}'})
-
-def temp_upload(form_dict):
-    target = os.path.join(current_app.config['UPLOAD_DIRECTORY'],
-                          current_user.username)
-    if not os.path.exists(target):
-        logging.debug(f'creating directory {target}')
-        os.mkdir(target)
-    logging.debug('saving files')
-    for upload in form_dict['complete_genomes']:
-        logging.debug(upload.filename.rsplit("/")[0])
-        filename = upload.filename.rsplit("/")[0]
-        destination = "/".join([target, filename])
-        # logging.debug("Accept incoming file:", filename)
-        # logging.debug("Save it to:", destination)
-        upload.save(destination)
-
-@phame_blueprint.route('/input_js', methods=['POST'])
-def input_js():
-    logging.debug('calling input_javascript')
-
-    # process request.form
-    data = request.form
-
-    form_dict = request.form.to_dict()
-    ref_files_list = request.files.getlist("ref_files")
-    form_dict['complete_genomes'] = ref_files_list
-    logging.debug(f"files_list {ref_files_list}")
-    contig_files_list = request.files.getlist("contig_files")
-    form_dict['contigs_files'] = contig_files_list
-    logging.debug(f"files_list {contig_files_list}")
-    read_files_list = request.files.getlist("read_files")
-    form_dict['reads_files'] = read_files_list
-    logging.debug(f"files_list {read_files_list}")
-    temp_upload(form_dict)
-    project_dir, ref_dir = project_setup(form_dict)
-    create_config_file(form_dict)
-    logging.debug(f"params {jsonify(data)}")
-    return redirect(url_for('phame.runphame', project=form_dict['project']))
+        return render_template('error.html',
+                               error={
+                                   'msg': f'There was a problem displaying '
+                                   f'projects: {str(e)}'})
 
 
 @phame_blueprint.route('/input', methods=['GET', 'POST'])
@@ -647,10 +608,11 @@ def input():
     files_list = sorted(os.listdir(os.path.join(
         current_app.config['UPLOAD_DIRECTORY'], current_user.username)))
     form.reference_file.choices = []
-    form.complete_genomes.choices = [(a, a) for a in files_list if
-                                     (a.endswith('fna') or a.endswith('fasta')
-                                      or a.endswith('gff'))]
-    form.contigs.choices = [(a, a) for a in files_list if a.endswith('contig')]
+    form.complete_genomes.choices = [
+        (a, a) for a in files_list if (
+            a.endswith('fna') or a.endswith('fasta') or a.endswith('gff'))]
+    form.contigs.choices = [
+        (a, a) for a in files_list if a.endswith('contig')]
     form.reads.choices = [(a, a) for a in files_list if a.endswith('fastq')]
 
     if request.method == 'POST':
@@ -675,8 +637,9 @@ def input():
             logging.debug(f"data {form.data_type.data}")
 
             # Perform validation based on requirements of PhaME
-            if ('1' in form.data_type.data or '2' in form.data_type.data) and \
-                len(form.reference_file.data) == 0:
+            if (
+                '1' in form.data_type.data or '2' in form.data_type.data
+            ) and len(form.reference_file.data) == 0:
                 error = 'You must upload a reference genome if you select ' \
                         'Contigs or Reads from Data'
                 remove_uploaded_files(project_dir)
@@ -685,34 +648,34 @@ def input():
 
             # Ensure each fasta file has a corresponding mapping file if
             # Generate SNPs is yes and 'random' or 'ani'
-            if form.cds_snps.data == '1' and (form.reference.data == '0' or
-                                              form.reference.data == '2'):
+            if form.cds_snps.data == '1' and (
+                    form.reference.data == '0' or form.reference.data == '2'):
                 for fname in os.listdir(ref_dir):
-                    if fname.endswith('.fa') or fname.endswith('.fasta') or \
-                        fname.endswith('.fna'):
+                    if fname.endswith(
+                            '.fa') or fname.endswith(
+                            '.fasta') or fname.endswith('.fna'):
                         if not os.path.exists(os.path.join(
-                            ref_dir,
-                            '{0}.{1}'.format(fname.split('.')[0],'gff'))):
+                            ref_dir, f"{fname.split('.')[0]}.{'gff'}")
+                        ):
                             remove_uploaded_files(project_dir)
-                            error = 'Each full genome file must have a ' \
-                                    'corresponding .gff file if '\
-                                    '"Generate SNPs from coding regions" is ' \
-                                    'yes and "Reference" is random or ANI'
+                            error = \
+                                'Each full genome file must have a ' \
+                                'corresponding .gff file if "Generate SNPs ' \
+                                'from coding regions" ' \
+                                'is yes and "Reference" is random or ANI'
                             return render_template('input.html',
                                                    title='Phame input',
                                                    form=form, error=error)
 
             # Ensure a reference file is selected if the Reference option
             # selected is 'manual selection'
-            if form.reference.data == '1' and \
-                len(form.reference_file.data) == 0:
+            if form.reference.data == '1' and len(
+                    form.reference_file.data) == 0:
                 error = 'You must select a reference genome if you select ' \
                         '"manual selection" from the Reference menu'
                 remove_uploaded_files(project_dir)
                 return render_template('input.html', title='Phame input',
                                        form=form, error=error)
-
-
             # Create config file
             create_config_file(request.form.to_dict())
 
@@ -732,11 +695,11 @@ def get_config_property(project_dir, property):
         value = \
             config_df[
                 config_df[
-                    'field'] ==
-                property]['val'].values[0].strip().split('#')[0].strip()
+                    'field'] == property]['val'].values[0].strip().\
+            split('#')[0].strip()
     except IOError as e:
         logging.exception(f'Cannot get config property {property} for project '
-                          f'directory {project_dir}')
+                          f'directory {project_dir}: {e}')
     return value
 
 
@@ -746,7 +709,7 @@ def subset(project):
     form = SubsetForm()
     project_path = os.path.join(current_app.config['PROJECT_DIRECTORY'],
                                 current_user.username, project)
-    new_project = project+'_subset'
+    new_project = project + '_subset'
     new_project_path = os.path.join(current_app.config['PROJECT_DIRECTORY'],
                                     current_user.username, new_project)
 
@@ -778,7 +741,7 @@ def subset(project):
                             os.path.join(new_project_path, 'workdir',
                                          'results', results_dir))
 
-        #copy files from results directory
+        # copy files from results directory
         results_files = os.listdir(os.path.join(project_path, 'workdir',
                                                 'results'))
         for result_file in results_files:
@@ -791,8 +754,7 @@ def subset(project):
                             os.path.join(new_project_path, 'workdir',
                                          'results'))
 
-
-        #create new working_list.txt file and copy files
+        # create new working_list.txt file and copy files
         if not os.path.exists(os.path.join(new_project_path, 'workdir',
                                            'files')):
             os.mkdir(os.path.join(new_project_path, 'workdir', 'files'))
@@ -809,11 +771,12 @@ def subset(project):
                                 os.path.join(new_project_path, 'workdir',
                                              'files', ref_file))
 
-        #modify config.ctl file to change project to new name and get
+        # modify config.ctl file to change project to new name and get
         # reference file name
         fh, abs_path = mkstemp()
-        with os.fdopen(fh, 'w') as tmp, \
-            open(os.path.join(new_project_path, 'config.ctl'), 'r') as config:
+        with os.fdopen(fh, 'w') \
+                as tmp, open(os.path.join(new_project_path,
+                                          'config.ctl'), 'r') as config:
             lines = config.readlines()
             reference_file = ''
             for line in lines:
@@ -842,9 +805,10 @@ def subset(project):
         # symlink contig files
         for file_name in os.listdir(os.path.join(project_path, 'workdir')):
             if file_name.endswith('.contig'):
-                os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
-                                        current_user.username, file_name),
-                           os.path.join(new_project_path, 'workdir', file_name))
+                os.symlink(os.path.join(
+                    current_app.config['PHAME_UPLOAD_DIR'],
+                    current_user.username, file_name),
+                    os.path.join(new_project_path, 'workdir', file_name))
 
         if form.validate_on_submit():
             if reference_file not in form.subset_files.data:
@@ -852,7 +816,6 @@ def subset(project):
                 return redirect(url_for('subset', project=project))
 
             return redirect(url_for('phame.runphame', project=new_project))
-
 
     return render_template('subset_input.html', title='Subset Phame input',
                            form=form)
@@ -871,7 +834,6 @@ def download(project):
                      as_attachment=True)
 
 
-
 def zip_output_files(project):
     """
     Create a zip file of all files in user's results directory
@@ -880,7 +842,7 @@ def zip_output_files(project):
     """
     zip_name = os.path.join(current_app.config['PROJECT_DIRECTORY'],
                             current_user.username, project, f'{project}.zip')
-    with zipfile.ZipFile(zip_name,  'w', zipfile.ZIP_DEFLATED) as zipf:
+    with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in \
             os.walk(os.path.join(current_app.config['PROJECT_DIRECTORY'],
                                  current_user.username, project, 'workdir',
@@ -904,17 +866,17 @@ def check_task(task_id):
     res = celery.AsyncResult(task_id)
     logging.debug('res state' + res.state)
     if res.state == states.PENDING or res.state == 'PROGRESS':
-        result= res.state
+        result = res.state
     else:
 
         result = str(res.result)
     logging.debug('result ' + str(result))
     if str(result) is None:
         logging.debug('result is None')
-        return render_template('error.html',
-                               error=
-                               {'msg' : 'Task status could not be obtained'})
-    return jsonify({'Result': result, 'task_output':json.dumps(res.result)})
+        return render_template(
+            'error.html',
+            error={'msg': 'Task status could not be obtained'})
+    return jsonify({'Result': result, 'task_output': json.dumps(res.result)})
 
 
 @phame_blueprint.route('/wait/<string:task_id>/<project>',
@@ -927,11 +889,10 @@ def wait(task_id, project):
     :return:
     """
     try:
-        return render_template('wait.html',
-                               status_url = url_for('phame.check_task',
-                                                    task_id=task_id),
-                               project=project,
-                               username = current_user.username)
+        return render_template(
+            'wait.html',
+            status_url=url_for('phame.check_task', task_id=task_id),
+            project=project, username=current_user.username)
     except TimeoutError as e:
         return render_template('error.html', error={'msg': str(e)})
 
@@ -943,13 +904,13 @@ def runphame(project):
     :param project: Project name
     :return:
     """
-    task = celery.send_task('tasks.run_phame', args = [current_user.username,
-                                                       project])
+    task = celery.send_task('tasks.run_phame',
+                            args=[current_user.username, project])
     logging.debug('task id: {0}'.format(task.id))
     response = check_task(task.id)
     if isinstance(response, dict):
-        logging.debug('check task {0}'.format(response.__dict__))
-    return redirect(url_for('phame.wait', task_id = task.id, project=project))
+        logging.debug(f'check task {response.__dict__}')
+    return redirect(url_for('phame.wait', task_id=task.id, project=project))
 
 
 @phame_blueprint.route('/get_log/<project>', methods=['GET'])
@@ -969,7 +930,7 @@ def get_log(project):
         while f.read(1) != b"\n":  # Until EOL is found...
             f.seek(-2, os.SEEK_CUR)  # ...jump back the read byte plus one more
         last = f.readline()
-    return jsonify({'log':str(last)})
+    return jsonify({'log': str(last)})
 
 
 @phame_blueprint.route('/num_results_files/<project>', methods=['GET'])
@@ -979,7 +940,7 @@ def num_results_files(project):
                                'results')
     num_files = len(os.listdir(results_dir)) \
         if os.path.exists(results_dir) else 0
-    return jsonify({'num_files':num_files})
+    return jsonify({'num_files': num_files})
 
 
 def send_mailgun(message, project):
@@ -992,20 +953,15 @@ def send_mailgun(message, project):
                                current_user.username, project, 'workdir',
                                'results')
     log_file = '{0}.log'.format(project)
-    log_fh = open(os.path.join(results_dir, log_file),"rb").read()
-    error_file = '{0}.error'.format(project)
-    error_fh = open(os.path.join(results_dir, error_file),"rb").read()
-    mail_request = requests.post(request_url,
-                                 auth=('api', key),
-                                 files=[("attachment", log_fh),
-                                        ("attachment", error_fh)],
-                                 data=
-                                 {'from': 'donotreply@edgebioinformatics.org',
-                                  'to': recipient,
-                                  'subject': 'Project {0}'.format(project),
-                                  'text': message
-                                       },
-                                 )
+    log_fh = open(os.path.join(results_dir, log_file), "rb").read()
+    error_file = f'{project}.error'
+    error_fh = open(os.path.join(results_dir, error_file), "rb").read()
+    mail_request = requests.post(
+        request_url,
+        auth=('api', key),
+        files=[("attachment", log_fh), ("attachment", error_fh)],
+        data={'from': 'donotreply@edgebioinformatics.org', 'to': recipient,
+              'subject': f'Project {project}', 'text': message})
     logging.debug(f"from: {'donotreply@edgebioinformatics.org'} to: "
                   f"{recipient} subject: Project {project} text: {message}")
     logging.debug(f'log file: {log_file}, error file: {error_file}')
@@ -1028,16 +984,18 @@ def notify(project):
     return redirect(url_for('phame.display', username=current_user.username,
                             project=project))
 
+
 @phame_blueprint.route('/display/<project>', methods=['POST', 'GET'])
 @phame_blueprint.route('/display/<username>/<project>',
                        methods=['POST', 'GET'])
-def display(project, username = None):
+def display(project, username=None):
     """
     Displays output from PhaME, including summary statistics, sequence lengths
     and tree output using archeopteryx.js library
     Creates a symlink between PhaME output tree file and static directory in
     flask directory
     :param project: project name
+    :param username: optional username of user
     :return: renders PhaME output page
     """
 
@@ -1056,18 +1014,18 @@ def display(project, username = None):
         return render_template('error.html', error=error)
 
     # create output tables
-    reads_file_count = len(
+    reads_count = len(
         [fname for fname in os.listdir(refdir) if
          (fname.endswith('.fq') or fname.endswith('.fastq'))])
-    contigs_file_count = len(
+    contigs_count = len(
         [fname for fname in os.listdir(workdir) if fname.endswith('.contig')])
-    full_genome_file_count = len([fname for fname in os.listdir(refdir) if
-                                  (fname.endswith('.fna') or
-                                   fname.endswith('.fasta'))])
-    logging.debug(f'# reads files {reads_file_count}, '
-                  f'# contig files {contigs_file_count}, '
-                  f'# full genomes {full_genome_file_count}, '
-                  f'len(length_df) {full_genome_file_count*3-1}')
+    full_genome_count = len(
+        [fname for fname in os.listdir(refdir) if (
+            fname.endswith('.fna') or fname.endswith('.fasta'))])
+    logging.debug(f'# reads files {reads_count}, '
+                  f'# contig files {contigs_count}, '
+                  f'# full genomes {full_genome_count}, '
+                  f'len(length_df) {full_genome_count*3-1}')
 
     output_files_list = [f'{project}_summaryStatistics.txt',
                          f'{project}_coverage.txt',
@@ -1076,6 +1034,7 @@ def display(project, username = None):
 
     output_tables_list = []
     titles_list = []
+    num_genomes = reads_count + contigs_count + full_genome_count
     try:
         for output_file in output_files_list:
             if os.path.exists(os.path.join(results_dir, 'tables',
@@ -1088,19 +1047,15 @@ def display(project, username = None):
                                              header=None, index_col=0)
                     del stats_df.index.name
                     stats_df.columns = ['']
-                    run_summary_df = \
-                        pd.DataFrame(
-                            {'# of genomes analyzed': reads_file_count +
-                                                      contigs_file_count +
-                                                      full_genome_file_count,
-                             '# of contigs': contigs_file_count,
-                             '# of reads': reads_file_count,
-                             '# of full genomes': full_genome_file_count,
-                             'reference genome used':
-                                 stats_df.loc['Reference used'],
-                             'project name': project
-                                                   }
-                                                  )
+
+                    run_summary_df = pd.DataFrame(
+                        {'# of genomes analyzed': num_genomes,
+                         '# of contigs': contigs_count,
+                         '# of reads': reads_count,
+                         '# of full genomes': full_genome_count,
+                         'reference genome used':
+                             stats_df.loc['Reference used'],
+                         'project name': project})
                     output_tables_list.append(run_summary_df.to_html(
                         classes='run_summary'))
                     output_tables_list.append(
@@ -1141,11 +1096,12 @@ def display(project, username = None):
         if not os.path.exists(trees_target_dir):
             os.makedirs(trees_target_dir)
         logging.debug(f'tree directory:{trees_target_dir}')
-        tree_file_list = [fname for fname in
-                          os.listdir(os.path.join(results_dir, 'trees'))
-                          if fname.endswith('.fasttree') or
-                          fname.endswith('.treefile')
-                          or 'bestTree' in fname or 'bipartitions' in fname]
+        tree_file_list = [
+            fname for fname in os.listdir(os.path.join(results_dir, 'trees'))
+            if fname.endswith(
+                '.fasttree') or fname.endswith(
+                '.treefile'
+            ) or 'bestTree' in fname or 'bipartitions' in fname]
 
         tree_files = []
         for tree in tree_file_list:
@@ -1176,7 +1132,6 @@ def display(project, username = None):
                                file_links=[])
 
 
-
 @phame_blueprint.route('/display_tree/<username>/<project>/<tree>')
 def display_tree(username, project, tree):
     """
@@ -1185,7 +1140,7 @@ def display_tree(username, project, tree):
     :param tree: Name of tree file (.fasttree)
     :return:
     """
-    return render_template('tree_output.html', username=username, tree= tree,
+    return render_template('tree_output.html', username=username, tree=tree,
                            project=project)
 
 
@@ -1199,8 +1154,7 @@ def display_file(filename, project):
     """
     with open(os.path.join(current_app.config['PROJECT_DIRECTORY'],
                            current_user.username, project,
-                                            'workdir', 'results', filename),
+                           'workdir', 'results', filename),
               'r') as fp:
         content = fp.read()
     return render_template('content.html', text=content)
-
