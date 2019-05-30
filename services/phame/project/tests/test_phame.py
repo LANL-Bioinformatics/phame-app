@@ -12,7 +12,8 @@ from project import db, create_app
 from project.api.forms import InputForm
 from project.api.models import User
 from project.api.phame import link_files, get_data_type, symlink_uploaded_file, project_setup, get_config_property, \
-    create_config_file, get_num_threads, get_exec_time, set_directories, get_file_counts, create_project_summary
+    create_config_file, get_num_threads, get_exec_time, set_directories, get_file_counts, create_project_summary, \
+    get_log
 
 
 app = create_app()
@@ -27,8 +28,8 @@ class PhameTest(BaseTestCase):
 
     def setUp(self):
         self.project_dir = os.path.join('/test', 'mark', 'test1')
-        self.ref_dir = os.path.join(self.project_dir, 'ref_dir')
-        self.work_dir = os.path.join(self.project_dir, 'work_dir')
+        self.ref_dir = os.path.join(self.project_dir, 'refdir')
+        self.work_dir = os.path.join(self.project_dir, 'workdir')
         self.upload_dir = current_app.config['UPLOAD_DIRECTORY']
         db.create_all()
         db.session.commit()
@@ -465,9 +466,53 @@ class PhameTest(BaseTestCase):
             for f in symlinked_files:
                 self.assertFalse(os.path.exists(f))
 
-    # def test_projects(self):
+    def test_get_log(self):
+        os.makedirs(os.path.join(self.work_dir, 'results'))
+        shutil.copy(os.path.join('project', 'tests', 'fixtures', 'test1.log'),
+                    os.path.join(self.work_dir, 'results', 'test1.log'))
 
+        self.add_user()
+        with self.client:
+            self.login()
+            response = self.client.get(url_for('phame.get_log', project='test1'))
+            self.assertEqual(response.status_code, 200)
+            resp_data = json.loads(response.data.decode())
+            self.assertEquals(resp_data['log'], 'null')
 
+    @patch('project.api.phame.send_mailgun')
+    def test_notify(self, mock_send):
+        current_app.config['SEND_NOTIFICATIONS'] = True
+        self.add_user()
+        with self.client:
+            self.login()
+            response = self.client.get(url_for('phame.notify', project='test1'))
+            self.assertEqual(response.status_code, 302)
+            mock_send.assert_called_with('Your project test1 has finished running', 'test1')
+
+    @patch('project.api.phame.send_mailgun')
+    def test_not_notify(self, mock_send):
+        current_app.config['SEND_NOTIFICATIONS'] = False
+        self.add_user()
+        with self.client:
+            self.login()
+            response = self.client.get(url_for('phame.notify', project='test1'))
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(mock_send.call_count, 0)
+
+    # def test_display_file(self):
+    #     current_app.config['PROJECT_DIRECTORY'] = '/test'
+    #     os.makedirs(os.path.join(self.work_dir, 'results'))
+    #     shutil.copy(os.path.join('project', 'tests', 'fixtures', 'test1.log'),
+    #                 os.path.join(self.work_dir, 'results', 'test1.log'))
+    #
+    #     self.add_user()
+    #     with self.client:
+    #         self.login()
+    #         response = self.client.get(url_for('phame.display_file', project='test1', filename='test1.log'))
+    #         self.assertEqual(response.status_code, 200)
+    #         resp_data = json.loads(response.data.decode())
+    #         print(resp_data)
+    #         self.assertEquals(resp_data['log'], 'null')
 
 if __name__ == '__main__':
     unittest.main()
