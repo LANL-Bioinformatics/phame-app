@@ -26,7 +26,7 @@ phame_blueprint = Blueprint('phame', __name__, template_folder='templates', stat
 # PROJECT_DIRECTORY = os.path.join('/phame_api', 'media')
 # UPLOAD_DIRECTORY = os.path.join('static', 'uploads')
 # PHAME_UPLOAD_DIR = os.path.join('/usr','src','app','static', 'uploads')
-SEND_NOTIFICATIONS = False
+
 logging.basicConfig(filename='api.log', level=logging.DEBUG)
 
 # logging.debug(f"project directory {# current_app.config['PROJECT_DIRECTORY']}")
@@ -873,9 +873,9 @@ def send_mailgun(message, project):
 @phame_blueprint.route('/notify/<project>', methods=['GET'])
 def notify(project):
     # logging.debug(f"send notifications: {app.config['SEND_NOTIFICATIONS']}")
-    if SEND_NOTIFICATIONS:
+    if current_app.config['SEND_NOTIFICATIONS']:
         try:
-            state = send_mailgun('Your project {0} has finished running'.format(project), project)
+            state = send_mailgun(f'Your project {project} has finished running', project)
             logging.info('message sent to {0} for project {1} status code {2}'.format(current_user.email, project, state))
         except os.error as e:
             logging.error(str(e))
