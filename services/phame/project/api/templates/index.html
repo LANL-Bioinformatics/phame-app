@@ -48,7 +48,7 @@
         <p><a href="http://phame.readthedocs.io/"><img src={{ url_for('phame.static', filename="images/read-the-docs-logo.png") }} alt="ReadTheDocs" style="width:40px;height:40px;">Read The Docs</a> </p>
         <div class="col-sm-6">
           <h3>System Specifications</h3>
-            CPU: 4, Mem: 32 GB
+            CPU: {{ specs.num_cpus }}, Mem: {{ specs.total_ram }}B
         </div>
       </div>
     </div>

@@ -2,9 +2,10 @@ import json
 import os
 import shutil
 import unittest
+import psutil
 import io
 import pandas as pd
-from unittest.mock import patch
+from unittest.mock import patch, Mock, PropertyMock
 from flask_login import current_user
 from flask import current_app, url_for
 from project.tests.base import BaseTestCase
@@ -14,7 +15,8 @@ from project.api.models import User
 from project.api.phame import link_files, get_data_type, \
     symlink_uploaded_file, project_setup, get_config_property, \
     create_config_file, get_num_threads, get_exec_time, set_directories, \
-    get_file_counts, create_project_summary
+    get_file_counts, create_project_summary, get_log, get_system_specs, \
+    get_log_mod_time
 
 
 app = create_app()
@@ -91,7 +93,7 @@ class PhameTest(BaseTestCase):
             if os.path.exists(file_name):
                 os.remove(file_name)
 
-    def create_config_file(self):
+    def create_config_file(self, field_dict=None):
         form = dict(project='test1', ref_dir=self.ref_dir,
                     work_dir=self.work_dir, reference='1',
                     reference_file='KJ660347.fasta', cds_snps='0',
@@ -99,6 +101,8 @@ class PhameTest(BaseTestCase):
                     reads='1', aligner='bowtie', tree='1', bootstrap='1',
                     N='100', pos_select='2', code='0', clean='0', threads='2',
                     cutoff='0.2')
+        if field_dict is not None:
+            form[field_dict['field']] = field_dict['value']
         current_app.config['PROJECT_DIRECTORY'] = '/test'
         self.add_user()
         os.makedirs(self.project_dir, exist_ok=True)
@@ -429,6 +433,15 @@ class PhameTest(BaseTestCase):
         value = get_config_property(self.project_dir, 'cutoff')
         self.assertEqual(value, '0.2')
 
+    def DO_NOT_test_get_config_property_bad_value(self):
+        self.create_config_file(field_dict=
+                                {'field': 'threads',
+                                 'value': '<input id="threads" name="threads"'
+                                          ' type="text" value="2">  # Number '
+                                          'of threads to use'})
+        with self.assertRaises(IndexError):
+            get_config_property(self.project_dir, 'threads')
+
     def test_get_num_threads(self):
         self.create_config_file()
         num_threads = get_num_threads(self.project_dir)
@@ -580,23 +593,55 @@ class PhameTest(BaseTestCase):
             self.assertEqual(response.status_code, 302)
             self.assertEqual(mock_send.call_count, 0)
 
-    # def test_display_file(self):
-    #     current_app.config['PROJECT_DIRECTORY'] = '/test'
-    #     os.makedirs(os.path.join(self.work_dir, 'results'))
-    #     shutil.copy(os.path.join('project', 'tests', 'fixtures',
-    #     'test1.log'),
-    #                 os.path.join(self.work_dir, 'results', 'test1.log'))
-    #
-    #     self.add_user()
-    #     with self.client:
-    #         self.login()
-    #         response = self.client.get(url_for('phame.display_file',
-    #         project='test1', filename='test1.log'))
-    #         self.assertEqual(response.status_code, 200)
-    #         resp_data = json.loads(response.data.decode())
-    #         print(resp_data)
-    #         self.assertEquals(resp_data['log'], 'null')
+    def test_display_file(self):
+        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        os.makedirs(os.path.join(self.work_dir, 'results'))
+        shutil.copy(os.path.join('project', 'tests', 'fixtures', 'test1.log'),
+                    os.path.join(self.work_dir, 'results', 'test1.log'))
 
+        self.add_user()
+        with self.client:
+            self.login()
+            response = self.client.get(url_for('phame.display_file',
+            project='test1', filename='test1.log'))
+            self.assertEqual(response.status_code, 200)
+            # resp_data = json.loads(response.data.decode())
+            # print(response.data)
+            self.assertIn('Tree phylogeny complete', str(response.data))
+
+
+    @patch('psutil.cpu_count')
+    def test_get_system_specs(self, mock_cpu):
+        total_mem = 4294967296
+        with patch.object(psutil, 'virtual_memory') as mock_mem:
+            pt = Mock(total=total_mem)
+            d = PropertyMock(return_value=total_mem)
+            type(mock_mem).info = pt
+            mock_mem.return_value = pt
+        mock_cpu.return_value = 6
+        mock_mem.total.return_value = total_mem
+        specs = get_system_specs()
+        print(specs)
+        self.assertEqual(specs['num_cpus'], 6)
+        self.assertEqual(specs['total_ram'], '3.9G')
+
+    @patch('os.path.getmtime')
+    def test_log_mod_time(self, mock_mtime):
+        mock_mtime.return_value = 1559280752
+        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        os.makedirs(os.path.join(self.work_dir, 'results'))
+        shutil.copy(os.path.join('project', 'tests', 'fixtures', 'test1.log'),
+                    os.path.join(self.work_dir, 'results', 'test1.log'))
+
+        self.add_user()
+        with self.client:
+            self.login()
+            mod_time = get_log_mod_time('test1')
+            print(mod_time)
+        self.assertEqual(mod_time, '2019-05-31 05:32:32')
+    # @patch('project.api.phame.get_system_specs')
+    # def test_index(self, mock_specs):
+    #     mock_specs.
 
 if __name__ == '__main__':
     unittest.main()

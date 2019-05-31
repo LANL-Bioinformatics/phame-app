@@ -3,7 +3,11 @@ import os
 import requests
 import zipfile
 import shutil
+import psutil
 from tempfile import mkstemp
+from time import ctime
+from datetime import datetime
+import stat
 import logging
 import json
 import re
@@ -30,7 +34,8 @@ logging.basicConfig(filename='api.log', level=logging.DEBUG)
 
 @phame_blueprint.route('/', methods=['GET'])
 def index():
-    return render_template('index.html')
+    specs = get_system_specs()
+    return render_template('index.html', specs=specs)
 
 
 def symlink_uploaded_file(dest_dir, upload_file, source_file=None):
@@ -155,7 +160,7 @@ def get_data_type(options_list):
 def create_config_file(form_dict):
     """
     create PhaME config.ctl file
-    :param form:
+    :param form_dict: dict with fields from InputForm
     :return:
     """
     logging.debug(f'form dict {form_dict}')
@@ -163,10 +168,9 @@ def create_config_file(form_dict):
         form_dict.pop('csrf_token')
     project = form_dict['project']
 
-    # form_dict.pop('csrf_token')
     form_dict['ref_dir'] = f'../{project}/refdir/'
     form_dict['work_dir'] = f'../{project}/workdir/'
-    # logging.debug(f"data type {form_dict['data_type']}")
+    logging.debug(f"threads {form_dict['threads']}")
     # if len(form.reference_file.data) > 0:
     #     form_dict['reference_file'] = form.reference_file.data
     form_dict['data_type'] = get_data_type(form_dict['data_type'])
@@ -177,6 +181,50 @@ def create_config_file(form_dict):
                            current_user.username,
                            project, 'config.ctl'), 'w') as conf:
         conf.write(content)
+
+
+def bytes2human(n):
+    # http://code.activestate.com/recipes/578019
+    # >>> bytes2human(10000)
+    # '9.8K'
+    # >>> bytes2human(100001221)
+    # '95.4M'
+    symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
+    prefix = {}
+    for i, s in enumerate(symbols):
+        prefix[s] = 1 << (i + 1) * 10
+    for s in reversed(symbols):
+        if n >= prefix[s]:
+            value = float(n) / prefix[s]
+            return '%.1f%s' % (value, s)
+    return "%sB" % n
+
+
+def get_system_usage():
+    mem = psutil.virtual_memory()
+    mem_usage = (mem.total - mem.free - mem.buffers) / mem.total
+    load = os.getloadavg()[1]
+    cpu_usage = load / int(psutil.cpu_count) * 100
+    fd = os.open(current_app.config['PROJECT_DIR'], os.O_RDONLY)
+    fstat = os.fstatvfs(fd)
+    disk_usage = fstat.f_frsize * fstat.f_bavail
+    return mem_usage, cpu_usage, disk_usage
+
+
+def get_system_specs():
+    num_cpus = psutil.cpu_count()
+    mem = psutil.virtual_memory()
+    total_ram = bytes2human(mem.total)
+    return dict(num_cpus=num_cpus, total_ram=total_ram)
+
+
+def get_log_mod_time(project):
+    log_file = os.path.join(current_app.config['PROJECT_DIRECTORY'],
+                           current_user.username,
+                           project, 'workdir', 'results', f'{project}.log')
+    mod_time = os.path.getmtime(log_file)
+    logging.debug(f'mod_time {mod_time}')
+    return datetime.utcfromtimestamp(mod_time).strftime('%Y-%m-%d %H:%M:%S')
 
 
 @phame_blueprint.route('/files', methods=['GET'])
@@ -294,11 +342,14 @@ def get_num_threads(project_dir):
     :param project_dir: Directory for project
     :return: number of threads
     """
-    num_threads = get_config_property(project_dir, 'threads')
-    if num_threads is None:
-        num_threads = 'Unknown'
-    return num_threads
-
+    try:
+        num_threads = get_config_property(project_dir, 'threads')
+        if num_threads is None:
+            num_threads = 'Unknown'
+        return num_threads
+    except IndexError as e:
+        logging.debug(f'Could not get number of threads for {project_dir}')
+        raise IndexError('IndexError')
 
 def get_exec_time(project_dir):
     """
@@ -685,21 +736,22 @@ def input():
     return render_template('input.html', title='Phame input', form=form)
 
 
-def get_config_property(project_dir, property):
+def get_config_property(project_dir, config_property):
     value = None
     try:
         config_df = pd.read_csv(os.path.join(project_dir, 'config.ctl'),
                                 sep='=', header=None, names=['field', 'val'])
         config_df = config_df.loc[pd.notna(config_df['val']), :]
         config_df['field'] = config_df['field'].apply(lambda x: x.strip())
-        value = \
-            config_df[
-                config_df[
-                    'field'] == property]['val'].values[0].strip().\
-            split('#')[0].strip()
+        logging.debug(f'config_property {config_property}')
+        logging.debug(f"config_field {config_df[config_df['field'] == config_property]['val']}")
+        value = config_df[config_df['field'] == config_property]['val'].values[0].strip().split('#')[0].strip()
     except IOError as e:
-        logging.exception(f'Cannot get config property {property} for project '
+        logging.exception(f'Cannot get config property {config_property} for project '
                           f'directory {project_dir}: {e}')
+    except IndexError as e:
+        logging.debug(f'IndexError Cannot get config property {config_property} for project ' 
+                      f'directory {project_dir}: {e}')
     return value
 
 
@@ -1136,6 +1188,7 @@ def display(project, username=None):
 def display_tree(username, project, tree):
     """
     Creates phylogeny tree using archeopteryx.js
+    :param username: user's name
     :param project: Name of project
     :param tree: Name of tree file (.fasttree)
     :return:
