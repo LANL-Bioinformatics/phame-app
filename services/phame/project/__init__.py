@@ -5,12 +5,14 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_cors import CORS
+from flask_migrate import Migrate
 
 # instantiate the db
 db = SQLAlchemy()
 login_manager = LoginManager()
 toolbar = DebugToolbarExtension()
 cors = CORS()
+migrate = Migrate()
 
 
 def create_app(script_info=None):
@@ -28,6 +30,7 @@ def create_app(script_info=None):
     login_manager.login_view = 'phame.login'
     toolbar.init_app(app)
     cors.init_app(app)
+    migrate.init_app(app, db)
 
     # register blueprints
     from project.api.phame import phame_blueprint
