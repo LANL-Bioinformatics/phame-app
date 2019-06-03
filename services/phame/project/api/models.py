@@ -50,6 +50,6 @@ class Project(db.Model):
     name = db.Column(db.String(128), nullable=False)
     start_time = db.Column(db.DateTime)
     end_time = db.Column(db.DateTime)
-    execution_time = db.Column(db.Time)
+    execution_time = db.Column(db.Integer)
     status = db.Column(db.String(30))
     num_threads = db.Column(db.Integer)

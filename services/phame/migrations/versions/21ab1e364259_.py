@@ -23,7 +23,7 @@ def upgrade():
     sa.Column('name', sa.String(length=128), nullable=False),
     sa.Column('start_time', sa.DateTime(), nullable=True),
     sa.Column('end_time', sa.DateTime(), nullable=True),
-    sa.Column('execution_time', sa.Time(), nullable=True),
+    sa.Column('execution_time', sa.Integer(), nullable=True),
     sa.Column('status', sa.String(length=30), nullable=True),
     sa.Column('num_threads', sa.Integer(), nullable=True),
     sa.PrimaryKeyConstraint('id')

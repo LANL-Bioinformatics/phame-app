@@ -97,6 +97,21 @@
                 }
             });
         }
+
+        function send_stats(project) {
+          console.log('stats for project: '+ project);
+          $.ajax({
+                type: 'POST',
+                url: '/phame/notify/' + project,
+                data: {status:project_status, name:project_name},
+                success: function(data, status, request) {
+                  console.log('email notification sent for ' + project);
+                },
+                error: function() {
+                    alert('Unexpected error');
+                }
+            });
+        }
         function update_progress(status_url, project) {
             console.log('update progress called with: ' + status_url);
             // send GET request to status URL

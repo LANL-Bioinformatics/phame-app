@@ -37,7 +37,7 @@ def login():
                 return redirect(url_for('users.login'))
         else:
             user = User.query.filter_by(username='public').first()
-        logging.debug(f'logged in user {user.username}')
+        # logging.debug(f'logged in user {user.username}')
 
         # logging.debug(f"request next page {request.args.get('next')}")
         login_user(user, remember=form.remember_me.data)
@@ -71,7 +71,7 @@ def register():
     """
 
     if current_user.is_authenticated:
-        logging.debug('current user is authenticated')
+        # logging.debug('current user is authenticated')
         return redirect(url_for('phame.index'))
     form = RegistrationForm()
     # logging.debug(f'form {form.__dict__}')
@@ -112,7 +112,7 @@ def register():
                                    'message': f'{form.email.data} was added'}
                 return jsonify(response_object), 200
             else:
-                logging.debug(f'response_object {response_object}')
+                # logging.debug(f'response_object {response_object}')
                 response_object['message'] = \
                     'Sorry. That email already exists.'
                 return jsonify(response_object), 400
@@ -159,8 +159,8 @@ def profile():
     if current_user.username == 'admin':
         form = AdminForm()
         user_list = User.query.all()
-        for a in user_list:
-            logging.debug(a.username)
+        # for a in user_list:
+            # logging.debug(a.username)
         if request.method == 'POST':
             return redirect(url_for('phame.projects',
                                     username=form.manage_username.data))

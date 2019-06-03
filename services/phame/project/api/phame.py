@@ -15,13 +15,14 @@ import pandas as pd
 from uuid import uuid4
 import celery.states as states
 import ast
-from sqlalchemy.exc import TimeoutError
+from sqlalchemy.exc import TimeoutError, IntegrityError, DataError
 from flask import Blueprint, jsonify, request, render_template, redirect, \
     url_for, flash, send_file, current_app
 from flask_login import current_user, login_required
 from project.api.forms import InputForm, SubsetForm
-
+from project.api.models import Project
 from project.api.worker import celery
+from project import db
 
 phame_blueprint = Blueprint('phame', __name__, template_folder='templates',
                             static_folder='static')
@@ -41,19 +42,19 @@ def index():
 def symlink_uploaded_file(dest_dir, upload_file, source_file=None):
     if not source_file:
         source_file = upload_file
-    logging.debug(f"upload file name {upload_file}")
-    logging.debug(f"dest_dir {dest_dir}")
+    # logging.debug(f"upload file name {upload_file}")
+    # logging.debug(f"dest_dir {dest_dir}")
     dest_file_path = os.path.join(dest_dir, upload_file)
     source_file_path = os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
                                     current_user.username, source_file)
     if os.path.exists(dest_file_path):
         os.remove(dest_file_path)
-    logging.debug(f"file {source_file_path}")
-    logging.debug(f"symlink file {dest_file_path}")
+    # logging.debug(f"file {source_file_path}")
+    # logging.debug(f"symlink file {dest_file_path}")
     try:
         os.symlink(source_file_path, dest_file_path)
 
-        logging.debug(f"symlink exists {os.path.exists(dest_file_path)}")
+        # logging.debug(f"symlink exists {os.path.exists(dest_file_path)}")
     except FileNotFoundError as e:
         logging.debug(f'file {dest_file_path} not found: {e}')
 
@@ -78,23 +79,23 @@ def link_files(project_dir, ref_dir, work_dir, form):
 
         # logging.debug(f"ref_dir {ref_dir}")
         for upload_file in form.complete_genomes.data:
-            logging.debug(f"upload_file {upload_file}")
+            # logging.debug(f"upload_file {upload_file}")
             symlink_uploaded_file(ref_dir, upload_file)
         form.reference_file.choices = \
             [(a, a) for a in form.complete_genomes.data]
     if len(form.reads.data) > 0:
         # symlink reads files
         for file_name in form.reads.data:
-            logging.debug(f"read {file_name}")
+            # logging.debug(f"read {file_name}")
             symlink_uploaded_file(ref_dir, file_name)
 
     if len(form.contigs.data) > 0:
         os.makedirs(work_dir)
         # symlink contig files
         for file_name in form.contigs.data:
-            logging.debug(f"contig {file_name}")
+            # logging.debug(f"contig {file_name}")
             new_filename = os.path.splitext(file_name)[0] + '.contig'
-            logging.debug(f'contig file {new_filename}')
+            # logging.debug(f'contig file {new_filename}')
             symlink_uploaded_file(work_dir, new_filename,
                                   source_file=file_name)
     logging.debug(f"done making links")
@@ -106,17 +107,17 @@ def project_setup(form):
     :param form: Input form
     :return: project and reference directory paths
     """
-    logging.debug(f"project {form.project.data}")
+    # logging.debug(f"project {form.project.data}")
     project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'],
                                current_user.username, form.project.data)
     ref_dir = os.path.join(project_dir, 'refdir')
     work_dir = os.path.join(project_dir, 'workdir')
-    logging.debug(f'ref directory: {ref_dir}')
+    # logging.debug(f'ref directory: {ref_dir}')
     # logging.debug(f'reference file: {form.reference_file.data}')
     # logging.debug(f'reference file: {form.project.data}')
 
-    logging.debug(os.path.exists(os.path.join(work_dir, 'results',
-                                              f"{form.project.data}.log")))
+    # logging.debug(os.path.exists(os.path.join(work_dir, 'results',
+    #                                           f"{form.project.data}.log")))
     # project name for projects that have successfully completed must be unique
     if os.path.exists(os.path.join(work_dir,
                                    'results',
@@ -163,19 +164,19 @@ def create_config_file(form_dict):
     :param form_dict: dict with fields from InputForm
     :return:
     """
-    logging.debug(f'form dict {form_dict}')
+    # logging.debug(f'form dict {form_dict}')
     if 'csrf_token' in form_dict.keys():
         form_dict.pop('csrf_token')
     project = form_dict['project']
 
     form_dict['ref_dir'] = f'../{project}/refdir/'
     form_dict['work_dir'] = f'../{project}/workdir/'
-    logging.debug(f"threads {form_dict['threads']}")
+    # logging.debug(f"threads {form_dict['threads']}")
     # if len(form.reference_file.data) > 0:
     #     form_dict['reference_file'] = form.reference_file.data
     form_dict['data_type'] = get_data_type(form_dict['data_type'])
     content = render_template('phame.tmpl', form=form_dict)
-    logging.debug(f'content {content}')
+    # logging.debug(f'content {content}')
 
     with open(os.path.join(current_app.config['PROJECT_DIRECTORY'],
                            current_user.username,
@@ -223,7 +224,7 @@ def get_log_mod_time(project):
                            current_user.username,
                            project, 'workdir', 'results', f'{project}.log')
     mod_time = os.path.getmtime(log_file)
-    logging.debug(f'mod_time {mod_time}')
+    # logging.debug(f'mod_time {mod_time}')
     return datetime.utcfromtimestamp(mod_time).strftime('%Y-%m-%d %H:%M:%S')
 
 
@@ -264,7 +265,7 @@ def upload():
     # Target folder for these uploads.
     target = os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
                           current_user.username)
-    logging.debug(f'target directory {target}')
+    # logging.debug(f'target directory {target}')
     if not os.path.exists(target):
         try:
             os.mkdir(target)
@@ -351,20 +352,26 @@ def get_num_threads(project_dir):
         logging.debug(f'Could not get number of threads for {project_dir}')
         raise IndexError('IndexError')
 
+
+def convert_seconds_to_time(exec_seconds):
+    m, s = divmod(exec_seconds, 60)
+    h, m = divmod(m, 60)
+    exec_time_string = "%d:%02d:%02d" % (h, m, s)
+    return exec_time_string
+
+
 def get_exec_time(project_dir):
     """
     Get the project execution time from log file
     :param project_dir: Directory for project
-    :return: String representation of time 'h:mm:ss'
+    :return: project run time in seconds
     """
-    exec_time_string = '0:00:00'
+    exec_time = 0
     if os.path.exists(os.path.join(project_dir, 'time.log')):
         with open(os.path.join(project_dir, 'time.log'), 'r') as fp:
-            exec_time = float(fp.readline()) / 1000.
-            m, s = divmod(exec_time, 60)
-            h, m = divmod(m, 60)
-            exec_time_string = "%d:%02d:%02d" % (h, m, s)
-    return exec_time_string
+            exec_time = int(round(float(fp.readline()) / 1000.))
+
+    return exec_time
 
 
 def get_reference_file(summary_statistics_file):
@@ -523,6 +530,41 @@ def delete_projects():
     return redirect(url_for('phame.projects'))
 
 
+@phame_blueprint.route('/stats', methods=['POST'])
+def add_stats():
+    """
+    Add project stats to database
+    :param project:
+    :return:
+    """
+    response_object = {
+        'status': 'fail',
+        'message': 'Invalid payload'
+    }
+    try:
+        data = request.form
+        project = request.form.get('project')
+        status = request.form.get('status')
+        logging.debug(f'project {project} status {status}')
+        end_time = get_log_mod_time(project)
+        project_dir = os.path.join(current_app.config['PROJECT_DIR'], current_user.username, project)
+        num_threads = get_num_threads(project_dir)
+        exec_time = get_exec_time(project_dir)
+
+        db.session.add(Project(name=project, end_time=end_time,
+                               execution_time=exec_time, num_threads=num_threads,
+                               status=status))
+        db.session.commit()
+        response_object = {
+            'status': 'success',
+            'message': f'{project} status was added!'
+        }
+        return jsonify(response_object), 201
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(response_object), 400
+
+
 @phame_blueprint.route('/projects/<username>')
 @phame_blueprint.route('/projects')
 @login_required
@@ -538,7 +580,7 @@ def projects(username=None):
             username if username and current_user.username == 'admin' else \
             current_user.username
 
-        logging.debug(f'display_user {display_user}')
+        # logging.debug(f'display_user {display_user}')
         # list of all projects for this user
         if not os.path.exists(
                 os.path.join(current_app.config['PROJECT_DIRECTORY'],
@@ -564,7 +606,7 @@ def projects(username=None):
 
         for project in projects_list:
 
-            logging.debug(f'{project}')
+            # logging.debug(f'{project}')
 
             project_dir, workdir, results_dir, refdir = \
                 set_directories(display_user, project)
@@ -583,7 +625,8 @@ def projects(username=None):
 
             num_threads = get_num_threads(project_dir)
 
-            exec_time = get_exec_time(project_dir)
+            exec_time_secs = get_exec_time(project_dir)
+            exec_time = convert_seconds_to_time(exec_time_secs)
 
             reference_genome = get_reference_file(summary_statistics_file)
 
@@ -667,17 +710,17 @@ def input():
     form.reads.choices = [(a, a) for a in files_list if a.endswith('fastq')]
 
     if request.method == 'POST':
-        logging.debug(f'request method {request.method}')
-        logging.debug(f'reference file {form.reference_file.data}')
+        # logging.debug(f'request method {request.method}')
+        # logging.debug(f'reference file {form.reference_file.data}')
         if len(form.project.data) == 0:
             error = 'Please enter a project name'
             return render_template('input.html', title='Phame input',
                                    form=form, error=error)
-        logging.debug(f'form {request.form}')
-        logging.debug(f'form flat {request.form.to_dict(flat=False)}')
-        logging.debug(f'form {request.form.to_dict()}')
+        # logging.debug(f'form {request.form}')
+        # logging.debug(f'form flat {request.form.to_dict(flat=False)}')
+        # logging.debug(f'form {request.form.to_dict()}')
         project_dir, ref_dir = project_setup(form)
-        logging.debug(f'ref file {form.reference_file.data}')
+        # logging.debug(f'ref file {form.reference_file.data}')
         if project_dir is None:
             # project creation failed because there is an existing project
             # that successfully completed
@@ -685,7 +728,7 @@ def input():
             return render_template('input.html', title='Phame input',
                                    form=form, error=error)
         if form.validate_on_submit():
-            logging.debug(f"data {form.data_type.data}")
+            # logging.debug(f"data {form.data_type.data}")
 
             # Perform validation based on requirements of PhaME
             if (
@@ -743,8 +786,8 @@ def get_config_property(project_dir, config_property):
                                 sep='=', header=None, names=['field', 'val'])
         config_df = config_df.loc[pd.notna(config_df['val']), :]
         config_df['field'] = config_df['field'].apply(lambda x: x.strip())
-        logging.debug(f'config_property {config_property}')
-        logging.debug(f"config_field {config_df[config_df['field'] == config_property]['val']}")
+        # logging.debug(f'config_property {config_property}')
+        # logging.debug(f"config_field {config_df[config_df['field'] == config_property]['val']}")
         value = config_df[config_df['field'] == config_property]['val'].values[0].strip().split('#')[0].strip()
     except IOError as e:
         logging.exception(f'Cannot get config property {config_property} for project '
@@ -771,8 +814,8 @@ def subset(project):
                                  (a.endswith('fna') or a.endswith('fasta'))]
 
     if request.method == 'POST':
-        logging.debug('POST')
-        logging.debug('post subset files: {0}'.format(form.subset_files.data))
+        # logging.debug('POST')
+        # logging.debug('post subset files: {0}'.format(form.subset_files.data))
 
         # Delete subset directory tree and create new directories
         if os.path.exists(new_project_path):
@@ -799,8 +842,8 @@ def subset(project):
         for result_file in results_files:
             if not os.path.isdir(os.path.join(project_path, 'workdir',
                                               'results', result_file)):
-                logging.debug(f'result file {result_file}')
-                logging.debug(f'isdir {os.path.isdir(result_file)}')
+                # logging.debug(f'result file {result_file}')
+                # logging.debug(f'isdir {os.path.isdir(result_file)}')
                 shutil.copy(os.path.join(project_path, 'workdir', 'results',
                                          result_file),
                             os.path.join(new_project_path, 'workdir',
@@ -843,13 +886,13 @@ def subset(project):
                 if re.search('reffile', line):
                     # m = re.search('=\s*(\w*)', line)
                     reference_file = line.split('=')[1].split()[0]
-                    logging.debug('reference line {0}'.format(line))
+                    # logging.debug('reference line {0}'.format(line))
         shutil.move(abs_path, os.path.join(new_project_path, 'config.ctl'))
 
         # symlink subset of reference genome files
         for file_name in form.subset_files.data:
 
-            logging.debug(f'file {file_name}')
+            # logging.debug(f'file {file_name}')
             os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
                                     current_user.username, file_name),
                        os.path.join(new_project_path, 'refdir', file_name))
@@ -916,15 +959,15 @@ def check_task(task_id):
     :return: json of task state
     """
     res = celery.AsyncResult(task_id)
-    logging.debug('res state' + res.state)
+    # logging.debug('res state' + res.state)
     if res.state == states.PENDING or res.state == 'PROGRESS':
         result = res.state
     else:
 
         result = str(res.result)
-    logging.debug('result ' + str(result))
+    # logging.debug('result ' + str(result))
     if str(result) is None:
-        logging.debug('result is None')
+        # logging.debug('result is None')
         return render_template(
             'error.html',
             error={'msg': 'Task status could not be obtained'})
@@ -999,7 +1042,7 @@ def send_mailgun(message, project):
     key = os.environ['MAILGUN_KEY']
     email_domain = 'mail.edgebioinformatics.org'
     recipient = current_user.email
-    logging.info('current_user.email: {0}'.format(recipient))
+    # logging.info('current_user.email: {0}'.format(recipient))
     request_url = f'https://api.mailgun.net/v3/{email_domain}/messages'
     results_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'],
                                current_user.username, project, 'workdir',
@@ -1014,10 +1057,10 @@ def send_mailgun(message, project):
         files=[("attachment", log_fh), ("attachment", error_fh)],
         data={'from': 'donotreply@edgebioinformatics.org', 'to': recipient,
               'subject': f'Project {project}', 'text': message})
-    logging.debug(f"from: {'donotreply@edgebioinformatics.org'} to: "
-                  f"{recipient} subject: Project {project} text: {message}")
-    logging.debug(f'log file: {log_file}, error file: {error_file}')
-    logging.info('Status: {0}'.format(mail_request.status_code))
+    # logging.debug(f"from: {'donotreply@edgebioinformatics.org'} to: "
+    #               f"{recipient} subject: Project {project} text: {message}")
+    # logging.debug(f'log file: {log_file}, error file: {error_file}')
+    # logging.info('Status: {0}'.format(mail_request.status_code))
     return mail_request.status_code
 
 
@@ -1074,10 +1117,10 @@ def display(project, username=None):
     full_genome_count = len(
         [fname for fname in os.listdir(refdir) if (
             fname.endswith('.fna') or fname.endswith('.fasta'))])
-    logging.debug(f'# reads files {reads_count}, '
-                  f'# contig files {contigs_count}, '
-                  f'# full genomes {full_genome_count}, '
-                  f'len(length_df) {full_genome_count*3-1}')
+    # logging.debug(f'# reads files {reads_count}, '
+    #               f'# contig files {contigs_count}, '
+    #               f'# full genomes {full_genome_count}, '
+    #               f'len(length_df) {full_genome_count*3-1}')
 
     output_files_list = [f'{project}_summaryStatistics.txt',
                          f'{project}_coverage.txt',
@@ -1147,7 +1190,7 @@ def display(project, username=None):
         # directory and flask static directory
         if not os.path.exists(trees_target_dir):
             os.makedirs(trees_target_dir)
-        logging.debug(f'tree directory:{trees_target_dir}')
+        # logging.debug(f'tree directory:{trees_target_dir}')
         tree_file_list = [
             fname for fname in os.listdir(os.path.join(results_dir, 'trees'))
             if fname.endswith(
@@ -1160,7 +1203,7 @@ def display(project, username=None):
             tree_split = tree.split('/')[-1]
             target = os.path.join(trees_target_dir, tree_split)
             tree_files.append(tree_split)
-            logging.debug('fasttree file: trees/{0}'.format(tree_split))
+            # logging.debug('fasttree file: trees/{0}'.format(tree_split))
             source = os.path.join(results_dir, 'trees', tree_split)
             if not os.path.exists(target):
                 os.symlink(source, target)
@@ -1168,7 +1211,7 @@ def display(project, username=None):
                 error = {'msg': 'File does not exists {0}'.format(target)}
                 return render_template('error.html', error=error)
 
-        logging.debug(f'results dir: {results_dir}/trees/*.fastree')
+        # logging.debug(f'results dir: {results_dir}/trees/*.fastree')
 
         return render_template('display.html',
                                username=username,

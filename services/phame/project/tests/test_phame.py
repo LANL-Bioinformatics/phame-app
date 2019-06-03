@@ -433,14 +433,17 @@ class PhameTest(BaseTestCase):
         value = get_config_property(self.project_dir, 'cutoff')
         self.assertEqual(value, '0.2')
 
-    def DO_NOT_test_get_config_property_bad_value(self):
+    def test_get_config_property_bad_value(self):
+        value = None
         self.create_config_file(field_dict=
-                                {'field': 'threads',
-                                 'value': '<input id="threads" name="threads"'
-                                          ' type="text" value="2">  # Number '
-                                          'of threads to use'})
-        with self.assertRaises(IndexError):
-            get_config_property(self.project_dir, 'threads')
+                            {'field': 'threads',
+                             'value': '<input id="threads" name="threads"'
+                                      ' type="text" value="2">  # Number '
+                                      'of threads to use'})
+        try:
+            value = get_config_property(self.project_dir, 'threads')
+        except IndexError as e:
+            self.assertFalse(value)
 
     def test_get_num_threads(self):
         self.create_config_file()
@@ -639,9 +642,27 @@ class PhameTest(BaseTestCase):
             mod_time = get_log_mod_time('test1')
             print(mod_time)
         self.assertEqual(mod_time, '2019-05-31 05:32:32')
-    # @patch('project.api.phame.get_system_specs')
-    # def test_index(self, mock_specs):
-    #     mock_specs.
+
+    @patch('project.api.phame.get_log_mod_time')
+    def test_add_stats(self, mock_time):
+        self.create_config_file()
+        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        os.makedirs(os.path.join(self.work_dir, 'results'))
+        shutil.copy(os.path.join('project', 'tests', 'fixtures', 'test1.log'),
+                    os.path.join(self.work_dir, 'results', 'test1.log'))
+        self.add_user()
+        mock_time.return_value = 3056
+        with self.client:
+            self.login()
+            response = self.client.post(url_for('phame.add_stats', data=json.dumps(
+                                 {'project': 'test1',
+                                  'status': 'SUCCESS'
+                                  }),
+                             content_type='application/json', ))
+        self.assertEqual(response.status_code, 200)
+        resp_data = json.loads(response.data.decode())
+        self.assertEqual(resp_data['status'], 'success')
+        self.assertEqual(resp_data['message'], f'test1 status was added!')
 
 if __name__ == '__main__':
     unittest.main()
