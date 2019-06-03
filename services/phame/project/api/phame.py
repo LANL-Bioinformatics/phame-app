@@ -20,7 +20,7 @@ from flask import Blueprint, jsonify, request, render_template, redirect, \
     url_for, flash, send_file, current_app
 from flask_login import current_user, login_required
 from project.api.forms import InputForm, SubsetForm
-from project.api.models import Project
+from project.api.models import Project, User
 from project.api.worker import celery
 from project import db
 
@@ -215,6 +215,7 @@ def get_system_usage():
 def get_system_specs():
     num_cpus = psutil.cpu_count()
     mem = psutil.virtual_memory()
+    logging.debug(f'mem.total {mem.total}')
     total_ram = bytes2human(mem.total)
     return dict(num_cpus=num_cpus, total_ram=total_ram)
 
@@ -542,24 +543,78 @@ def add_stats():
         'message': 'Invalid payload'
     }
     try:
-        data = request.form
-        project = request.form.get('project')
-        status = request.form.get('status')
+        post_data = request.get_json()
+        logging.debug(f'post_data {post_data}')
+        project = post_data.get('project')
+        status = post_data.get('status')
         logging.debug(f'project {project} status {status}')
         end_time = get_log_mod_time(project)
-        project_dir = os.path.join(current_app.config['PROJECT_DIR'], current_user.username, project)
+        logging.debug(f'end_time {end_time}')
+        project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)
         num_threads = get_num_threads(project_dir)
         exec_time = get_exec_time(project_dir)
 
+        logging.debug(f'exec_time {exec_time}')
+        user = User.query.filter_by(username=current_user.username).first()
         db.session.add(Project(name=project, end_time=end_time,
-                               execution_time=exec_time, num_threads=num_threads,
-                               status=status))
+                               execution_time=exec_time,
+                               num_threads=num_threads,
+                               status=status, user=user))
         db.session.commit()
         response_object = {
             'status': 'success',
             'message': f'{project} status was added!'
         }
         return jsonify(response_object), 201
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(response_object), 400
+
+@phame_blueprint.route('/stats/<project>', methods=['GET'])
+def get_project_stats(project):
+    """
+    Get project stats
+    :param project: project name
+    :return: stats for project
+    """
+    response_object = {
+        'status': 'fail',
+        'message': 'Invalid payload'
+    }
+    try:
+        user = User.query.filter_by(username=current_user.username).first()
+        project_stats = Project.query.filter_by(name=project, user=user).first()
+
+        response_object = {
+            'status': 'success',
+            'data': {
+                'name': project_stats.name,
+                'end_time': project_stats.end_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'num_threads': project_stats.num_threads,
+                'execution_time':
+                    project_stats.convert_seconds_to_time(),
+                'status': project_stats.status
+                }
+        }
+        return jsonify(response_object), 200
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(response_object), 400
+
+
+def get_all_project_stats():
+    """
+    Get project stats
+    :return: stats for all projects
+    """
+    response_object = {
+        'status': 'fail',
+        'message': 'Invalid payload'
+    }
+    try:
+        user = User.query.filter_by(username=current_user.username).first()
+
+        return [project.to_json() for project in Project.query.filter_by(user=user)]
     except IntegrityError:
         db.session.rollback()
         return jsonify(response_object), 400
@@ -573,6 +628,7 @@ def projects(username=None):
     Displays run summaries and links to user's projects
     :return:
     """
+    response_object = {'status': 'fail', 'message': 'Invalid payload'}
     try:
         pd.set_option('display.max_colwidth', 1000)
 
@@ -587,17 +643,28 @@ def projects(username=None):
                              display_user)):
             os.makedirs(os.path.join(current_app.config['PROJECT_DIRECTORY'],
                                      display_user))
-        projects_list = [project for project in
-                         os.listdir(os.path.join(
-                             current_app.config['PROJECT_DIRECTORY'],
-                             display_user))]
+        # projects_list = [project for project in
+        #                  os.listdir(os.path.join(
+        #                      current_app.config['PROJECT_DIRECTORY'],
+        #                      display_user))]
+        projects_list = get_all_project_stats()
+        logging.debug(f"projects project_stats {projects_list}")
+        # proj_list = project_stats
+        # logging.debug(f'projects proj_list {proj_list}')
+        user = User.query.filter_by(username=current_user.username).first()
+        response_object = {'status': 'success', 'data': {
+            'projects': projects_list}}
+    #     return jsonify(response_object), 200
+    # except IntegrityError:
+    #     db.session.rollback()
+    #     return jsonify(response_object), 400
 
         if len(projects_list) == 0 and current_user.username != 'public':
             return redirect(url_for('phame.input'))
         if len(projects_list) == 0 and current_user.username == 'public':
             return redirect(url_for('phame.index'))
 
-        projects_list.sort()
+        # projects_list.sort()
 
         # list of projects to display
         projects_display_list = []
@@ -606,18 +673,18 @@ def projects(username=None):
 
         for project in projects_list:
 
-            # logging.debug(f'{project}')
+            logging.debug(f'{project}')
 
             project_dir, workdir, results_dir, refdir = \
-                set_directories(display_user, project)
+                set_directories(display_user, project['name'])
 
             # hack to fix tables for subsetted projects
-            if re.search('_subset$', project):
-                fix_subset_tables(project, results_dir)
+            if re.search('_subset$', project['name']):
+                fix_subset_tables(project['name'], results_dir)
 
             summary_statistics_file = \
                 os.path.join(results_dir, 'tables',
-                             f'{project}_summaryStatistics.txt')
+                             f"{project['name']}_summaryStatistics.txt")
 
             # create output tables
             reads_file_count, contigs_file_count, full_genome_file_count = \
@@ -631,11 +698,11 @@ def projects(username=None):
             reference_genome = get_reference_file(summary_statistics_file)
 
             project_task_status = set_project_status(project_statuses,
-                                                     project,
+                                                     project['name'],
                                                      reference_genome,
                                                      results_dir)
 
-            project_summary = create_project_summary(project,
+            project_summary = create_project_summary(project['name'],
                                                      project_task_status,
                                                      num_threads,
                                                      reads_file_count,

@@ -98,14 +98,14 @@
             });
         }
 
-        function send_stats(project) {
+        function send_stats(project, project_status) {
           console.log('stats for project: '+ project);
           $.ajax({
                 type: 'POST',
-                url: '/phame/notify/' + project,
-                data: {status:project_status, name:project_name},
+                url: '{{ url_for('phame.add_stats') }}' + '/' + project,
+                data: {status:project_status, name:project},
                 success: function(data, status, request) {
-                  console.log('email notification sent for ' + project);
+                  console.log('insert ' + project);
                 },
                 error: function() {
                     alert('Unexpected error');
@@ -144,6 +144,7 @@
                       content_div.style.display = 'block';
                       send_notification(project);
                       get_display(project);
+                      send_stats(project, result)
                     }
                     // not getting status updates, so check log file
                     else if (project_status === 'null' && last_line === 'null'){

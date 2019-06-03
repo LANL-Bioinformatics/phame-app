@@ -5,26 +5,22 @@ import unittest
 import psutil
 import io
 import pandas as pd
+import datetime
 from unittest.mock import patch, Mock, PropertyMock
 from flask_login import current_user
 from flask import current_app, url_for
 from project.tests.base import BaseTestCase
 from project import db, create_app
 from project.api.forms import InputForm
-from project.api.models import User
+from project.api.models import User, Project
 from project.api.phame import link_files, get_data_type, \
     symlink_uploaded_file, project_setup, get_config_property, \
     create_config_file, get_num_threads, get_exec_time, set_directories, \
     get_file_counts, create_project_summary, get_log, get_system_specs, \
-    get_log_mod_time
+    get_log_mod_time, bytes2human, get_all_project_stats, get_project_stats
 
 
 app = create_app()
-
-
-class FileObj():
-    def __init__(self, filename):
-        self.filename = filename
 
 
 class PhameTest(BaseTestCase):
@@ -455,11 +451,11 @@ class PhameTest(BaseTestCase):
         with open(os.path.join(self.project_dir, 'time.log'), 'w') as fp:
             fp.write('86400000')
         exec_time = get_exec_time(self.project_dir)
-        self.assertEqual(exec_time, '24:00:00')
+        self.assertEqual(exec_time, 86400)
         with open(os.path.join(self.project_dir, 'time.log'), 'w') as fp:
             fp.write('43200000')
         exec_time = get_exec_time(self.project_dir)
-        self.assertEqual(exec_time, '12:00:00')
+        self.assertEqual(exec_time, 43200)
 
     def test_set_directories(self):
         current_app.config['PROJECT_DIRECTORY'] = '/test'
@@ -616,17 +612,17 @@ class PhameTest(BaseTestCase):
     @patch('psutil.cpu_count')
     def test_get_system_specs(self, mock_cpu):
         total_mem = 4294967296
+        human = bytes2human(total_mem)
         with patch.object(psutil, 'virtual_memory') as mock_mem:
             pt = Mock(total=total_mem)
             d = PropertyMock(return_value=total_mem)
             type(mock_mem).info = pt
             mock_mem.return_value = pt
-        mock_cpu.return_value = 6
-        mock_mem.total.return_value = total_mem
-        specs = get_system_specs()
+            mock_cpu.return_value = 6
+            specs = get_system_specs()
         print(specs)
         self.assertEqual(specs['num_cpus'], 6)
-        self.assertEqual(specs['total_ram'], '3.9G')
+        self.assertEqual(specs['total_ram'], human)
 
     @patch('os.path.getmtime')
     def test_log_mod_time(self, mock_mtime):
@@ -648,21 +644,96 @@ class PhameTest(BaseTestCase):
         self.create_config_file()
         current_app.config['PROJECT_DIRECTORY'] = '/test'
         os.makedirs(os.path.join(self.work_dir, 'results'))
+        with open(os.path.join(self.project_dir, 'time.log'), 'w') as fp:
+            fp.write('86400000')
         shutil.copy(os.path.join('project', 'tests', 'fixtures', 'test1.log'),
                     os.path.join(self.work_dir, 'results', 'test1.log'))
         self.add_user()
-        mock_time.return_value = 3056
+        mock_time.return_value = '2019-05-31 05:32:32'
         with self.client:
             self.login()
-            response = self.client.post(url_for('phame.add_stats', data=json.dumps(
-                                 {'project': 'test1',
-                                  'status': 'SUCCESS'
-                                  }),
-                             content_type='application/json', ))
-        self.assertEqual(response.status_code, 200)
+            response = self.client.post(url_for('phame.add_stats'),
+                                        data=json.dumps({'project': 'test1',
+                                                         'status': 'SUCCESS'}),
+                                        content_type='application/json',)
+        self.assertEqual(response.status_code, 201)
         resp_data = json.loads(response.data.decode())
         self.assertEqual(resp_data['status'], 'success')
         self.assertEqual(resp_data['message'], f'test1 status was added!')
+        project = Project.query.filter_by(name='test1').first()
+        self.assertEqual(project.name, 'test1')
+        self.assertEqual(project.end_time, datetime.datetime(2019, 5, 31, 5, 32, 32))
+        self.assertEqual(project.num_threads, 2)
+        self.assertEqual(project.execution_time, 86400)
+        self.assertEqual(project.status, 'SUCCESS')
+
+    def test_get_stats(self):
+
+        user = self.add_user()
+        with self.client:
+            self.login()
+            db.session.add(Project(name='test1', end_time=datetime.datetime(2019, 5, 31, 5, 32, 32),
+                                   execution_time=86400,
+                                   num_threads=2, status='SUCCESS', user=user))
+            db.session.commit()
+            response = self.client.get(url_for('phame.get_project_stats',
+                                               project='test1'))
+            self.assertEqual(response.status_code, 200)
+            resp_data = json.loads(response.data.decode())
+            self.assertEqual(resp_data['data']['name'], 'test1')
+            self.assertEqual(resp_data['data']['num_threads'], 2)
+            self.assertEqual(resp_data['data']['status'], 'SUCCESS')
+            self.assertEqual(resp_data['data']['end_time'],
+                             '2019-05-31 05:32:32')
+            self.assertEqual(resp_data['data']['execution_time'], '24:00:00')
+
+    def test_get_all_project_stats(self):
+        user = self.add_user()
+        db.session.add(Project(name='test1',
+                               end_time=datetime.datetime(2019, 5, 31, 5, 32,
+                                                          32),
+                               execution_time=86400, num_threads=2,
+                               status='SUCCESS', user=user))
+        db.session.add(Project(name='test2',
+                               end_time=datetime.datetime(2019, 5, 31, 5, 46,
+                                                          2),
+                               execution_time=43200, num_threads=4,
+                               status='FAILURE', user=user))
+        db.session.commit()
+        with self.client:
+            self.login()
+            resp_data = get_all_project_stats()
+        print(resp_data)
+        self.assertEqual(resp_data[0]['name'], 'test1')
+        self.assertEqual(resp_data[0]['num_threads'], 2)
+        self.assertEqual(resp_data[0]['status'], 'SUCCESS')
+        self.assertEqual(resp_data[0]['end_time'], '2019-05-31 05:32:32')
+        self.assertEqual(resp_data[0]['execution_time'], '24:00:00')
+        self.assertEqual(resp_data[1]['name'], 'test2')
+        self.assertEqual(resp_data[1]['num_threads'], 4)
+        self.assertEqual(resp_data[1]['status'], 'FAILURE')
+        self.assertEqual(resp_data[1]['end_time'], '2019-05-31 05:46:02')
+        self.assertEqual(resp_data[1]['execution_time'], '12:00:00')
+
+    def test_projects(self):
+        user = self.add_user()
+        db.session.add(Project(name='test1',
+                               end_time=datetime.datetime(2019, 5, 31, 5, 32,
+                                                          32),
+                               execution_time=86400, num_threads=2,
+                               status='SUCCESS', user=user))
+        db.session.add(Project(name='test2',
+                               end_time=datetime.datetime(2019, 5, 31, 5, 46,
+                                                          2),
+                               execution_time=43200, num_threads=4,
+                               status='FAILURE', user=user))
+        db.session.commit()
+        with self.client:
+            self.login()
+            response = self.client.get(url_for('phame.projects'))
+        self.assertEqual(response.status_code, 200)
+        resp_data = json.loads(response.data.decode())
+        self.assertEqual(resp_data['projects'][0]['name'], 'test1')
 
 if __name__ == '__main__':
     unittest.main()
