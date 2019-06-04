@@ -1,6 +1,6 @@
 # services/phame/project/api/models.py
 
-
+import enum
 from flask_login import UserMixin
 from sqlalchemy.sql import func
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -8,6 +8,30 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from project import db
 # from project.api.phame import convert_seconds_to_time
 
+class IntEnum(db.TypeDecorator):
+    """
+    Enables passing in a Python enum and storing the enum's *value* in the db.
+    The default would have stored the enum's *name* (ie the string).
+    """
+    impl = db.Integer
+
+    def __init__(self, enumtype, *args, **kwargs):
+        super(IntEnum, self).__init__(*args, **kwargs)
+        self._enumtype = enumtype
+
+    def process_bind_param(self, value, dialect):
+        if isinstance(value, int):
+            return value
+
+        return value.value
+
+    def process_result_value(self, value, dialect):
+        return self._enumtype(value)
+
+class StatusTypes(enum.IntEnum):
+    PROGRESS = 1
+    SUCCESS = 2
+    FAILURE = 3
 
 class User(db.Model, UserMixin):
 
@@ -54,6 +78,7 @@ class Project(db.Model):
     end_time = db.Column(db.DateTime)
     execution_time = db.Column(db.Integer)
     status = db.Column(db.String(30))
+    # status = db.Column(IntEnum(StatusTypes), default=StatusTypes.FAILURE)
     num_threads = db.Column(db.Integer)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 

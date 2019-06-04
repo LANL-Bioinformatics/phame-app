@@ -667,6 +667,26 @@ class PhameTest(BaseTestCase):
         self.assertEqual(project.execution_time, 86400)
         self.assertEqual(project.status, 'SUCCESS')
 
+    @patch('project.api.phame.get_log_mod_time')
+    def test_add_stats_bad_status(self, mock_time):
+        self.create_config_file()
+        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        os.makedirs(os.path.join(self.work_dir, 'results'))
+        with open(os.path.join(self.project_dir, 'time.log'), 'w') as fp:
+            fp.write('86400000')
+        shutil.copy(os.path.join('project', 'tests', 'fixtures', 'test1.log'),
+                    os.path.join(self.work_dir, 'results', 'test1.log'))
+        self.add_user()
+        mock_time.return_value = '2019-05-31 05:32:32'
+        with self.client:
+            self.login()
+            response = self.client.post(url_for('phame.add_stats'),
+                                        data=json.dumps({'project': 'test1',
+                                                         'status': 'SUCESSSS'}),
+                                        content_type='application/json', )
+        self.assertEqual(response.status_code, 201)
+        resp_data = json.loads(response.data.decode())
+
     def test_get_stats(self):
 
         user = self.add_user()

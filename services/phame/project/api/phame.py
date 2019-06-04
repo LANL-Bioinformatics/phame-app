@@ -545,11 +545,14 @@ def add_stats():
     }
     try:
         user = User.query.filter_by(username=current_user.username).first()
-        post_data = request.get_json()
-        logging.debug(f'post_data {post_data}')
-        if post_data:
-            project = post_data.get('project')
-            status = post_data.get('status')
+        # post_data = request.get_json()
+        # logging.debug(f'post_data {post_data}')
+        logging.debug(f'request {request}')
+        logging.debug(f'request.data {request.data}')
+        logging.debug(f'request.json {request.json}')
+        if request.json:
+            project = request.json.get('project')
+            status = request.json.get('status')
             project_status = Project.query.filter_by(name=project, user=user).first()
             logging.debug(f'project {project} status {status}')
             end_time = get_log_mod_time(project)
@@ -580,7 +583,7 @@ def add_stats():
 
             return jsonify(response_object), 201
         else:
-            return jsonify(response_object), 201
+            return jsonify(response_object), 400
     except IntegrityError:
         db.session.rollback()
         return jsonify(response_object), 400
