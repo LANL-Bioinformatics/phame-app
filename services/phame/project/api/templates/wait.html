@@ -20,7 +20,7 @@
     <script>
         var nfiles=0;
         function get_display(project) {
-            console.log('project: '+ project);
+            console.log('project display: '+ project);
             // send ajax POST request to start background job
             $.ajax({
                 type: 'POST',
@@ -69,7 +69,7 @@
         }
 
         function display_status(project, project_status) {
-            console.log('project: '+ project);
+            console.log('display_status for project: '+ project);
             // send ajax POST request to start background job
             $.ajax({
                 type: 'POST',
@@ -102,10 +102,10 @@
           console.log('stats for project: '+ project);
           $.ajax({
                 type: 'POST',
-                url: '{{ url_for('phame.add_stats') }}' + '/' + project,
-                data: {status:project_status, name:project},
+                url: '/phame/stats',
+                data: {status:project_status, project:project},
                 success: function(data, status, request) {
-                  console.log('insert ' + project);
+                  console.log('insert ' + project + ' status ' + project_status);
                 },
                 error: function() {
                     alert('Unexpected error');
@@ -127,6 +127,10 @@
                   console.log('result: '+result);
                   console.log('project_status: '+project_status);
                   console.log('status: '+status);
+                  if (result !== null) {
+                    send_stats(project, result);
+                  }
+
                   let last_line;
                   var promise = $.ajax('/phame/get_log/' + project);
                   promise.done(function(data){
@@ -144,7 +148,7 @@
                       content_div.style.display = 'block';
                       send_notification(project);
                       get_display(project);
-                      send_stats(project, result)
+                      console.log('project '+project+ ' status '+result);
                     }
                     // not getting status updates, so check log file
                     else if (project_status === 'null' && last_line === 'null'){

@@ -538,68 +538,84 @@ def add_stats():
     :param project:
     :return:
     """
+    logging.debug('adding stats')
     response_object = {
         'status': 'fail',
         'message': 'Invalid payload'
     }
     try:
+        user = User.query.filter_by(username=current_user.username).first()
         post_data = request.get_json()
         logging.debug(f'post_data {post_data}')
-        project = post_data.get('project')
-        status = post_data.get('status')
-        logging.debug(f'project {project} status {status}')
-        end_time = get_log_mod_time(project)
-        logging.debug(f'end_time {end_time}')
-        project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)
-        num_threads = get_num_threads(project_dir)
-        exec_time = get_exec_time(project_dir)
+        if post_data:
+            project = post_data.get('project')
+            status = post_data.get('status')
+            project_status = Project.query.filter_by(name=project, user=user).first()
+            logging.debug(f'project {project} status {status}')
+            end_time = get_log_mod_time(project)
+            logging.debug(f'end_time {end_time}')
+            project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)
+            num_threads = get_num_threads(project_dir)
+            exec_time = get_exec_time(project_dir)
 
-        logging.debug(f'exec_time {exec_time}')
-        user = User.query.filter_by(username=current_user.username).first()
-        db.session.add(Project(name=project, end_time=end_time,
-                               execution_time=exec_time,
-                               num_threads=num_threads,
-                               status=status, user=user))
-        db.session.commit()
-        response_object = {
-            'status': 'success',
-            'message': f'{project} status was added!'
-        }
-        return jsonify(response_object), 201
-    except IntegrityError:
-        db.session.rollback()
-        return jsonify(response_object), 400
-
-@phame_blueprint.route('/stats/<project>', methods=['GET'])
-def get_project_stats(project):
-    """
-    Get project stats
-    :param project: project name
-    :return: stats for project
-    """
-    response_object = {
-        'status': 'fail',
-        'message': 'Invalid payload'
-    }
-    try:
-        user = User.query.filter_by(username=current_user.username).first()
-        project_stats = Project.query.filter_by(name=project, user=user).first()
-
-        response_object = {
-            'status': 'success',
-            'data': {
-                'name': project_stats.name,
-                'end_time': project_stats.end_time.strftime('%Y-%m-%d %H:%M:%S'),
-                'num_threads': project_stats.num_threads,
-                'execution_time':
-                    project_stats.convert_seconds_to_time(),
-                'status': project_stats.status
+            logging.debug(f'exec_time {exec_time}')
+            if not project_status:
+                db.session.add(Project(name=project, end_time=end_time,
+                                       execution_time=exec_time,
+                                       num_threads=num_threads,
+                                       status=status, user=user))
+                db.session.commit()
+                response_object = {
+                    'status': 'success',
+                    'message': f'added project {project}'
                 }
-        }
-        return jsonify(response_object), 200
+            else:
+                project_status.status = status
+                project_status.execution_time= get_exec_time(project_dir)
+                db.session.commit()
+                response_object = {
+                    'status': 'success',
+                    'message': f'updated project {project}'
+                }
+
+            return jsonify(response_object), 201
+        else:
+            return jsonify(response_object), 201
     except IntegrityError:
         db.session.rollback()
         return jsonify(response_object), 400
+
+#
+# @phame_blueprint.route('/stats/<project>', methods=['GET'])
+# def get_project_stats(project):
+#     """
+#     Get project stats
+#     :param project: project name
+#     :return: stats for project
+#     """
+#     response_object = {
+#         'status': 'fail',
+#         'message': 'Invalid payload'
+#     }
+#     try:
+#         user = User.query.filter_by(username=current_user.username).first()
+#         project_stats = Project.query.filter_by(name=project, user=user).first()
+#
+#         response_object = {
+#             'status': 'success',
+#             'data': {
+#                 'name': project_stats.name,
+#                 'end_time': project_stats.end_time.strftime('%Y-%m-%d %H:%M:%S'),
+#                 'num_threads': project_stats.num_threads,
+#                 'execution_time':
+#                     project_stats.convert_seconds_to_time(),
+#                 'status': project_stats.status
+#                 }
+#         }
+#         return jsonify(response_object), 200
+#     except IntegrityError:
+#         db.session.rollback()
+#         return jsonify(response_object), 400
 
 
 def get_all_project_stats():
