@@ -623,7 +623,7 @@ def add_stats():
 
             return jsonify(response_object), 201
         else:
-            return jsonify(response_object), 400
+            return jsonify(response_object), 200
     except IntegrityError:
         db.session.rollback()
         return jsonify(response_object), 400
@@ -749,10 +749,9 @@ def projects(username=None):
             reads_file_count, contigs_file_count, full_genome_file_count = \
                 get_file_counts(refdir, workdir)
 
-            num_threads = get_num_threads(project_dir)
-
-            exec_time_secs = get_exec_time(project_dir)
-            exec_time = convert_seconds_to_time(exec_time_secs)
+            num_threads = project['num_threads']
+            exec_time= project['execution_time']
+            # exec_time = convert_seconds_to_time(exec_time_secs)
 
             reference_genome = get_reference_file(summary_statistics_file)
 
