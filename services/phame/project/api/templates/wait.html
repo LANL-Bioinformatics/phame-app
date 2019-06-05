@@ -21,9 +21,9 @@
             // send ajax POST request to start background job
             $.ajax({
                 type: 'POST',
-                url: '/phame/display/' + project,
+                url: "{{ url_for('phame.display', project=project) }}",
                 success: function(data, status, request) {
-                  $("#output").load('/phame/display/'+project)
+                  $("#output").load("{{ url_for('phame.display', project=project) }}")
                 },
                 error: function() {
                     alert('Unexpected error');
@@ -37,7 +37,7 @@
         function get_num_results_files(project) {
             $.ajax({
                 type: 'GET',
-                url: '/phame/num_results_files/' + project,
+                url: "{{ url_for('phame.num_results_files', project=project) }}",
                 success: function(data, status, request) {
                   nfiles = data['num_files'];
 
@@ -52,7 +52,7 @@
         function get_log(project) {
             $.ajax({
                 type: 'GET',
-                url: '/phame/get_log/' + project,
+                url: "{{ url_for('phame.get_log', project=project) }}",
                 success: function(response) {
                   return response;
                   {#console.log(data['log']);#}
@@ -85,7 +85,7 @@
           console.log('email project: '+ project);
           $.ajax({
                 type: 'GET',
-                url: '/phame/notify/' + project,
+                url: "{{ url_for('phame.notify', project=project) }}",
                 success: function(data, status, request) {
                   console.log('email notification sent for ' + project);
                 },
@@ -99,7 +99,7 @@
           console.log('stats for project: '+ project);
           $.ajax({
                 type: 'POST',
-                url: '/phame/stats',
+                url: "{{ url_for('phame.add_stats') }}",
                 dataType: "JSON",
                 contentType: 'application/json;charset=UTF-8',
                 data: {status:project_status, project:project},
@@ -132,7 +132,7 @@
                   }
 
                   let last_line;
-                  var promise = $.ajax('/phame/get_log/' + project);
+                  var promise = $.ajax("{{ url_for('phame.get_log', project=project) }}");
                   promise.done(function(data){
                     console.log('last line '+ data['log']);
                     last_line = data['log'];
