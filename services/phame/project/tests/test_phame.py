@@ -17,7 +17,7 @@ from project.api.phame import link_files, get_data_type, \
     symlink_uploaded_file, project_setup, get_config_property, \
     create_config_file, get_num_threads, get_exec_time, set_directories, \
     get_file_counts, create_project_summary, get_log, get_system_specs, \
-    get_log_mod_time, bytes2human, get_all_project_stats, get_project_stats
+    get_log_mod_time, bytes2human, get_all_project_stats
 
 
 app = create_app()
