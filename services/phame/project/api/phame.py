@@ -224,8 +224,12 @@ def get_log_mod_time(project):
     log_file = os.path.join(current_app.config['PROJECT_DIRECTORY'],
                            current_user.username,
                            project, 'workdir', 'results', f'{project}.log')
-    mod_time = os.path.getmtime(log_file)
-    # logging.debug(f'mod_time {mod_time}')
+    if os.path.exists(log_file):
+        logging.debug(f'log file {log_file}')
+        mod_time = os.path.getmtime(log_file)
+    else:
+        mod_time = 0
+    logging.debug(f'mod_time {mod_time}')
     return datetime.utcfromtimestamp(mod_time).strftime('%Y-%m-%d %H:%M:%S')
 
 
@@ -531,6 +535,33 @@ def delete_projects():
     return redirect(url_for('phame.projects'))
 
 
+def update_stats(project):
+    """
+    Update project status, runtime and finish time
+    :param project: Name of project
+    :return:
+    """
+    project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)
+    try:
+        user = User.query.filter_by(username=current_user.username).first()
+        project_status = Project.query.filter_by(name=project, user=user).first()
+        if os.path.exists(os.path.join(project_dir, 'workdir', 'results', f'{project}.log')) and project_status:
+            logging.debug(f'end time {project_status.end_time}')
+            # project has successfully completed
+            if project_status.status != 'SUCCESS':
+                project_status.status = 'SUCCESS'
+            # datetime_obj = datetime.strptime(project_status.end_time, '%Y-%m-%d %H:%M:%S')
+            # logging.debug(f'datetime_obj {datetime_obj}')
+            if project_status.end_time < datetime(1970,12,31):
+                project_status.end_time = get_log_mod_time(project)
+            if project_status.execution_time == 0:
+                project_status.execution_time = get_exec_time(project_dir)
+            db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        logging.debug(f'Error updating project {project}')
+
+
 @phame_blueprint.route('/stats', methods=['POST'])
 def add_stats():
     """
@@ -545,16 +576,23 @@ def add_stats():
     }
     try:
         user = User.query.filter_by(username=current_user.username).first()
+        # logging.debug(f'request {request.__dict__}')
+        # for key, value in request['environ'].items():
+        #     logging.debug(f'key {key} value {value}')
+
+        data = str(request.data).split('&')
+        logging.debug(f'request.data {data}')
+        project = data[1].split('=')[1].strip("'")
+        status = data[0].split('=')[1].strip()
+        logging.debug(f'project {project}, status: {status}')
         # post_data = request.get_json()
         # logging.debug(f'post_data {post_data}')
-        logging.debug(f'request {request}')
-        logging.debug(f'request.data {request.data}')
-        logging.debug(f'request.json {request.json}')
-        if request.json:
-            project = request.json.get('project')
-            status = request.json.get('status')
+        # logging.debug(f'request.json {request.json}')
+        if status != 'None':
+            # project = request.json.get('project')
+            # status = request.json.get('status')
             project_status = Project.query.filter_by(name=project, user=user).first()
-            logging.debug(f'project {project} status {status}')
+            logging.debug(f'project_status {project_status}')
             end_time = get_log_mod_time(project)
             logging.debug(f'end_time {end_time}')
             project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)
@@ -563,7 +601,9 @@ def add_stats():
 
             logging.debug(f'exec_time {exec_time}')
             if not project_status:
-                db.session.add(Project(name=project, end_time=end_time,
+                db.session.add(Project(name=project,
+                                       start_time=datetime.now(),
+                                       end_time=end_time,
                                        execution_time=exec_time,
                                        num_threads=num_threads,
                                        status=status, user=user))
@@ -1179,7 +1219,7 @@ def display(project, username=None):
     :param username: optional username of user
     :return: renders PhaME output page
     """
-
+    update_stats(project)
     if not username:
         username = current_user.username
     project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'],
