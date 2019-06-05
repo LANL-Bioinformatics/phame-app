@@ -4,8 +4,8 @@
 
 // Constants
 var MAX_UPLOAD_FILE_SIZE = 1024*1024; // 1 MB
-var UPLOAD_URL = "/phame/upload";
-var NEXT_URL   = "/files";
+var UPLOAD_URL = Flask.url_for('phame.upload');
+var NEXT_URL   = Flask.url_for('phame.input');
 
 // List of pending files to handle when the Upload button is finally clicked.
 var PENDING_FILES  = [];
@@ -13,6 +13,7 @@ var PENDING_FILES  = [];
 
 $(document).ready(function() {
     // Set up the drag/drop zone.
+    console.log('init dropbox');
     initDropbox();
 
     // Set up the handler for the file input box.
@@ -95,7 +96,7 @@ function doUpload() {
                 // Ok! Get the UUID.
                 var uuid = data.msg;
                 $("#progress").hide();
-                window.location = '/phame/input';
+                window.location = NEXT_URL;
 
             }
         },

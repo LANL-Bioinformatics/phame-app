@@ -6,6 +6,7 @@ from flask_login import LoginManager
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_cors import CORS
 from flask_migrate import Migrate
+from flask_jsglue import JSGlue
 
 # instantiate the db
 db = SQLAlchemy()
@@ -13,6 +14,7 @@ login_manager = LoginManager()
 toolbar = DebugToolbarExtension()
 cors = CORS()
 migrate = Migrate()
+jsglue = JSGlue()
 
 
 def create_app(script_info=None):
@@ -31,6 +33,7 @@ def create_app(script_info=None):
     toolbar.init_app(app)
     cors.init_app(app)
     migrate.init_app(app, db)
+    jsglue.init_app(app)
 
     # register blueprints
     from project.api.phame import phame_blueprint
