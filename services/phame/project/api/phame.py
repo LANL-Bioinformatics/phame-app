@@ -487,7 +487,7 @@ def get_file_counts(refdir, workdir):
 
 def create_project_summary(project, project_status, num_threads,
                            reads_file_count, contigs_file_count,
-                           full_genome_file_count, exec_time,
+                           full_genome_file_count, exec_time, end_time,
                            reference_genome):
     """
     Create run summary for project
@@ -512,7 +512,9 @@ def create_project_summary(project, project_status, num_threads,
          'project name': project,
          '# of threads': num_threads,
          'status': project_status,
-         'execution time(h:m:s)': exec_time}
+         'execution time(h:m:s)': exec_time,
+         'finish time': end_time
+         }
     logging.debug(f'project {project}')
     logging.debug(f'current user username {current_user.username}')
     if current_user.username != 'public':
@@ -582,13 +584,13 @@ def add_stats():
 
         data = str(request.data).split('&')
         logging.debug(f'request.data {data}')
-        project = data[1].split('=')[1].strip("'")
-        status = data[0].split('=')[1].strip()
+        logging.debug(f'request.json {request.json}')
+        project = request.json['project']
+        status = request.json['status']
         logging.debug(f'project {project}, status: {status}')
         # post_data = request.get_json()
         # logging.debug(f'post_data {post_data}')
-        # logging.debug(f'request.json {request.json}')
-        if status != 'None':
+        if status:
             # project = request.json.get('project')
             # status = request.json.get('status')
             project_status = Project.query.filter_by(name=project, user=user).first()
@@ -702,13 +704,9 @@ def projects(username=None):
                              display_user)):
             os.makedirs(os.path.join(current_app.config['PROJECT_DIRECTORY'],
                                      display_user))
-        # projects_list = [project for project in
-        #                  os.listdir(os.path.join(
-        #                      current_app.config['PROJECT_DIRECTORY'],
-        #                      display_user))]
+
         projects_list = get_all_project_stats()
         logging.debug(f"projects project_stats {projects_list}")
-        # proj_list = project_stats
         # logging.debug(f'projects proj_list {proj_list}')
         user = User.query.filter_by(username=current_user.username).first()
         response_object = {'status': 'success', 'data': {
@@ -767,6 +765,7 @@ def projects(username=None):
                                                      contigs_file_count,
                                                      full_genome_file_count,
                                                      exec_time,
+                                                     project['end_time'],
                                                      reference_genome)
             projects_display_list.append(project_summary)
 
@@ -778,12 +777,12 @@ def projects(username=None):
                 ['project name', '# of genomes analyzed',
                  '# of contigs', '# of reads',
                  'reference genome used', '# of threads',
-                 'status', 'execution time(h:m:s)', 'delete']
+                 'status', 'execution time(h:m:s)', 'finish time', 'delete']
         else:
             run_summary_columns = ['project name', '# of genomes analyzed',
                                    '# of contigs', '# of reads',
                                    'reference genome used', '# of threads',
-                                   'status', 'execution time(h:m:s)']
+                                   'status', 'execution time(h:m:s)', 'finish time']
 
         # Turn project name into a link to the display page if it's finished
         # running successfully

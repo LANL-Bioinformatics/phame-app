@@ -34,7 +34,7 @@ function send_stats(project, project_status) {
         url: Flask.url_for('phame.add_stats'),
         dataType: "JSON",
         contentType: 'application/json;charset=UTF-8',
-        data: {status:project_status, project:project},
+        data: JSON.stringify({status:project_status, project:project}, null, '\t'),
         success: function(data, status, request) {
           console.log('insert ' + project + ' status ' + project_status);
         },

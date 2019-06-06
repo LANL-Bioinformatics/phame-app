@@ -17,7 +17,7 @@ from project.api.phame import link_files, get_data_type, \
     symlink_uploaded_file, project_setup, get_config_property, \
     create_config_file, get_num_threads, get_exec_time, set_directories, \
     get_file_counts, create_project_summary, get_log, get_system_specs, \
-    get_log_mod_time, bytes2human, get_all_project_stats
+    get_log_mod_time, bytes2human, get_all_project_stats, update_stats
 
 
 app = create_app()
@@ -496,7 +496,7 @@ class PhameTest(BaseTestCase):
         with self.client:
             self.login()
             project_summary = create_project_summary('test1', 'finished', 2, 8,
-                                                     4, 4, '12:00:00',
+                                                     4, 4, '12:00:00', '2019-05-31 05:46:02',
                                                      'KJ660347.fasta')
         self.assertEqual(project_summary['# of genomes analyzed'], 16)
         self.assertEqual(project_summary['# of contigs'], 4)
@@ -508,6 +508,7 @@ class PhameTest(BaseTestCase):
         self.assertEqual(project_summary['# of threads'], 2)
         self.assertEqual(project_summary['status'], 'finished')
         self.assertEqual(project_summary['execution time(h:m:s)'], '12:00:00')
+        self.assertEqual(project_summary['finish time'], '2019-05-31 05:46:02')
         self.assertEqual(
             project_summary['delete'],
             '<input name="deleteCheckBox" type="checkbox" '
@@ -519,7 +520,7 @@ class PhameTest(BaseTestCase):
         with self.client:
             self.login(username='public', password='public')
             project_summary = create_project_summary('test1', 'finished', 2, 8,
-                                                     4, 4, '12:00:00',
+                                                     4, 4, '12:00:00', '2019-05-31 05:46:02',
                                                      'KJ660347.fasta')
         self.assertEqual(project_summary['# of genomes analyzed'], 16)
         self.assertEqual(project_summary['# of contigs'], 4)
@@ -531,6 +532,7 @@ class PhameTest(BaseTestCase):
         self.assertEqual(project_summary['# of threads'], 2)
         self.assertEqual(project_summary['status'], 'finished')
         self.assertEqual(project_summary['execution time(h:m:s)'], '12:00:00')
+        self.assertEqual(project_summary['finish time'], '2019-05-31 05:46:02')
         self.assertFalse('delete' in project_summary.keys())
 
     def test_delete_projects(self):
@@ -659,7 +661,7 @@ class PhameTest(BaseTestCase):
         self.assertEqual(response.status_code, 201)
         resp_data = json.loads(response.data.decode())
         self.assertEqual(resp_data['status'], 'success')
-        self.assertEqual(resp_data['message'], f'test1 status was added!')
+        self.assertEqual(resp_data['message'], f'added project test1')
         project = Project.query.filter_by(name='test1').first()
         self.assertEqual(project.name, 'test1')
         self.assertEqual(project.end_time, datetime.datetime(2019, 5, 31, 5, 32, 32))
@@ -687,25 +689,61 @@ class PhameTest(BaseTestCase):
         self.assertEqual(response.status_code, 201)
         resp_data = json.loads(response.data.decode())
 
-    def test_get_stats(self):
-
+    @patch('project.api.phame.get_log_mod_time')
+    def test_add_stats_update(self, mock_time):
+        self.create_config_file()
+        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        os.makedirs(os.path.join(self.work_dir, 'results'))
+        with open(os.path.join(self.project_dir, 'time.log'), 'w') as fp:
+            fp.write('86400000')
+        shutil.copy(os.path.join('project', 'tests', 'fixtures', 'test1.log'),
+                    os.path.join(self.work_dir, 'results', 'test1.log'))
         user = self.add_user()
+        mock_time.return_value = '2019-05-31 05:32:32'
+        db.session.add(Project(name='test1',
+                               end_time=datetime.datetime(1970, 5, 31, 5, 32,
+                                                          32),
+                               execution_time=0, num_threads=2,
+                               status='PENDING', user=user))
+        db.session.commit()
         with self.client:
             self.login()
-            db.session.add(Project(name='test1', end_time=datetime.datetime(2019, 5, 31, 5, 32, 32),
-                                   execution_time=86400,
-                                   num_threads=2, status='SUCCESS', user=user))
-            db.session.commit()
-            response = self.client.get(url_for('phame.get_project_stats',
-                                               project='test1'))
-            self.assertEqual(response.status_code, 200)
-            resp_data = json.loads(response.data.decode())
-            self.assertEqual(resp_data['data']['name'], 'test1')
-            self.assertEqual(resp_data['data']['num_threads'], 2)
-            self.assertEqual(resp_data['data']['status'], 'SUCCESS')
-            self.assertEqual(resp_data['data']['end_time'],
-                             '2019-05-31 05:32:32')
-            self.assertEqual(resp_data['data']['execution_time'], '24:00:00')
+            response = self.client.post(url_for('phame.add_stats'),
+                                        data=json.dumps({'project': 'test1',
+                                                         'status': 'SUCCESS'}),
+                                        content_type='application/json', )
+        self.assertEqual(response.status_code, 201)
+        resp_data = json.loads(response.data.decode())
+        self.assertEqual(resp_data['message'], 'updated project test1')
+        project = Project.query.filter_by(name='test1', user=user).first()
+        self.assertEqual(project.status, 'SUCCESS')
+        self.assertEqual(project.execution_time, 86400)
+
+    @patch('project.api.phame.get_log_mod_time')
+    def test_update_stats(self, mock_time):
+        self.create_config_file()
+        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        os.makedirs(os.path.join(self.work_dir, 'results'))
+        with open(os.path.join(self.project_dir, 'time.log'), 'w') as fp:
+            fp.write('86400000')
+        with open(os.path.join(self.work_dir, 'results', 'test1.log'), 'w') as fp:
+            fp.write('Tree complete')
+        mock_time.return_value = '2019-05-31 05:32:32'
+        user = self.add_user()
+
+        db.session.add(Project(name='test1',
+                               end_time=datetime.datetime(1970, 5, 31, 5, 32,
+                                                          32),
+                               execution_time=0, num_threads=2,
+                               status='PENDING', user=user))
+        db.session.commit()
+        with self.client:
+            self.login()
+            update_stats('test1')
+        project = Project.query.filter_by(name='test1', user=user).first()
+        self.assertEqual(project.end_time, datetime.datetime(2019, 5, 31, 5, 32, 32))
+        self.assertEqual(project.execution_time, 86400)
+        self.assertEqual(project.status, 'SUCCESS')
 
     def test_get_all_project_stats(self):
         user = self.add_user()
@@ -752,8 +790,44 @@ class PhameTest(BaseTestCase):
             self.login()
             response = self.client.get(url_for('phame.projects'))
         self.assertEqual(response.status_code, 200)
-        resp_data = json.loads(response.data.decode())
-        self.assertEqual(resp_data['projects'][0]['name'], 'test1')
+        # print(response.data)
+        self.assertIn('test1', str(response.data))
+        self.assertIn('test2', str(response.data))
+        self.assertIn('2019-05-31 05:46:02', str(response.data))
+        self.assertIn('2019-05-31 05:32:32', str(response.data))
+        self.assertIn('4', str(response.data))
+        self.assertIn('2', str(response.data))
+        self.assertIn('delete', str(response.data))
+
+    def test_projects_public(self):
+        """Test public view only shows public projects and no delete checkbox is present"""
+
+        user = self.add_user()
+        db.session.add(Project(name='private',
+                               end_time=datetime.datetime(2019, 5, 31, 5, 32,
+                                                          32),
+                               execution_time=86400, num_threads=2,
+                               status='SUCCESS', user=user))
+        user = self.add_user(username='public', email='public@example.com',
+                      password='public')
+        db.session.add(Project(name='test1',
+                               end_time=datetime.datetime(2019, 5, 31, 5, 32,
+                                                          32),
+                               execution_time=86400, num_threads=2,
+                               status='SUCCESS', user=user))
+        db.session.add(Project(name='test2',
+                               end_time=datetime.datetime(2019, 5, 31, 5, 46,
+                                                          2),
+                               execution_time=43200, num_threads=4,
+                               status='FAILURE', user=user))
+        db.session.commit()
+        with self.client:
+            self.login(username='public', password='public')
+            response = self.client.get(url_for('phame.projects'))
+            self.assertEqual(response.status_code, 200)
+            resp_data = str(response.data)
+            self.assertNotIn('private', resp_data)
+            self.assertNotIn('delete', resp_data)
 
 if __name__ == '__main__':
     unittest.main()
