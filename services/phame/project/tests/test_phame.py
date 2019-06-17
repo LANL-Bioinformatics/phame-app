@@ -824,14 +824,36 @@ class PhameTest(BaseTestCase):
             response = self.client.get(url_for('phame.projects'))
         self.assertEqual(response.status_code, 200)
         # print(response.data)
-        with open('project/tests/fixtures/projects.html', 'wb') as fp:
-            fp.write(response.data)
-        with open('project/tests/fixtures/projects.html', 'r') as fp:
-            soup = BeautifulSoup(fp, 'html.parser')
-        rows = soup.find_all('tr')
-        self.assertEqual(rows[1].get_text(),
-                         '\ntest1\n3\n1\n1\n\n2\nFAILURE\n24:00:00\n2019-05-31 05:32:32\n\n')
-        self.assertEqual(rows[2].get_text(), '\ntest2\n3\n1\n1\n\n4\nFAILURE\n12:00:00\n2019-05-31 05:46:02\n\n')
+        # with open('project/tests/fixtures/projects.html', 'wb') as fp:
+        #     fp.write(response.data)
+        # with open('project/tests/fixtures/projects.html', 'r') as fp:
+        #     soup = BeautifulSoup(fp, 'html.parser')
+        soup = BeautifulSoup(str(response.data), "html.parser")
+        rows = soup.find_all('td')
+        print(rows[:20])
+        output = ['<td>test1</td>',
+                  '<td>3</td>',
+                  '<td>1</td>',
+                  '<td>1</td>',
+                  '<td></td>',
+                  '<td>2</td>',
+                  '<td>FAILURE</td>',
+                  '<td>24:00:00</td>',
+                  '<td>2019-05-31 05:32:32</td>',
+                  '<td><input name="deleteCheckBox" type="checkbox" unchecked"="" value="test1"/></td>',
+                  '<td>test2</td>',
+                  '<td>3</td>',
+                  '<td>1</td>',
+                  '<td>1</td>',
+                  '<td></td>',
+                  '<td>4</td>',
+                  '<td>FAILURE</td>',
+                  '<td>12:00:00</td>',
+                  '<td>2019-05-31 05:46:02</td>',
+                  '<td><input name="deleteCheckBox" type="checkbox" unchecked"="" value="test2"/></td>']
+
+
+        self.assertEqual(list(map(str, rows[:20])), output)
         self.assertEqual(len(soup.find_all('input')), 3)
 
     def test_projects_public(self):
@@ -849,25 +871,17 @@ class PhameTest(BaseTestCase):
                             exec_time=86400, num_threads=2, status='SUCCESS', user=public_user)
         self.create_project('public2',end_time=datetime.datetime(2019, 5, 31, 5, 32,32),
                             exec_time=86400, num_threads=2, status='SUCCESS', user=public_user)
-        # db.session.add(Project(name='test1',
-        #                        end_time=datetime.datetime(2019, 5, 31, 5, 32,
-        #                                                   32),
-        #                        execution_time=86400, num_threads=2,
-        #                        status='SUCCESS', user=public_user))
-        # db.session.add(Project(name='test2',
-        #                        end_time=datetime.datetime(2019, 5, 31, 5, 46, 2),
-        #                        execution_time=43200, num_threads=4,
-        #                        status='FAILURE', user=public_user))
-        # db.session.commit()
+
         with self.client:
             self.login(username='public', password='public')
             response = self.client.get(url_for('phame.projects'))
             self.assertEqual(response.status_code, 200)
             resp_data = str(response.data)
-            with open('project/tests/fixtures/projects_public.html', 'wb') as fp:
-                fp.write(response.data)
-            with open('project/tests/fixtures/projects_public.html', 'r') as fp:
-                public_soup = BeautifulSoup(fp, 'html.parser')
+            public_soup = BeautifulSoup(resp_data, "html.parser")
+            # with open('project/tests/fixtures/projects_public.html', 'wb') as fp:
+            #     fp.write(response.data)
+            # with open('project/tests/fixtures/projects_public.html', 'r') as fp:
+            #     public_soup = BeautifulSoup(fp, 'html.parser')
             self.assertEqual(len(public_soup.find_all('input')), 0)
 
     def test_input_get(self):
