@@ -1,50 +1,63 @@
 <html>
     <head>
+
     {{ JSGlue.include() }}
-    <link rel="stylesheet" href="{{ url_for('phame.static', filename='css/jquery.mobile.1.4.3.min.css') }}">
+     <link rel="stylesheet" href="{{ url_for('phame.static', filename='css/jquery.mobile.1.4.3.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('phame.static', filename='css/bootstrap.min.css') }}">
-    <script src="{{ url_for('phame.static', filename='javascript/jquery.min.js') }}"></script>
-    <script src="{{ url_for('phame.static', filename='javascript/bootstrap.min.js') }}"></script>
-    <style>
-      .jumbotron {
-        margin-bottom: 10px;
-        height: 200px;
-        padding-top: 2px;
-        padding-bottom: 2px;
-      }
-        .navbar {
-            margin-bottom: 0;
-            background-color: #2d2d30;
-            border: 0;
-            font-size: 11px !important;
-            letter-spacing: 4px;
-            opacity:0.9;
-        }
+    <script type="text/javascript" src="{{ url_for('phame.static', filename='javascript/jquery-2.1.1.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('phame.static', filename='javascript/uploadr.js') }}"></script>
 
-        /* Add a gray color to all navbar links */
-        .navbar li a, .navbar .navbar-brand {
-                color: #d5d5d5 !important;
-        }
+    <link rel="stylesheet" href="{{ url_for('phame.static', filename='css/jquery.mobile.1.4.3.min.css') }}">
+{#    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">#}
+{#    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>#}
+{#    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>#}
 
-        /* On hover, the links will turn white */
-        .navbar-nav li a:hover {
-                color: #fff !important;
-        }
+    <link rel="stylesheet" href="{{ url_for('phame.static', filename='css/bootstrap.min.css') }}">
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.2/js/bootstrap.min.js"></script>
 
-        /* The active link */
-        .navbar-nav li.active a {
-                color: #fff !important;
-                        background-color:#29292c !important;
-        }
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/css/bootstrap-multiselect.css" rel="stylesheet" id="bootstrap-css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.js"></script>
+<style>
+  .jumbotron {
+    margin-bottom: 10px;
+    height: 200px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+	.navbar {
+	    margin-bottom: 0;
+	    background-color: #2d2d30;
+	    border: 0;
+	    font-size: 11px !important;
+	    letter-spacing: 4px;
+	    opacity:0.9;
+	}
 
-        /* Remove border color from the collapsible button */
-        .navbar-default .navbar-toggle {
-                border-color: transparent;
-        }
-      .main {
-        margin-top: 80px;
-        margin-left: 150px;
-      }
+	/* Add a gray color to all navbar links */
+	.navbar li a, .navbar .navbar-brand {
+		    color: #d5d5d5 !important;
+	}
+
+	/* On hover, the links will turn white */
+	.navbar-nav li a:hover {
+		    color: #fff !important;
+	}
+
+	/* The active link */
+	.navbar-nav li.active a {
+		    color: #fff !important;
+			        background-color:#29292c !important;
+	}
+
+	/* Remove border color from the collapsible button */
+	.navbar-default .navbar-toggle {
+		    border-color: transparent;
+	}
+  .main {
+    margin-top: 80px;
+    margin-left: 150px;
+  }
 
     </style>
     {% block head %}{% endblock %}
@@ -59,12 +72,12 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" style="padding:5px" href="#"><img src="{{ url_for('phame.static', filename='images/phame_logo.png') }}" style="width:50px;height:40px;" ></a>
+          <a class="navbar-brand" style="padding:5px" href="#"><img src={{ url_for('phame.static', filename="images/phame_logo.png") }} style="width:50px;height:40px;" ></a>
               </div>
               <div class="collapse navbar-collapse" id="myNavbar">
                 <ul class="nav navbar-nav navbar-right">
             <li><a href="{{ url_for('phame.index') }}"><span class="glyphicon glyphicon-home"></span>Home</a></li>
-                  {% if current_user.username %}
+            {% if current_user.username %}
             <li><a href="{{ url_for('users.logout') }}"><span class="glyphicon glyphicon-log-out"></span>Logout</a></li>
             {% else %}
             <li><a href="{{ url_for('users.login') }}"><span class="glyphicon glyphicon-log-in"></span>Login</a></li>
@@ -74,9 +87,6 @@
             {% if current_user.username %}
               <li><a href="{{ url_for('users.profile') }}"><p class="navbar-text" style="color:white";><span class="glyphicon glyphicon-user"></span>{{ current_user.username}}</p></a>/li>
             {% endif %}
-
-
-
           </ul>
               </div>
             </div>

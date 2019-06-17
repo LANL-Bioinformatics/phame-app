@@ -4,7 +4,10 @@
   <link rel=stylesheet type=text/css href="{{ url_for('phame.static', filename='css/phame-loading.css') }}">
   <link rel=stylesheet type=text/css href="{{ url_for('phame.static', filename='css/phame-input.css') }}">
   <link rel="stylesheet" type="text/css" href="{{ url_for('phame.static', filename='css/style.css') }}">
+
+
 <script>
+
     function outputUpdate(cutoff) {
           document.querySelector('#selected-cutoff').value = Math.round(cutoff * 100) / 100;
       }
@@ -149,7 +152,7 @@
       console.log('calling remove files');
       $.ajax({
           type: 'POST',
-          url: '{{ url_for("phame.remove_files") }}',
+          url: '{{ url_for('phame.remove_files') }}',
           success: function(data, status, request) {
             console.log('files removed');
             document.getElementById("uploads").innerHTML = "";
@@ -164,7 +167,7 @@
       console.log('calling get files list');
       $.ajax({
           type: 'GET',
-          url: '{{ url_for("phame.upload_files_list") }}',
+          url: '{{ url_for('phame.upload_files_list') }}',
           success: function(data, status, request) {
             for (i = 0; i < data['uploads'].length; i++) {
               document.getElementById("uploads").innerHTML += data['uploads'][i] + "\n";
@@ -174,6 +177,7 @@
               alert('Unexpected error');
           }
       });
+
     }
 
     window.onload = function() {getUploadedFilesList();}
@@ -189,6 +193,8 @@
 </div>
 
 <div id="content">
+
+
     <h1>PhaME Input</h1>
 
     {% with messages = get_flashed_messages() %}
@@ -238,8 +244,6 @@
         <input type="submit" value="Remove files" id="remove-button" onclick="removeUploadedFiles()">
     </form>
 
-    <script type="text/javascript" src="{{ url_for('phame.static', filename='javascript/jquery-2.1.1.min.js') }}"></script>
-    <script type="text/javascript" src="{{ url_for('phame.static', filename='javascript/uploadr.js') }}"></script>
 
     <p><a href="http://phame.readthedocs.io/">PhaME Documentation</a> </p>
     <!-- Input form -->
@@ -269,11 +273,20 @@
               <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </div>
+        <script type="text/javascript">
+        $(document).ready(function() {
+            $('.multiselect').children('select').multiselect({
+              includeSelectAllOption: true,
+              selectAllValue: 'multiselect-all'
+            });
+        });
+        </script>
+
         <!-- Select Complete Genomes -->
         <div id="complete_genomes_div" style="display: block">
             <div class="flex-container-row">
                 <div class="flex-label">{{ form.complete_genomes.label }}</div>
-                <div class="flex-field">{{ form.complete_genomes(title='Select complete genome files. Use Command-Click to select multiple genome files', data_toggle="tooltip", onchange="referenceFileUpdate()") }}</div>
+                <div class="flex-field multiselect">{{ form.complete_genomes(title='Select complete genome files', data_toggle="tooltip", onchange="referenceFileUpdate()") }}</div>
                 {% for error in form.complete_genomes.errors %}
                   <span style="color: red;">[{{ error }}]</span>
                 {% endfor %}
@@ -283,7 +296,7 @@
         <div id="contigs_div" style="display: none;">
             <div class="flex-container-row">
                 <div class="flex-label">{{ form.contigs.label }}</div>
-                <div class="flex-field">{{ form.contigs(title='Select contig files', data_toggle="tooltip") }}</div>
+                <div class="flex-field multiselect">{{ form.contigs(title='Select contig files', data_toggle="tooltip") }}</div>
                 {% for error in form.contigs.errors %}
                   <span style="color: red;">[{{ error }}]</span>
                 {% endfor %}
@@ -303,7 +316,7 @@
         <div id="reads_div" style="display: none;">
             <div class="flex-container-row">
                 <div class="flex-label">{{ form.reads.label }}</div>
-                <div class="flex-field">{{ form.reads(title='Select reads files', data_toggle="tooltip") }}</div>
+                <div class="flex-field multiselect">{{ form.reads(title='Select reads files', data_toggle="tooltip") }}</div>
                 {% for error in form.reads.errors %}
                   <span style="color: red;">[{{ error }}]</span>
                 {% endfor %}
