@@ -6,6 +6,7 @@ import psutil
 import io
 import pandas as pd
 import datetime
+from bs4 import BeautifulSoup
 from unittest.mock import patch, Mock, PropertyMock
 from flask_login import current_user
 from flask import current_app, url_for
@@ -825,15 +826,15 @@ class PhameTest(BaseTestCase):
         # print(response.data)
         with open('project/tests/fixtures/projects.html', 'wb') as fp:
             fp.write(response.data)
-        self.assertIn('test1', str(response.data))
-        self.assertIn('test2', str(response.data))
-        self.assertIn('2019-05-31 05:46:02', str(response.data))
-        self.assertIn('2019-05-31 05:32:32', str(response.data))
-        self.assertIn('4', str(response.data))
-        self.assertIn('2', str(response.data))
-        self.assertIn('delete', str(response.data))
+        with open('project/tests/fixtures/projects.html', 'r') as fp:
+            soup = BeautifulSoup(fp, 'html.parser')
+        rows = soup.find_all('tr')
+        self.assertEqual(rows[1].get_text(),
+                         '\ntest1\n3\n1\n1\n\n2\nFAILURE\n24:00:00\n2019-05-31 05:32:32\n\n')
+        self.assertEqual(rows[2].get_text(), '\ntest2\n3\n1\n1\n\n4\nFAILURE\n12:00:00\n2019-05-31 05:46:02\n\n')
+        self.assertEqual(len(soup.find_all('input')), 3)
 
-    def DO_NOT_test_projects_public(self):
+    def test_projects_public(self):
         """Test public view only shows public projects and no delete checkbox is present"""
         public_user = self.add_user(username='public', email='public@example.com',
                                     password='public')
@@ -857,7 +858,7 @@ class PhameTest(BaseTestCase):
         #                        end_time=datetime.datetime(2019, 5, 31, 5, 46, 2),
         #                        execution_time=43200, num_threads=4,
         #                        status='FAILURE', user=public_user))
-        db.session.commit()
+        # db.session.commit()
         with self.client:
             self.login(username='public', password='public')
             response = self.client.get(url_for('phame.projects'))
@@ -865,8 +866,9 @@ class PhameTest(BaseTestCase):
             resp_data = str(response.data)
             with open('project/tests/fixtures/projects_public.html', 'wb') as fp:
                 fp.write(response.data)
-            self.assertNotIn('private', resp_data)
-            self.assertNotIn('delete', resp_data)
+            with open('project/tests/fixtures/projects_public.html', 'r') as fp:
+                public_soup = BeautifulSoup(fp, 'html.parser')
+            self.assertEqual(len(public_soup.find_all('input')), 0)
 
     def test_input_get(self):
         self.add_user()
