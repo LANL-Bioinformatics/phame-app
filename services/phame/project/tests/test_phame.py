@@ -52,8 +52,9 @@ class PhameTest(BaseTestCase):
         eml = email if email else 'mcflynn617@gmail.com'
         pssword = password if password else 'test1'
         pssword2 = password if password else 'test1'
+        print(f'usr {usr}')
         with self.client:
-            self.client.post(url_for('users.register'),
+            response = self.client.post(url_for('users.register'),
                              data=json.dumps(
                                  {'username': usr,
                                   'email': eml,
@@ -61,7 +62,10 @@ class PhameTest(BaseTestCase):
                                   'password2': pssword2
                                   }),
                              content_type='application/json', )
+            # print(f'response {response.status_code} {response.data} ')
         user = User.query.filter_by(username=usr).first()
+        print(f'add_user user {user}')
+
         return user
 
     def login(self, username=None, password=None):
@@ -77,6 +81,37 @@ class PhameTest(BaseTestCase):
         test_file2 = os.path.join(current_app.config['UPLOAD_DIRECTORY'],
                                   'mark', 'test2.fa')
         return [test_file, test_file2]
+
+    def create_project(self, project, exec_time, end_time, status, num_threads, user):
+        project_dir = os.path.join('/test', user.username, project)
+        if os.path.exists(project_dir):
+            shutil.rmtree(project_dir)
+        self.create_config_file()
+        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        ref_dir = os.path.join(project_dir, 'refdir')
+        work_dir = os.path.join(project_dir, 'workdir')
+        os.makedirs(ref_dir)
+        os.makedirs(os.path.join(work_dir, 'results'))
+        print(f'ref_dir {ref_dir}')
+        os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], 'mark',
+                                'KJ660347.fasta'),
+                   os.path.join(ref_dir, 'KJ660347.fasta'))
+        os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], 'mark',
+                                'SRR3359589_R1.fastq'),
+                   os.path.join(ref_dir, 'SRR3359589_R1.fastq'))
+        os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], 'mark',
+                                'KJ660347.fasta'),
+                   os.path.join(work_dir, 'KJ660347.contig'))
+        with open(os.path.join(project_dir, 'time.log'), 'w') as fp:
+            fp.write('86400000')
+        with open(os.path.join(work_dir, 'results', 'test1.log'), 'w') as fp:
+            fp.write('Tree complete')
+        print(f'user {user.username}')
+        db.session.add(Project(name=project,
+                               end_time=end_time,
+                               execution_time=exec_time, num_threads=num_threads,
+                               status=status, user=user))
+        db.session.commit()
 
     def create_paths(self, file_dir, files_list):
         output_file_list = []
@@ -158,7 +193,7 @@ class PhameTest(BaseTestCase):
 
     def test_link_files(self):
         self.add_user()
-        upload_files, complete_genomes_list = [], []
+        upload_files_list, complete_genomes_list = [], []
         reads_list, contigs_list = [], []
 
         server_file_paths = \
@@ -173,14 +208,14 @@ class PhameTest(BaseTestCase):
                 contigs_list.append(f)
             if f.endswith('.fastq'):
                 reads_list.append(f)
-            upload_files.append(open(os.path.join('project', 'tests',
+            upload_files_list.append(open(os.path.join('project', 'tests',
                                                   'fixtures', f), 'rb'))
 
         try:
             with self.client:
                 self.login()
                 response = self.client.post(url_for('phame.upload'),
-                                            data=dict(file=upload_files),
+                                            data=dict(file=upload_files_list),
                                             follow_redirects=True,
                                             content_type='multipart/form-data')
                 self.assertEqual(response.status_code, 200)
@@ -761,7 +796,7 @@ class PhameTest(BaseTestCase):
         with self.client:
             self.login()
             resp_data = get_all_project_stats()
-        print(resp_data)
+        # print(resp_data)
         self.assertEqual(resp_data[0]['name'], 'test1')
         self.assertEqual(resp_data[0]['num_threads'], 2)
         self.assertEqual(resp_data[0]['status'], 'SUCCESS')
@@ -775,22 +810,21 @@ class PhameTest(BaseTestCase):
 
     def test_projects(self):
         user = self.add_user()
-        db.session.add(Project(name='test1',
-                               end_time=datetime.datetime(2019, 5, 31, 5, 32,
-                                                          32),
-                               execution_time=86400, num_threads=2,
-                               status='SUCCESS', user=user))
-        db.session.add(Project(name='test2',
-                               end_time=datetime.datetime(2019, 5, 31, 5, 46,
-                                                          2),
-                               execution_time=43200, num_threads=4,
-                               status='FAILURE', user=user))
-        db.session.commit()
+        self.create_project('test1',end_time=datetime.datetime(2019, 5, 31, 5, 32,32),
+                            exec_time=86400, num_threads=2, status='SUCCESS', user=user)
+        self.create_project('test2',end_time=datetime.datetime(2019, 5, 31, 5, 46,2),
+                            exec_time=43200,
+                            status='FAILURE',
+                            num_threads=4, user=user)
+        current_app.config['PROJECT_DIRECTORY'] = '/test'
+
         with self.client:
             self.login()
             response = self.client.get(url_for('phame.projects'))
         self.assertEqual(response.status_code, 200)
         # print(response.data)
+        with open('project/tests/fixtures/projects.html', 'wb') as fp:
+            fp.write(response.data)
         self.assertIn('test1', str(response.data))
         self.assertIn('test2', str(response.data))
         self.assertIn('2019-05-31 05:46:02', str(response.data))
@@ -799,35 +833,55 @@ class PhameTest(BaseTestCase):
         self.assertIn('2', str(response.data))
         self.assertIn('delete', str(response.data))
 
-    def test_projects_public(self):
+    def DO_NOT_test_projects_public(self):
         """Test public view only shows public projects and no delete checkbox is present"""
-
+        public_user = self.add_user(username='public', email='public@example.com',
+                                    password='public')
+        print(f'public user added {public_user}')
+        puser = User.query.filter_by(username='public').first()
+        print(f'public user {puser}')
         user = self.add_user()
-        db.session.add(Project(name='private',
-                               end_time=datetime.datetime(2019, 5, 31, 5, 32,
-                                                          32),
-                               execution_time=86400, num_threads=2,
-                               status='SUCCESS', user=user))
-        user = self.add_user(username='public', email='public@example.com',
-                      password='public')
-        db.session.add(Project(name='test1',
-                               end_time=datetime.datetime(2019, 5, 31, 5, 32,
-                                                          32),
-                               execution_time=86400, num_threads=2,
-                               status='SUCCESS', user=user))
-        db.session.add(Project(name='test2',
-                               end_time=datetime.datetime(2019, 5, 31, 5, 46,
-                                                          2),
-                               execution_time=43200, num_threads=4,
-                               status='FAILURE', user=user))
+        self.create_project('private',end_time=datetime.datetime(2019, 5, 31, 5, 32,32),
+                            exec_time=86400, num_threads=2, status='SUCCESS', user=user)
+
+        self.create_project('public1',end_time=datetime.datetime(2019, 5, 31, 5, 32,32),
+                            exec_time=86400, num_threads=2, status='SUCCESS', user=public_user)
+        self.create_project('public2',end_time=datetime.datetime(2019, 5, 31, 5, 32,32),
+                            exec_time=86400, num_threads=2, status='SUCCESS', user=public_user)
+        # db.session.add(Project(name='test1',
+        #                        end_time=datetime.datetime(2019, 5, 31, 5, 32,
+        #                                                   32),
+        #                        execution_time=86400, num_threads=2,
+        #                        status='SUCCESS', user=public_user))
+        # db.session.add(Project(name='test2',
+        #                        end_time=datetime.datetime(2019, 5, 31, 5, 46, 2),
+        #                        execution_time=43200, num_threads=4,
+        #                        status='FAILURE', user=public_user))
         db.session.commit()
         with self.client:
             self.login(username='public', password='public')
             response = self.client.get(url_for('phame.projects'))
             self.assertEqual(response.status_code, 200)
             resp_data = str(response.data)
+            with open('project/tests/fixtures/projects_public.html', 'wb') as fp:
+                fp.write(response.data)
             self.assertNotIn('private', resp_data)
             self.assertNotIn('delete', resp_data)
+
+    def test_input_get(self):
+        self.add_user()
+        self.upload_files()
+        with self.client:
+            self.login()
+            response = self.client.get(url_for('phame.input'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('ZEBOV_2007_0Luebo.fna', str(response.data))
+        self.assertIn('Input form', str(response.data))
+
+    def test_num_results_files(self):
+        user = self.add_user()
+        self.create_project('test1', end_time=datetime.datetime(2019, 5, 31, 5, 32, 32),
+                            exec_time=86400, num_threads=2, status='SUCCESS', user=user)
 
 if __name__ == '__main__':
     unittest.main()

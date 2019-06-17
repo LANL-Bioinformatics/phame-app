@@ -320,8 +320,8 @@ def get_all_task_statuses():
     :return: api call response as a json
     """
     statuses = requests.get('http://monitor:5555/api/tasks')
-    logging.debug(f'status: {statuses.text}')
-    logging.debug(f'status json: {statuses.json()}')
+    # logging.debug(f'status: {statuses.text}')
+    # logging.debug(f'status json: {statuses.json()}')
     return statuses.json()
 
 
@@ -331,7 +331,7 @@ def get_project_statuses(display_user):
     :return: list of dicts with project names and their states
     """
     task_statuses = get_all_task_statuses()
-    logging.debug('task statuses:')
+    # logging.debug('task statuses:')
     project_statuses = []
     for task, status in task_statuses.items():
         args_list = ast.literal_eval(status['args'])
@@ -414,7 +414,7 @@ def set_project_status(project_statuses, project, reference_genome,
 
     project_task_status = None
     for status in project_statuses:
-        logging.debug(f'project {project} status {status}')
+        # logging.debug(f'project {project} status {status}')
         if status['project'] == project:
             project_task_status = status['state']
     if not project_task_status:
@@ -515,8 +515,8 @@ def create_project_summary(project, project_status, num_threads,
          'execution time(h:m:s)': exec_time,
          'finish time': end_time
          }
-    logging.debug(f'project {project}')
-    logging.debug(f'current user username {current_user.username}')
+    # logging.debug(f'project {project}')
+    # logging.debug(f'current user username {current_user.username}')
     if current_user.username != 'public':
         project_summary['delete'] = \
             f'<input name="deleteCheckBox" type="checkbox" ' \
@@ -548,7 +548,7 @@ def update_stats(project):
         user = User.query.filter_by(username=current_user.username).first()
         project_status = Project.query.filter_by(name=project, user=user).first()
         if os.path.exists(os.path.join(project_dir, 'workdir', 'results', f'{project}.log')) and project_status:
-            logging.debug(f'end time {project_status.end_time}')
+            # logging.debug(f'end time {project_status.end_time}')
             # project has successfully completed
             if project_status.status != 'SUCCESS':
                 project_status.status = 'SUCCESS'
@@ -583,25 +583,25 @@ def add_stats():
         #     logging.debug(f'key {key} value {value}')
 
         data = str(request.data).split('&')
-        logging.debug(f'request.data {data}')
-        logging.debug(f'request.json {request.json}')
+        # logging.debug(f'request.data {data}')
+        # logging.debug(f'request.json {request.json}')
         project = request.json['project']
         status = request.json['status']
-        logging.debug(f'project {project}, status: {status}')
+        # logging.debug(f'project {project}, status: {status}')
         # post_data = request.get_json()
         # logging.debug(f'post_data {post_data}')
         if status:
             # project = request.json.get('project')
             # status = request.json.get('status')
             project_status = Project.query.filter_by(name=project, user=user).first()
-            logging.debug(f'project_status {project_status}')
+            # logging.debug(f'project_status {project_status}')
             end_time = get_log_mod_time(project)
-            logging.debug(f'end_time {end_time}')
+            # logging.debug(f'end_time {end_time}')
             project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)
             num_threads = get_num_threads(project_dir)
             exec_time = get_exec_time(project_dir)
 
-            logging.debug(f'exec_time {exec_time}')
+            # logging.debug(f'exec_time {exec_time}')
             if not project_status:
                 db.session.add(Project(name=project,
                                        start_time=datetime.now(),

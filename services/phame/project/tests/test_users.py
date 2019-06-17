@@ -20,7 +20,7 @@ class UsersTest(BaseTestCase):
         pssword = password if password else 'test1'
         pssword2 = password if password else 'test1'
         with self.client:
-            response = self.client.post('/users/register',
+            response = self.client.post(url_for('users.register'),
                                         data=json.dumps(
                                             {'username': user,
                                              'email': eml,
@@ -29,6 +29,7 @@ class UsersTest(BaseTestCase):
                                              }),
                                         content_type='application/json', )
             print(response.status_code)
+        return User.query.filter_by(username=user).first()
 
     def create_app(self):
         # pass in test configuration
@@ -44,50 +45,51 @@ class UsersTest(BaseTestCase):
     #     db.drop_all()
 
     #
-    # def test_single_user(self):
-    #     """Ensure get single user behaves correctly."""
-    #     user = self.add_user('mark', 'mcflynn617@gmail.com')
-    #     with self.client:
-    #         response = self.client.get(f'/phame/users/{user.id}')
-    #         data = json.loads(response.data.decode())
-    #         self.assertEqual(response.status_code, 200)
-    #         self.assertIn('mark', data['data']['username'])
-    #         self.assertIn('mcflynn617@gmail.com', data['data']['email'])
-    #         self.assertIn('success', data['status'])
-    #
-    # def test_single_user_no_id(self):
-    #     """Ensure error is thrown if an id is not provided."""
-    #     with self.client:
-    #         response = self.client.get(f"{url_for('users.register')}/blah")
-    #         data = json.loads(response.data.decode())
-    #         self.assertEqual(response.status_code, 404)
-    #         self.assertIn('User does not exist', data['message'])
-    #         self.assertIn('fail', data['status'])
-    #
-    # def test_single_user_incorrect_id(self):
-    #     """Ensure error is thrown if the id does not exist."""
-    #     with self.client:
-    #         response = self.client.get(f"{url_for('users.register')}/999")
-    #         data = json.loads(response.data.decode())
-    #         self.assertEqual(response.status_code, 404)
-    #         self.assertIn('User does not exist', data['message'])
-    #         self.assertIn('fail', data['status'])
-    #
-    # def test_all_users(self):
-    #     self.add_user('mark', 'mcflynn617@gmail.com')
-    #     self.add_user('fletcher', 'fletch@fletch.com')
-    #     with self.client:
-    #         response = self.client.get('/phame/users')
-    #         data = json.loads(response.data.decode())
-    #         self.assertEqual(response.status_code, 200)
-    #         self.assertEqual(len(data['data']['users']), 2)
-    #         self.assertIn('mark', data['data']['users'][0]['username'])
-    #         self.assertIn('mcflynn617@gmail.com', data['data']['users'][0]
-    #         ['email'])
-    #         self.assertIn('fletcher', data['data']['users'][1]['username'])
-    #         self.assertIn('fletch@fletch.com', data['data']['users'][1]
-    #         ['email'])
-    #         self.assertIn('success', data['status'])
+    def test_single_user(self):
+        """Ensure get single user behaves correctly."""
+        user = self.add_user()
+        with self.client:
+            response = self.client.get(url_for('users.get_single_user', user_id=user.id))
+            data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('mark', data['data']['username'])
+            self.assertIn('mcflynn617@gmail.com', data['data']['email'])
+            self.assertIn('success', data['status'])
+
+    def test_single_user_no_id(self):
+        """Ensure error is thrown if an id is not provided."""
+        with self.client:
+            response = self.client.get(url_for('users.get_single_user', user_id='blah'))
+            data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 404)
+            self.assertIn('User does not exist', data['message'])
+            self.assertIn('fail', data['status'])
+
+    def test_single_user_incorrect_id(self):
+        """Ensure error is thrown if the id does not exist."""
+        with self.client:
+            response = self.client.get(url_for('users.get_single_user', user_id=999))
+            data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 404)
+            self.assertIn('User does not exist', data['message'])
+            self.assertIn('fail', data['status'])
+
+    def test_all_users(self):
+        self.add_user('mark', 'mcflynn617@gmail.com')
+        self.add_user('fletcher', 'fletch@fletch.com')
+        with self.client:
+            response = self.client.get(url_for('users.get_all_users'))
+            data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(data['data']['users']), 2)
+            self.assertIn('mark', data['data']['users'][0]['username'])
+            self.assertIn('mcflynn617@gmail.com', data['data']['users'][0]
+            ['email'])
+            self.assertIn('fletcher', data['data']['users'][1]['username'])
+            self.assertIn('fletch@fletch.com', data['data']['users'][1]
+            ['email'])
+            self.assertIn('success', data['status'])
+
     def test_login(self):
         self.add_user()
         with self.client:
@@ -157,6 +159,11 @@ class UsersTest(BaseTestCase):
             self.assertEquals(response.status_code, 302)
             self.assertIn('projects', response.headers['Location'])
 
+            response = self.client.get(url_for('users.get_all_users'))
+            data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['data']['users'][0]['username'], 'public')
+
     def test_login_user(self):
         self.add_user()
         user = User.query.filter_by(username='mark').first()
@@ -177,14 +184,14 @@ class UsersTest(BaseTestCase):
                       password='test')
 
         with self.client:
-            self.client.post('/users/login',
+            self.client.post(url_for('users.login'),
                              data=json.dumps(
                                  {'username': 'admin',
                                   'password': 'test'
                                   }),
                              content_type='application/json',
                              )
-            response = self.client.get('/users/profile')
+            response = self.client.get(url_for('users.profile'))
             self.assertIn('Username to view', str(response.data))
 
 
