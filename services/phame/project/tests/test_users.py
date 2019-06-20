@@ -6,6 +6,7 @@ from flask import current_app, url_for
 from project.tests.base import BaseTestCase
 from project import create_app
 from project.api.models import User
+from project import db
 
 app = create_app()
 
@@ -45,6 +46,15 @@ class UsersTest(BaseTestCase):
     #     db.drop_all()
 
     #
+
+    def test_set_password(self):
+        new_user = User(username='test', email='test@example.com')
+        new_user.set_password('mypassword')
+        db.session.add(new_user)
+        db.session.commit()
+        user = User.query.filter_by(username='test').first()
+        self.assertTrue(user.check_password('mypassword'))
+
     def test_single_user(self):
         """Ensure get single user behaves correctly."""
         user = self.add_user()

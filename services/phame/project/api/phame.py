@@ -530,6 +530,7 @@ def delete_projects():
     logging.debug('delete called')
     form = request.form
     projects = form.to_dict(flat=False)
+    logging.debug(f'delete projects form {form.to_dict(flat=False)}')
     for project in projects['deleteCheckBox']:
         logging.debug(f'removing project: {project}')
         shutil.rmtree(os.path.join(current_app.config['PROJECT_DIRECTORY'],
@@ -830,7 +831,7 @@ def input():
         (a, a) for a in files_list if (
             a.endswith('fna') or a.endswith('fasta') or a.endswith('gff'))]
     form.contigs.choices = [
-        (a, a) for a in files_list if a.endswith('contig')]
+        (a, a) for a in files_list if (a.endswith('contig') or a.endswith('fasta'))]
     form.reads.choices = [(a, a) for a in files_list if a.endswith('fastq')]
 
     if request.method == 'POST':
@@ -840,8 +841,8 @@ def input():
             error = 'Please enter a project name'
             return render_template('input.html', title='Phame input',
                                    form=form, error=error)
-        # logging.debug(f'form {request.form}')
-        # logging.debug(f'form flat {request.form.to_dict(flat=False)}')
+        logging.debug(f'form {request.form}')
+        logging.debug(f'form flat {request.form.to_dict(flat=False)}')
         # logging.debug(f'form {request.form.to_dict()}')
         project_dir, ref_dir = project_setup(form)
         # logging.debug(f'ref file {form.reference_file.data}')
@@ -855,14 +856,14 @@ def input():
             # logging.debug(f"data {form.data_type.data}")
 
             # Perform validation based on requirements of PhaME
-            if (
-                '1' in form.data_type.data or '2' in form.data_type.data
-            ) and len(form.reference_file.data) == 0:
-                error = 'You must upload a reference genome if you select ' \
-                        'Contigs or Reads from Data'
-                remove_uploaded_files(project_dir)
-                return render_template('input.html', title='Phame input',
-                                       form=form, error=error)
+            # if (
+            #     '1' in form.data_type.data or '2' in form.data_type.data
+            # ) and len(form.reference_file.data) == 0:
+            #     error = 'You must upload a reference genome if you select ' \
+            #             'Contigs or Reads from Data'
+            #     remove_uploaded_files(project_dir)
+            #     return render_template('input.html', title='Phame input',
+            #                            form=form, error=error)
 
             # Ensure each fasta file has a corresponding mapping file if
             # Generate SNPs is yes and 'random' or 'ani'

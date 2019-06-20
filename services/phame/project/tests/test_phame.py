@@ -150,6 +150,7 @@ class PhameTest(BaseTestCase):
                 open(os.path.join('project', 'tests', 'fixtures', f), 'rb'))
             fname_list.append(f)
         data = dict(file=file_list)
+        # print(current_app.config['PHAME_UPLOAD_DIR'])
         files = self.create_paths(
             os.path.join(current_app.config['PHAME_UPLOAD_DIR'], 'mark'),
             fname_list)
@@ -887,17 +888,105 @@ class PhameTest(BaseTestCase):
     def test_input_get(self):
         self.add_user()
         self.upload_files()
+        files_list = []
+        for f in os.listdir(os.path.join('project', 'tests', 'fixtures')):
+            if f.endswith('.fna') or f.endswith('.gff') or f.endswith('.fasta'):
+                files_list.append(f)
         with self.client:
             self.login()
             response = self.client.get(url_for('phame.input'))
+
         self.assertEqual(response.status_code, 200)
-        self.assertIn('ZEBOV_2007_0Luebo.fna', str(response.data))
-        self.assertIn('Input form', str(response.data))
+        soup = BeautifulSoup(str(response.data), "html.parser")
+        genomes = soup.find(id='complete_genomes').children
+        files_list.sort()
+        zip_list = zip(genomes, files_list)
+        for genome, fname in zip_list:
+            self.assertEqual(genome.get_text(), fname)
+
+    def test_input_post(self):
+        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        print(current_app.config['PROJECT_DIRECTORY'])
+        current_app.config['PHAME_UPLOAD_DIR'] = os.path.join('/', 'test', 'uploads')
+        complete_genomes_list = []
+        reads_list, contigs_list = [], []
+        self.add_user()
+        self.upload_files()
+        for f in os.listdir(os.path.join('project', 'tests', 'fixtures')):
+            if f.endswith('.fna') or f.endswith('.gff'):
+                complete_genomes_list.append(f)
+            if f.endswith('.fasta'):
+                contigs_list.append(f)
+            if f.endswith('.fastq'):
+                reads_list.append(f)
+        form = dict(complete_genomes=complete_genomes_list, reads=reads_list, contigs=contigs_list,
+                    project='test1', reference_file=complete_genomes_list[0], data_type=[1])
+        with self.client:
+            self.login()
+            response = self.client.post(url_for('phame.input'),
+                                        data=dict(form))
+        # with open('project/tests/fixtures/test_input.html', 'w') as fp:
+        #     fp.write(str(response.data))
+        self.assertEqual(response.status_code, 302)
+        soup = BeautifulSoup(str(response.data), "html.parser")
+        self.assertEqual(soup.find(style='color: red;'), None)
+
+    @patch('project.api.phame.project_setup')
+    def test_input_post_no_project_dir(self, mock_setup):
+        self.add_user()
+        self.upload_files()
+        mock_setup.return_value = [None, None]
+
+        form = dict(project='test1')
+        with self.client:
+            self.login()
+            response = self.client.post(url_for('phame.input'), data=json.dumps(form), content_type='application/json', follow_redirects=False)
+        self.assertEqual(response.status_code, 200)
+        mock_setup.assert_called_once()
+        soup = BeautifulSoup(str(response.data), "html.parser")
+        self.assertIn('Error: Project directory already exists', soup.find("p", class_='error').get_text())
+
+    def test_input_post_form_validation(self):
+        """Test form validation"""
+        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        complete_genomes_list = []
+        reads_list, contigs_list = [], []
+        self.add_user()
+        self.upload_files()
+        # mock_setup.return_value = ['test1', 'test1/refdir']
+        for f in os.listdir(os.path.join('project', 'tests', 'fixtures')):
+            if f.endswith('.fna') or f.endswith('.gff'):
+                complete_genomes_list.append(f)
+            if f.endswith('.fasta'):
+                contigs_list.append(f)
+            if f.endswith('.fastq'):
+                reads_list.append(f)
+        form = dict(complete_genomes=complete_genomes_list, reads=reads_list, contigs=contigs_list,
+                         project='test1', data_type=['1'])
+        with self.client:
+            self.login()
+            response = self.client.post(url_for('phame.input'), data=json.dumps(form), content_type='application/json', follow_redirects=False)
+        # with open('project/tests/fixtures/validation_error.html', 'w') as fp:
+        #     fp.write(str(response.data))
+        self.assertEqual(response.status_code, 200)
+        # mock_setup.assert_called_once()
+        soup = BeautifulSoup(str(response.data), "html.parser")
+        red_tag = False
+        for tag in soup.find_all('span'):
+            if 'style="color: red;">[Not a valid choice]' in str(tag):
+                red_tag = True
+        self.assertTrue(red_tag)
 
     def test_num_results_files(self):
         user = self.add_user()
         self.create_project('test1', end_time=datetime.datetime(2019, 5, 31, 5, 32, 32),
                             exec_time=86400, num_threads=2, status='SUCCESS', user=user)
+
+        data = dict(file=[open(
+            os.path.join('project', 'tests', 'fixtures', 'KJ660347.fasta'),
+            'rb'), open(
+            os.path.join('project', 'tests', 'fixtures', 'KJ660347.gff'),
+            'rb')])
 
 if __name__ == '__main__':
     unittest.main()
