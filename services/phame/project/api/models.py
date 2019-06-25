@@ -1,5 +1,5 @@
 # services/phame/project/api/models.py
-
+from datetime import datetime
 import enum
 from flask_login import UserMixin
 from sqlalchemy.sql import func
@@ -45,11 +45,6 @@ class User(db.Model, UserMixin):
     created_date = db.Column(db.DateTime, default=func.now(), nullable=False)
     projects = db.relationship('Project', backref='user', lazy=True)
 
-    # def __init__(self, username, email, password_hash):
-    #     self.username = username
-    #     self.email = email
-    #     self.password_hash = password_hash
-
     def to_json(self):
         return {
             'id': self.id,
@@ -74,12 +69,12 @@ class Project(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(128), nullable=False)
-    start_time = db.Column(db.DateTime)
-    end_time = db.Column(db.DateTime)
-    execution_time = db.Column(db.Integer)
-    status = db.Column(db.String(30))
+    start_time = db.Column(db.DateTime, default=datetime.now())
+    end_time = db.Column(db.DateTime, default=datetime.now())
+    execution_time = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(30), default='PENDING')
     # status = db.Column(IntEnum(StatusTypes), default=StatusTypes.FAILURE)
-    num_threads = db.Column(db.Integer)
+    num_threads = db.Column(db.Integer, default=2)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
     def convert_seconds_to_time(self):
@@ -92,7 +87,7 @@ class Project(db.Model):
         return {
             'id': self.id,
             'name': self.name,
-            'start_time': self.start_time,
+            'start_time': self.start_time.strftime('%Y-%m-%d %H:%M:%S'),
             'end_time': self.end_time.strftime('%Y-%m-%d %H:%M:%S'),
             'status': self.status,
             'execution_time': self.convert_seconds_to_time(),
