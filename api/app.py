@@ -189,7 +189,7 @@ def upload():
 
     logging.debug("=== Form Data ===")
     for key, value in list(form.items()):
-        logging.debug(key, "=>", value)
+        logging.debug("key {0} => value {1}".format(key, value))
 
     for upload in request.files.getlist("file"):
         filename = upload.filename.rsplit("/")[0]
