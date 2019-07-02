@@ -526,7 +526,7 @@ def input():
     files_list = sorted(os.listdir(os.path.join(app.config['UPLOAD_DIR'], current_user.username)))
     form.reference_file.choices = []
     form.complete_genomes.choices = [(a, a) for a in files_list if (a.endswith('fna') or a.endswith('fasta') or a.endswith('gff'))]
-    form.contigs.choices = [(a, a) for a in files_list if a.endswith('contig')]
+    form.contigs.choices = [(a, a) for a in files_list if (a.endswith('contig') or a.endswith('fna') or a.endswith('fasta'))]
     form.reads.choices = [(a, a) for a in files_list if a.endswith('fastq')]
 
     if request.method == 'POST':
@@ -549,6 +549,20 @@ def input():
                 error = 'You must upload a reference genome if you select Contigs or Reads from Data'
                 remove_uploaded_files(project_dir)
                 return render_template('input.html', title='Phame input', form=form, error=error)
+
+            if ('1' in form.data_type.data or '3' in form.data_type.data or
+                    '6' in form.data_type.data) and len(form.contigs.data) == 0:
+                error = 'You must upload one or more contig files if you select Contigs from Data'
+                remove_uploaded_files(project_dir)
+                return render_template('input.html', title='Phame input',
+                                       form=form, error=error)
+
+            if ('2' in form.data_type.data or '4' in form.data_type.data or
+                    '6' in form.data_type.data) and len(form.reads.data) == 0:
+                error = 'You must upload one or more read files if you select Reads from Data'
+                remove_uploaded_files(project_dir)
+                return render_template('input.html', title='Phame input',
+                                       form=form, error=error)
 
             # Ensure each fasta file has a corresponding mapping file if Generate SNPs is yes and 'random' or 'ani'
             if form.cds_snps.data == '1' and (form.reference.data == '0' or form.reference.data == '2'):
