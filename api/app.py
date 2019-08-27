@@ -666,13 +666,16 @@ def get_file_counts(refdir, workdir):
     :param workdir: Work file directory
     :return: Number of full, contig and read files
     """
-    reads_file_count = len(
-        [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
+    try:
+        reads_file_count = len(
+            [fname for fname in os.listdir(refdir) if (fname.endswith('.fq') or fname.endswith('.fastq'))])
 
-    contigs_file_count = len([fname for fname in os.listdir(workdir) if fname.endswith('.contig')]) \
-        if os.path.exists(workdir) else 0
-    full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or
-                                                                            fname.endswith('.fasta'))])
+        contigs_file_count = len([fname for fname in os.listdir(workdir) if fname.endswith('.contig')]) \
+            if os.path.exists(workdir) else 0
+        full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or
+                                                                                fname.endswith('.fasta'))])
+    except FileExistsError as e:
+        reads_file_count, contigs_file_count, full_genome_file_count = 0, 0, 0
     return reads_file_count, contigs_file_count, full_genome_file_count
 
 
