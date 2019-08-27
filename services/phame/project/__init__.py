@@ -29,7 +29,7 @@ def create_app(script_info=None):
     # set up extensions
     db.init_app(app)
     login_manager.init_app(app)
-    login_manager.login_view = 'phame.login'
+    login_manager.login_view = 'users.login'
     toolbar.init_app(app)
     cors.init_app(app)
     migrate.init_app(app, db)

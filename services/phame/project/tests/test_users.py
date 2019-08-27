@@ -204,6 +204,11 @@ class UsersTest(BaseTestCase):
             response = self.client.get(url_for('users.profile'))
             self.assertIn('Username to view', str(response.data))
 
+    def test_no_login_redirect(self):
+        with self.client:
+            response = self.client.get(url_for('phame.projects'))
+            self.assertEquals(response.status_code, 302)
+            self.assertIn('login', response.headers['Location'])
 
 if __name__ == '__main__':
     unittest.main()

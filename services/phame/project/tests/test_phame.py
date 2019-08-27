@@ -528,6 +528,13 @@ class PhameTest(BaseTestCase):
                            os.path.join(self.work_dir, 'KJ660347.contig')
                            ])
 
+    def test_get_file_counts_no_directories(self):
+        reads_file_count, contigs_file_count, full_genome_file_count = \
+            get_file_counts(self.ref_dir, self.work_dir)
+        self.assertEqual(full_genome_file_count, 0)
+        self.assertEqual(reads_file_count, 0)
+        self.assertEqual(contigs_file_count, 0)
+
     def test_create_project_summary(self):
         self.add_user()
         with self.client:
