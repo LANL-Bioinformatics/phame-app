@@ -321,7 +321,7 @@ def get_all_task_statuses():
     """
     statuses = requests.get('http://monitor:5555/api/tasks')
     # logging.debug(f'status: {statuses.text}')
-    # logging.debug(f'status json: {statuses.json()}')
+    logging.debug(f'status json: {statuses.json()}')
     return statuses.json()
 
 

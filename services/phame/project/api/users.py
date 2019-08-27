@@ -110,7 +110,7 @@ def register():
 
                 response_object = {'status': 'success',
                                    'message': f'{form.email.data} was added'}
-                return jsonify(response_object), 200
+                return redirect(url_for('users.login'))
             else:
                 # logging.debug(f'response_object {response_object}')
                 response_object['message'] = \

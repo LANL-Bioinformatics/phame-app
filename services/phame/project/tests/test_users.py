@@ -133,8 +133,8 @@ class UsersTest(BaseTestCase):
                                              'password2': 'test1'
                                              }),
                                         content_type='application/json',)
-            self.assertEquals(response.status_code, 200)
-            # self.assertIn('login', response.headers['Location'])
+            self.assertEquals(response.status_code, 302)
+            self.assertIn('login', response.headers['Location'])
             self.assertTrue(os.path.exists(os.path.join(PROJECT_DIRECTORY,
                                                         'mark')))
             self.assertTrue(os.path.exists(os.path.join(UPLOAD_DIRECTORY,
