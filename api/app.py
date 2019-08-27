@@ -674,7 +674,7 @@ def get_file_counts(refdir, workdir):
             if os.path.exists(workdir) else 0
         full_genome_file_count = len([fname for fname in os.listdir(refdir) if (fname.endswith('.fna') or
                                                                                 fname.endswith('.fasta'))])
-    except FileExistsError:
+    except FileNotFoundError:
         return 0, 0, 0
     return reads_file_count, contigs_file_count, full_genome_file_count
 
