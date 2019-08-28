@@ -45,8 +45,8 @@ services:
       - FLASK_ENV=development
       - FLASK_APP=project/__init__.py
       - APP_SETTINGS=project.config.DevelopmentConfig
-      - DATABASE_URL=postgres://postgres:postgres@phame-db:5432/users_dev  # new
-      - DATABASE_TEST_URL=postgres://postgres:postgres@phame-db:5432/users_test  # new
+      - DATABASE_URL=postgres://debug:debug@phame-db:5432/users_dev  # new
+      - DATABASE_TEST_URL=postgres://debug:debug@phame-db:5432/users_test  # new
     depends_on:
       - phame-db
 
