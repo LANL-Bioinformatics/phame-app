@@ -735,6 +735,9 @@ def get_all_task_statuses():
     except requests.exceptions.ConnectionError as e:
         logging.exception(f'Connection error {e}')
         return None
+    except json.decoder.JSONDecodeError as e:
+        logging.exception(f'JSON decode error {e}')
+        return None
     return statuses.json()
 
 
