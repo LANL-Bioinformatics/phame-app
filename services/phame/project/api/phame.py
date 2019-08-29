@@ -830,12 +830,13 @@ def projects(username=None):
                 ['project name', '# of genomes analyzed',
                  '# of contigs', '# of reads',
                  'reference genome used', '# of threads',
-                 'status', 'execution time(h:m:s)', 'finish time', 'delete']
+                 'status', 'execution time(h:m:s)', 'delete']
+            # 'finish time',
         else:
             run_summary_columns = ['project name', '# of genomes analyzed',
                                    '# of contigs', '# of reads',
                                    'reference genome used', '# of threads',
-                                   'status', 'execution time(h:m:s)', 'finish time']
+                                   'status', 'execution time(h:m:s)']
 
         # Turn project name into a link to the display page if it's finished
         # running successfully
@@ -1270,7 +1271,7 @@ def display(project, username=None):
     :param username: optional username of user
     :return: renders PhaME output page
     """
-    update_stats(project)
+    # update_stats(project)
     if not username:
         username = current_user.username
     project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'],
