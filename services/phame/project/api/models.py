@@ -35,15 +35,15 @@ class StatusTypes(enum.IntEnum):
 
 class User(db.Model, UserMixin):
 
-    __tablename__ = 'users'
+    __tablename__ = 'user'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(128), nullable=False)
     email = db.Column(db.String(128), nullable=False)
     password_hash = db.Column(db.String(128))
-    active = db.Column(db.Boolean(), default=True, nullable=False)
-    created_date = db.Column(db.DateTime, default=func.now(), nullable=False)
-    projects = db.relationship('Project', backref='user', lazy=True)
+    # active = db.Column(db.Boolean(), default=True, nullable=False)
+    # created_date = db.Column(db.DateTime, default=func.now(), nullable=False)
+    # projects = db.relationship('Project', backref='user', lazy=True)
 
     def to_json(self):
         return {
