@@ -48,6 +48,7 @@ services:
       - APP_SETTINGS=project.config.ProductionConfig
       - DATABASE_URL=postgres://debug:debug@phame-db:5432/phame_api01
       - DATABASE_TEST_URL=postgres://debug:debug@phame-db:5432/phame-app_db-test
+      - SECRET_KEY=${SECRET_KEY}
     depends_on:
       - phame-db
 
