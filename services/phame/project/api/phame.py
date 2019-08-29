@@ -1207,6 +1207,7 @@ def get_log(project):
         return jsonify({'log': str(last)})
     except OSError as e:
         logging.debug(f'Error reading log {e}')
+        return jsonify({'log': 'null'})
 
 
 @phame_blueprint.route('/num_results_files/<project>', methods=['GET'])
