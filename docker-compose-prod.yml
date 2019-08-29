@@ -1,63 +1,72 @@
-version: "3"
+version: '3.6'
 volumes:
   phame_data: {}
   postgres_data_local: {}
   postgres_backup_local: {}
 
 services:
-  postgres:
-    build:
-      context: .
-      dockerfile: ./compose/production/postgres/Dockerfile
-    image: phame_api01_production_postgres
-    volumes:
-      - postgres_data_local:/var/lib/postgresql/data
-      - postgres_backup_local:/backups
-    env_file:
-      - ./.envs/.local/.postgres
 
   nginx:
-    image: nginx
-    volumes:
-     - ./compose/local/nginx/conf.d:/etc/nginx/conf.d
-    ports:
-     - "80:80"
-    depends_on:
-      - web
-
-  # flask app that calls shell script that runs phame
-  phame:
     build:
-      context: .
-      dockerfile: ./PhaME-1/Dockerfile
+      context: ./services/nginx
+      dockerfile: Dockerfile-dev
+    restart: always
+    ports:
+      - 80:80
+    depends_on:
+      - phame
+
+ # flask app that calls shell script that runs phame
+  phame-app:
+    build:
+      context: ./services/phame-app
+      dockerfile: Dockerfile
     depends_on:
       - redis
-    ports:
-      - 5001:5001
+    expose:
+      - 5001
     volumes:
       - phame_data:/phame_api/media
       - /vol_d/api/uploads:/api/static/uploads
 
-  # web gui that generates celery task
-  web:
+  # flask-based API
+  phame:
     build:
-      context: ./api
-      dockerfile: Dockerfile
-    hostname: web
+      context: ./services/phame
+      dockerfile: Dockerfile-dev
+    volumes:
+      - phame_data:/phame_api/media
+      - /vol_d/api/uploads:/api/static/uploads
+    expose:
+      - 5000
     env_file:
       - ./.envs/.local/.postgres
       - ./.envs/.local/.email
-    restart: always
-    volumes:
-      - phame_data:/phame_api/media
-      - /vol_d/api/uploads:/api/static/uploads
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=project/__init__.py
+      - APP_SETTINGS=project.config.DevelopmentConfig
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@phame-db:5432/${POSTGRES_DB}
+      - DATABASE_TEST_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@phame-db:5432/phame-app_db-test
     depends_on:
-      - redis
-      - postgres
+      - phame-db
+
+  phame-db:
+    build:
+      context: ./services/phame/project/db
+      dockerfile: Dockerfile
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+      - postgres_backup_local:/backups
+    ports:
+    - 5435:5432
+    environment:
+    - POSTGRES_USER=${POSTGRES_USER}
+    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 
   monitor:
     build:
-      context: celery-queue
+      context: ./services/celery-queue
       dockerfile: Dockerfile
     ports:
      - "5555:5555"
