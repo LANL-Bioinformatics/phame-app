@@ -33,7 +33,7 @@ services:
   phame:
     build:
       context: ./services/phame
-      dockerfile: Dockerfile-dev
+      dockerfile: Dockerfile-prod
     volumes:
       - phame_data:/phame_api/media
       - /vol_d/api/uploads:/api/static/uploads
@@ -45,9 +45,9 @@ services:
     environment:
       - FLASK_ENV=development
       - FLASK_APP=project/__init__.py
-      - APP_SETTINGS=project.config.DevelopmentConfig
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@phame-db:5432/${POSTGRES_DB}
-      - DATABASE_TEST_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@phame-db:5432/phame-app_db-test
+      - APP_SETTINGS=project.config.ProductionConfig
+      - DATABASE_URL=postgres://debug:debug@phame-db:5432/phame_api01
+      - DATABASE_TEST_URL=postgres://debug:debug@phame-db:5432/phame-app_db-test
     depends_on:
       - phame-db
 
