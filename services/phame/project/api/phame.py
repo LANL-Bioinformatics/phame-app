@@ -1193,17 +1193,20 @@ def get_log(project):
     :param project: Project name
     :return: json of log file
     """
-    log_file = os.path.join(current_app.config['PROJECT_DIRECTORY'],
-                            current_user.username, project, 'workdir',
-                            'results', f'{project}.log')
-    if not os.path.exists(log_file):
-        return jsonify({'log': 'null'})
-    with open(log_file, 'rb') as f:
-        f.seek(-2, os.SEEK_END)  # Jump to the second last byte.
-        while f.read(1) != b"\n":  # Until EOL is found...
-            f.seek(-2, os.SEEK_CUR)  # ...jump back the read byte plus one more
-        last = f.readline()
-    return jsonify({'log': str(last)})
+    try:
+        log_file = os.path.join(current_app.config['PROJECT_DIRECTORY'],
+                                current_user.username, project, 'workdir',
+                                'results', f'{project}.log')
+        if not os.path.exists(log_file):
+            return jsonify({'log': 'null'})
+        with open(log_file, 'rb') as f:
+            f.seek(-2, os.SEEK_END)  # Jump to the second last byte.
+            while f.read(1) != b"\n":  # Until EOL is found...
+                f.seek(-2, os.SEEK_CUR)  # ...jump back the read byte plus one more
+            last = f.readline()
+        return jsonify({'log': str(last)})
+    except OSError as e:
+        logging.debug(f'Error reading log {e}')
 
 
 @phame_blueprint.route('/num_results_files/<project>', methods=['GET'])
