@@ -1217,11 +1217,11 @@ def num_results_files(project):
 
 
 def send_mailgun(message, project):
-    key = os.environ['MAILGUN_KEY']
-    email_domain = 'mail.edgebioinformatics.org'
+    key = os.environ['API_KEY']
+    sender = os.environ['SENDER']
     recipient = current_user.email
     # logging.info('current_user.email: {0}'.format(recipient))
-    request_url = f'https://api.mailgun.net/v3/{email_domain}/messages'
+    request_url = os.environ['EMAIL_URL']
     results_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'],
                                current_user.username, project, 'workdir',
                                'results')
@@ -1233,7 +1233,7 @@ def send_mailgun(message, project):
         request_url,
         auth=('api', key),
         files=[("attachment", log_fh), ("attachment", error_fh)],
-        data={'from': 'donotreply@edgebioinformatics.org', 'to': recipient,
+        data={'from': sender, 'to': recipient,
               'subject': f'Project {project}', 'text': message})
     # logging.debug(f"from: {'donotreply@edgebioinformatics.org'} to: "
     #               f"{recipient} subject: Project {project} text: {message}")
