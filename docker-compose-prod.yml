@@ -27,7 +27,7 @@ services:
       - 5001
     volumes:
       - phame_data:/phame_api/media
-      - /vol_d/api/uploads:/api/static/uploads
+      - /vol_d/api/uploads:/usr/src/app/static/uploads
 
   # flask-based API
   phame:
@@ -36,7 +36,7 @@ services:
       dockerfile: Dockerfile-prod
     volumes:
       - phame_data:/phame_api/media
-      - /vol_d/api/uploads:/api/static/uploads
+      - /vol_d/api/uploads:/usr/src/app/static/uploads
     expose:
       - 5000
     env_file:
