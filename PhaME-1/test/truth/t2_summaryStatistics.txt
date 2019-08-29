@@ -1,5 +1,0 @@
-Reference used:	KJ660347
-Reference sequence length:	18959
-Total gap length:	0
-Core genome length:	18959
-Total SNPs:	0

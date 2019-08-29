@@ -1,0 +1,106 @@
+<html>
+    <head>
+
+    {{ JSGlue.include() }}
+     <link rel="stylesheet" href="{{ url_for('phame.static', filename='css/jquery.mobile.1.4.3.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('phame.static', filename='css/bootstrap.min.css') }}">
+    <script type="text/javascript" src="{{ url_for('phame.static', filename='javascript/jquery-2.1.1.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('phame.static', filename='javascript/uploadr.js') }}"></script>
+
+    <link rel="stylesheet" href="{{ url_for('phame.static', filename='css/jquery.mobile.1.4.3.min.css') }}">
+
+    <link rel="stylesheet" href="{{ url_for('phame.static', filename='css/bootstrap.min.css') }}">
+<script type="text/javascript" src="{{ url_for('phame.static', filename='javascript/jquery-2.1.1.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('phame.static', filename='javascript/bootstrap.min.js') }}"></script>
+
+<link rel="stylesheet" href="{{ url_for('phame.static', filename='css/bootstrap-multiselect.css') }}" id="bootstrap-css">
+<script type="text/javascript" src="{{ url_for('phame.static', filename='javascript/bootstrap-multiselect.js') }}"></script>
+<style>
+  .jumbotron {
+    margin-bottom: 10px;
+    height: 200px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+	.navbar {
+	    margin-bottom: 0;
+	    background-color: #2d2d30;
+	    border: 0;
+	    font-size: 11px !important;
+	    letter-spacing: 4px;
+	    opacity:0.9;
+	}
+
+	/* Add a gray color to all navbar links */
+	.navbar li a, .navbar .navbar-brand {
+		    color: #d5d5d5 !important;
+	}
+
+	/* On hover, the links will turn white */
+	.navbar-nav li a:hover {
+		    color: #fff !important;
+	}
+
+	/* The active link */
+	.navbar-nav li.active a {
+		    color: #fff !important;
+			        background-color:#29292c !important;
+	}
+
+	/* Remove border color from the collapsible button */
+	.navbar-default .navbar-toggle {
+		    border-color: transparent;
+	}
+  .main {
+    margin-top: 80px;
+    margin-left: 150px;
+  }
+
+    </style>
+    {% block head %}{% endblock %}
+    </head>
+    <body>
+        <div class="container">
+          <nav class="navbar navbar-default navbar-fixed-top">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" style="padding:5px" href="#"><img src={{ url_for('phame.static', filename="images/phame_logo.png") }} style="width:50px;height:40px;" ></a>
+              </div>
+              <div class="collapse navbar-collapse" id="myNavbar">
+                <ul class="nav navbar-nav navbar-right">
+            <li><a href="{{ url_for('phame.index') }}"><span class="glyphicon glyphicon-home"></span>Home</a></li>
+            {% if current_user.username %}
+            <li><a href="{{ url_for('users.logout') }}"><span class="glyphicon glyphicon-log-out"></span>Logout</a></li>
+            {% else %}
+            <li><a href="{{ url_for('users.login') }}"><span class="glyphicon glyphicon-log-in"></span>Login</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('phame.input') }}"><span class="glyphicon glyphicon-tree-conifer"></span>Input</a></li>
+            <li><a href="{{ url_for('phame.projects') }}"><span class="glyphicon glyphicon-th-list"></span>Projects</a></li>
+            {% if current_user.username %}
+              <li><a href="{{ url_for('users.profile') }}"><p class="navbar-text" style="color:white";><span class="glyphicon glyphicon-user"></span>{{ current_user.username}}</p></a>/li>
+            {% endif %}
+          </ul>
+              </div>
+            </div>
+          </nav>
+        </div>
+        <div class="main">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul>
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+        </div>
+    </body>
+</html>

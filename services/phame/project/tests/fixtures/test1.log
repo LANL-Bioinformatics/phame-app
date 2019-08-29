@@ -1,0 +1,33 @@
+
+Running self-nucmer on /phame_api/media/mark/test1/workdir/files/ZEBOV_2007_0Luebo.fna
+[RUNNING:] nucmer --maxmatch --nosimplify --prefix=seq_seq175 /phame_api/media/mark/test1/workdir/files/ZEBOV_2007_0Luebo.fna /phame_api/media/mark/test1/workdir/files/ZEBOV_2007_0Luebo.fna 2>/dev/null
+[RUNNING:] show-coords -r -I 97 -L 75 -T seq_seq175.delta | awk '$1 != $3 || $2 != $4 && $8==$9 {print}' > seq_seq175.coords
+
+Running self-nucmer on /phame_api/media/mark/test1/workdir/files/KJ660347.fna
+[RUNNING:] nucmer --maxmatch --nosimplify --prefix=seq_seq176 /phame_api/media/mark/test1/workdir/files/KJ660347.fna /phame_api/media/mark/test1/workdir/files/KJ660347.fna 2>/dev/null
+[RUNNING:] show-coords -r -I 97 -L 75 -T seq_seq176.delta | awk '$1 != $3 || $2 != $4 && $8==$9 {print}' > seq_seq176.coords
+
+Repeat coords for all references found.
+Self-NUCmer complete
+==================================================================
+Aligning to the reference genome /phame_api/media/mark/test1/workdir/files/KJ660347.fna
+
+Running nucmer on KJ660347_ZEBOV_2007_0Luebo
+Running nucmer on KJ660347_KJ660347
+
+NUCmer on all reference genomes complete.
+==================================================================
+Empty Gap Files: /phame_api/media/mark/test1/workdir/results/gaps/KJ660347_KJ660347.gaps
+Empty Gap Files: /phame_api/media/mark/test1/workdir/results/gaps/KJ660347_ZEBOV_2007_0Luebo.gaps
+
+buildSNPDB.pl -i /phame_api/media/mark/test1/workdir/results -r /phame_api/media/mark/test1/workdir/files/KJ660347.fna -l /phame_api/media/mark/test1/workdir/working_list.txt -p test1 -c 0 -g 0.1 2>>/phame_api/media/mark/test1/workdir/results/test1.error >> /phame_api/media/mark/test1/workdir/results/test1.log
+
+Reading Gaps file.
+Printing Summary Statistics.
+Creating SNP alignment.
+Creating SNP stats file. 
+SNP alignment complete.
+Reconstructing phylogeny using FastTree
+export OMP_NUM_THREADS=2; FastTree -quiet -nt -gtr < /phame_api/media/mark/test1/workdir/results/test1_all_snp_alignment.fna > /phame_api/media/mark/test1/workdir/results/test1_all.fasttree 2>>/phame_api/media/mark/test1/workdir/results/test1.error 
+
+Tree phylogeny complete.
