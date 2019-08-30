@@ -75,7 +75,7 @@ class Project(db.Model):
     status = db.Column(db.String(30), default='PENDING')
     # status = db.Column(IntEnum(StatusTypes), default=StatusTypes.FAILURE)
     num_threads = db.Column(db.Integer, default=2)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    # user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
     def convert_seconds_to_time(self):
         m, s = divmod(self.execution_time, 60)

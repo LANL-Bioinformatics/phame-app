@@ -1,4 +1,3 @@
-CREATE DATABASE phame-app_db;
-CREATE DATABASE phame-app_db;
-CREATE DATABASE phame-app_db;
-CREATE DATABASE phame-app_db-test;
+CREATE DATABASE phame_prod;
+CREATE DATABASE phame_dev;
+CREATE DATABASE phame_test;
