@@ -8,7 +8,7 @@ class BaseConfig:
     """Base configuration"""
     TESTING = False
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = 'my_precious'
+    SECRET_KEY = os.environ.get('SECRET_KEY')
     DEBUG_TB_ENABLED = False
     DEBUG_TB_INTERCEPT_REDIRECTS = False
     MAX_CONTENT_LENGTH = 1000 * 1024 * 1024
@@ -35,4 +35,5 @@ class TestingConfig(BaseConfig):
 
 class ProductionConfig(BaseConfig):
     """Production configuration"""
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')  # new
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    SEND_NOTIFICATIONS = True

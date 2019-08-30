@@ -60,7 +60,7 @@ function update_progress(status_url, project) {
           console.log('status: '+status);
           if (result !== null) {
             console.log('result not null, sending status');
-            send_stats(project, result);
+            // send_stats(project, result);
           }
 
           let last_line;

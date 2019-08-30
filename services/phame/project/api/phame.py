@@ -489,10 +489,8 @@ def get_file_counts(refdir, workdir):
     return reads_file_count, contigs_file_count, full_genome_file_count
 
 
-def create_project_summary(project, project_status, num_threads,
-                           reads_file_count, contigs_file_count,
-                           full_genome_file_count, exec_time, end_time,
-                           reference_genome):
+def create_project_summary(project, project_status, num_threads, reads_file_count, contigs_file_count,
+                        full_genome_file_count, exec_time, reference_genome):
     """
     Create run summary for project
     Adds a 'delete' field if the user is not 'public'
@@ -506,27 +504,20 @@ def create_project_summary(project, project_status, num_threads,
     :param reference_genome: Reference genome file
     :return: project_summary dict
     """
-    project_summary = \
-        {'# of genomes analyzed':
-            full_genome_file_count + contigs_file_count + reads_file_count,
-         '# of contigs': contigs_file_count,
-         '# of reads': reads_file_count,
-         '# of full genomes': full_genome_file_count,
-         'reference genome used': reference_genome,
-         'project name': project,
-         '# of threads': num_threads,
-         'status': project_status,
-         'execution time(h:m:s)': exec_time,
-         'finish time': end_time
-         }
-    # logging.debug(f'project {project}')
-    # logging.debug(f'current user username {current_user.username}')
+   project_summary = {'# of genomes analyzed': full_genome_file_count + contigs_file_count + reads_file_count,
+                       '# of contigs': contigs_file_count,
+                       '# of reads': reads_file_count,
+                       '# of full genomes': full_genome_file_count,
+                       'reference genome used': reference_genome,
+                       'project name': project,
+                       '# of threads': num_threads,
+                       'status': project_status,
+                       'execution time(h:m:s)': exec_time
+                       }
     if current_user.username != 'public':
-        project_summary['delete'] = \
-            f'<input name="deleteCheckBox" type="checkbox" ' \
-            f'value={project} unchecked">'
+        project_summary['delete'] = '<input name="deleteCheckBox" type="checkbox" value={0} unchecked">'.format(
+            project)
     return project_summary
-
 
 @phame_blueprint.route('/delete', methods=["POST"])
 def delete_projects():
@@ -710,7 +701,9 @@ def projects(username=None):
             os.makedirs(os.path.join(current_app.config['PROJECT_DIRECTORY'],
                                      display_user))
 
-        projects_list = get_all_project_stats()
+        # projects_list = get_all_project_stats()
+        projects_list = [project for project in os.listdir(os.path.join(current_app.config['PROJECT_DIRECTORY'], display_user))]
+
         logging.debug(f"projects project_stats {projects_list}")
         # logging.debug(f'projects proj_list {proj_list}')
         user = User.query.filter_by(username=current_user.username).first()
@@ -737,41 +730,59 @@ def projects(username=None):
 
             logging.debug(f'{project}')
 
+            # project_dir, workdir, results_dir, refdir = \
+                # set_directories(display_user, project['name'])
             project_dir, workdir, results_dir, refdir = \
-                set_directories(display_user, project['name'])
+                set_directories(display_user, project)
 
             # hack to fix tables for subsetted projects
-            if re.search('_subset$', project['name']):
-                fix_subset_tables(project['name'], results_dir)
+            # if re.search('_subset$', project['name']):
+            #     fix_subset_tables(project['name'], results_dir)
+            if re.search('_subset$', project):
+                fix_subset_tables(project, results_dir)
+
+            # summary_statistics_file = \
+            #     os.path.join(results_dir, 'tables',
+            #                  f"{project['name']}_summaryStatistics.txt")
 
             summary_statistics_file = \
                 os.path.join(results_dir, 'tables',
-                             f"{project['name']}_summaryStatistics.txt")
+                             f"{project}_summaryStatistics.txt")
 
             # create output tables
             reads_file_count, contigs_file_count, full_genome_file_count = \
                 get_file_counts(refdir, workdir)
 
-            num_threads = project['num_threads']
-            exec_time= project['execution_time']
+            # num_threads = project['num_threads']
+            # exec_time= project['execution_time']
+            num_threads = get_num_threads(project_dir)
+
+            exec_time = get_exec_time(project_dir)
             # exec_time = convert_seconds_to_time(exec_time_secs)
 
             reference_genome = get_reference_file(summary_statistics_file)
 
             project_task_status = set_project_status(project_statuses,
-                                                     project['name'],
+                                                     project,
                                                      reference_genome,
                                                      results_dir)
+            # project_task_status = set_project_status(project_statuses,
+            #                                          project['name'],
+            #                                          reference_genome,
+            #                                          results_dir)
 
-            project_summary = create_project_summary(project['name'],
-                                                     project_task_status,
-                                                     num_threads,
-                                                     reads_file_count,
-                                                     contigs_file_count,
-                                                     full_genome_file_count,
-                                                     exec_time,
-                                                     project['end_time'],
+            project_summary = create_project_summary(project, project_task_status, num_threads, reads_file_count,
+                                                     contigs_file_count, full_genome_file_count, exec_time,
                                                      reference_genome)
+            # project_summary = create_project_summary(project['name'],
+            #                                          project_task_status,
+            #                                          num_threads,
+            #                                          reads_file_count,
+            #                                          contigs_file_count,
+            #                                          full_genome_file_count,
+            #                                          exec_time,
+            #                                          project['end_time'],
+            #                                          reference_genome)
             projects_display_list.append(project_summary)
 
         run_summary_df = pd.DataFrame(projects_display_list)
@@ -782,12 +793,13 @@ def projects(username=None):
                 ['project name', '# of genomes analyzed',
                  '# of contigs', '# of reads',
                  'reference genome used', '# of threads',
-                 'status', 'execution time(h:m:s)', 'finish time', 'delete']
+                 'status', 'execution time(h:m:s)', 'delete']
+            # 'finish time',
         else:
             run_summary_columns = ['project name', '# of genomes analyzed',
                                    '# of contigs', '# of reads',
                                    'reference genome used', '# of threads',
-                                   'status', 'execution time(h:m:s)', 'finish time']
+                                   'status', 'execution time(h:m:s)']
 
         # Turn project name into a link to the display page if it's finished
         # running successfully
@@ -1144,17 +1156,21 @@ def get_log(project):
     :param project: Project name
     :return: json of log file
     """
-    log_file = os.path.join(current_app.config['PROJECT_DIRECTORY'],
-                            current_user.username, project, 'workdir',
-                            'results', f'{project}.log')
-    if not os.path.exists(log_file):
+    try:
+        log_file = os.path.join(current_app.config['PROJECT_DIRECTORY'],
+                                current_user.username, project, 'workdir',
+                                'results', f'{project}.log')
+        if not os.path.exists(log_file):
+            return jsonify({'log': 'null'})
+        with open(log_file, 'rb') as f:
+            f.seek(-2, os.SEEK_END)  # Jump to the second last byte.
+            while f.read(1) != b"\n":  # Until EOL is found...
+                f.seek(-2, os.SEEK_CUR)  # ...jump back the read byte plus one more
+            last = f.readline()
+        return jsonify({'log': str(last)})
+    except OSError as e:
+        logging.debug(f'Error reading log {e}')
         return jsonify({'log': 'null'})
-    with open(log_file, 'rb') as f:
-        f.seek(-2, os.SEEK_END)  # Jump to the second last byte.
-        while f.read(1) != b"\n":  # Until EOL is found...
-            f.seek(-2, os.SEEK_CUR)  # ...jump back the read byte plus one more
-        last = f.readline()
-    return jsonify({'log': str(last)})
 
 
 @phame_blueprint.route('/num_results_files/<project>', methods=['GET'])
@@ -1168,11 +1184,11 @@ def num_results_files(project):
 
 
 def send_mailgun(message, project):
-    key = os.environ['MAILGUN_KEY']
-    email_domain = 'mail.edgebioinformatics.org'
+    key = os.environ['API_KEY']
+    sender = os.environ['SENDER']
     recipient = current_user.email
     # logging.info('current_user.email: {0}'.format(recipient))
-    request_url = f'https://api.mailgun.net/v3/{email_domain}/messages'
+    request_url = os.environ['EMAIL_URL']
     results_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'],
                                current_user.username, project, 'workdir',
                                'results')
@@ -1184,7 +1200,7 @@ def send_mailgun(message, project):
         request_url,
         auth=('api', key),
         files=[("attachment", log_fh), ("attachment", error_fh)],
-        data={'from': 'donotreply@edgebioinformatics.org', 'to': recipient,
+        data={'from': sender, 'to': recipient,
               'subject': f'Project {project}', 'text': message})
     # logging.debug(f"from: {'donotreply@edgebioinformatics.org'} to: "
     #               f"{recipient} subject: Project {project} text: {message}")
@@ -1222,7 +1238,7 @@ def display(project, username=None):
     :param username: optional username of user
     :return: renders PhaME output page
     """
-    update_stats(project)
+    # update_stats(project)
     if not username:
         username = current_user.username
     project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'],

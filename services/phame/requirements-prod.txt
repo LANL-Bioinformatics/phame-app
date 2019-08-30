@@ -8,7 +8,6 @@ click==6.7
 flake8===3.6.0
 Flask==1.0.2
 flask-login
-flask_debugtoolbar==0.10.1
 flask_cors==3.0.7
 Flask-JSGlue
 flask_migrate==2.2.0
@@ -28,9 +27,4 @@ redis==2.10.6
 requests
 tornado==5.0.2
 vine==1.1.4
-<<<<<<< HEAD
-<<<<<<< HEAD:api/requirements.txt
-Werkzeug==0.15.3
-requests
-IPython
 Werkzeug==0.15.3
