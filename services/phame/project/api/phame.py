@@ -504,7 +504,7 @@ def create_project_summary(project, project_status, num_threads, reads_file_coun
     :param reference_genome: Reference genome file
     :return: project_summary dict
     """
-   project_summary = {'# of genomes analyzed': full_genome_file_count + contigs_file_count + reads_file_count,
+    project_summary = {'# of genomes analyzed': full_genome_file_count + contigs_file_count + reads_file_count,
                        '# of contigs': contigs_file_count,
                        '# of reads': reads_file_count,
                        '# of full genomes': full_genome_file_count,
