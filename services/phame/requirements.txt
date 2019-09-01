@@ -28,8 +28,6 @@ redis==2.10.6
 requests
 tornado==5.0.2
 vine==1.1.4
-<<<<<<< HEAD
-<<<<<<< HEAD:api/requirements.txt
 Werkzeug==0.15.3
 requests
 IPython
