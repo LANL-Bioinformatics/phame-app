@@ -527,10 +527,17 @@ def delete_projects():
     form = request.form
     projects = form.to_dict(flat=False)
     logging.debug(f'delete projects form {form.to_dict(flat=False)}')
-    for project in projects['deleteCheckBox']:
-        logging.debug(f'removing project: {project}')
-        shutil.rmtree(os.path.join(current_app.config['PROJECT_DIRECTORY'],
-                                   current_user.username, f'{project}'))
+    for project_name in projects['deleteCheckBox']:
+        logging.debug(f'removing project: {project_name}')
+        try:
+            shutil.rmtree(os.path.join(current_app.config['PROJECT_DIRECTORY'],
+                                   current_user.username, f'{project_name}'))
+            project = Project.query.filter_by(name=project_name)
+            db.session.delete(project)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+
     return redirect(url_for('phame.projects'))
 
 
