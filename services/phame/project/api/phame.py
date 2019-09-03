@@ -448,7 +448,7 @@ def get_num_threads(project_dir):
     try:
         num_threads = get_config_property(project_dir, 'threads')
         if num_threads is None:
-            num_threads = 'Unknown'
+            num_threads = 2
         return num_threads
     except IndexError as e:
         logging.debug(f'Could not get number of threads for {project_dir}')
