@@ -1,11 +1,14 @@
 # services/phame/manage.py
 
-
+import os
 from flask.cli import FlaskGroup
 import unittest
 import coverage
+import time
+from datetime import timedelta
 from project import create_app, db
-from project.api.models import User
+from project.api.models import User, Project
+from project.api.phame import get_num_threads, get_exec_time
 
 COV = coverage.coverage(
     branch=True,
@@ -62,6 +65,33 @@ def test():
     if result.wasSuccessful():
         return 0
     return 1
+
+
+@cli.command()
+def insert_projects():
+    """ Insert projects into database """
+    users = User.query.all()
+    for user in users:
+        proj_dir = os.path.join(app.config['PROJECT_DIRECTORY'], user.username)
+        for project_name in os.listdir(proj_dir):
+            num_threads = get_num_threads(os.path.join(proj_dir, project_name))
+            exec_time = get_exec_time(os.path.join(proj_dir, project_name))
+            if not os.path.exists(
+                os.path.join(os.path.join(proj_dir, project_name, 'workdir', 'results'),
+                             f'{project_name}.log')):
+                project_task_status = 'FAILURE'
+                mod_time = os.path.getmtime(os.path.join(proj_dir, project_name))
+            else:
+                project_task_status = 'SUCCESS'
+                mod_time = os.path.getmtime(os.path.join(proj_dir, project_name, 'config.ctl'))
+            start_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mod_time))
+            e_time = mod_time + exec_time
+            end_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(e_time))
+
+            project = Project(name=project_name, user=user, num_threads=num_threads, execution_time=exec_time,
+                              status=project_task_status, start_time=start_time, end_time=end_time)
+            db.session.add(project)
+            db.session.commit()
 
 
 if __name__ == '__main__':

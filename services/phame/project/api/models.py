@@ -35,15 +35,16 @@ class StatusTypes(enum.IntEnum):
 
 class User(db.Model, UserMixin):
 
-    __tablename__ = 'user'
+    __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column(db.String(128), nullable=False)
-    email = db.Column(db.String(128), nullable=False)
+    username = db.Column(db.String(128), unique=True, nullable=False)
+    email = db.Column(db.String(128), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
-    # active = db.Column(db.Boolean(), default=True, nullable=False)
-    # created_date = db.Column(db.DateTime, default=func.now(), nullable=False)
-    # projects = db.relationship('Project', backref='user', lazy=True)
+    active = db.Column(db.Boolean(), default=True, nullable=False)
+    created_date = db.Column(db.DateTime, default=func.now(), nullable=False)
+    is_admin = db.Column(db.Boolean(), default=False, nullable=False)
+    projects = db.relationship('Project', backref='user', lazy=True)
 
     def to_json(self):
         return {
@@ -75,7 +76,7 @@ class Project(db.Model):
     status = db.Column(db.String(30), default='PENDING')
     # status = db.Column(IntEnum(StatusTypes), default=StatusTypes.FAILURE)
     num_threads = db.Column(db.Integer, default=2)
-    # user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
     def convert_seconds_to_time(self):
         m, s = divmod(self.execution_time, 60)

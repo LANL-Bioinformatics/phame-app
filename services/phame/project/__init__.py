@@ -3,7 +3,6 @@ import os
 from flask import Flask  # new
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
-from flask_debugtoolbar import DebugToolbarExtension
 from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_jsglue import JSGlue
@@ -11,7 +10,6 @@ from flask_jsglue import JSGlue
 # instantiate the db
 db = SQLAlchemy()
 login_manager = LoginManager()
-toolbar = DebugToolbarExtension()
 cors = CORS()
 migrate = Migrate()
 jsglue = JSGlue()
@@ -30,7 +28,6 @@ def create_app(script_info=None):
     db.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'users.login'
-    toolbar.init_app(app)
     cors.init_app(app)
     migrate.init_app(app, db)
     jsglue.init_app(app)

@@ -489,45 +489,8 @@ def get_file_counts(refdir, workdir):
     return reads_file_count, contigs_file_count, full_genome_file_count
 
 
-# def create_project_summary(project, project_status, num_threads,
-#                            reads_file_count, contigs_file_count,
-#                            full_genome_file_count, exec_time, end_time,
-#                            reference_genome):
-#     """
-#     Create run summary for project
-#     Adds a 'delete' field if the user is not 'public'
-#     :param project: Project name
-#     :param project_status: Status of project
-#     :param num_threads: Number of threads used for project
-#     :param reads_file_count: Number of reads files
-#     :param contigs_file_count: Number of contig files
-#     :param full_genome_file_count: Number of full genome files
-#     :param exec_time: How long it took for project to run
-#     :param reference_genome: Reference genome file
-#     :return: project_summary dict
-#     """
-#     project_summary = \
-#         {'# of genomes analyzed':
-#             full_genome_file_count + contigs_file_count + reads_file_count,
-#          '# of contigs': contigs_file_count,
-#          '# of reads': reads_file_count,
-#          '# of full genomes': full_genome_file_count,
-#          'reference genome used': reference_genome,
-#          'project name': project,
-#          '# of threads': num_threads,
-#          'status': project_status,
-#          'execution time(h:m:s)': exec_time,
-#          'finish time': end_time
-#          }
-#     # logging.debug(f'project {project}')
-#     # logging.debug(f'current user username {current_user.username}')
-#     if current_user.username != 'public':
-#         project_summary['delete'] = \
-#             f'<input name="deleteCheckBox" type="checkbox" ' \
-#             f'value={project} unchecked">'
-#     return project_summary
 def create_project_summary(project, project_status, num_threads, reads_file_count, contigs_file_count,
-                        full_genome_file_count, exec_time, reference_genome):
+                        full_genome_file_count, exec_time, end_time, reference_genome):
     """
     Create run summary for project
     Adds a 'delete' field if the user is not 'public'
@@ -549,6 +512,7 @@ def create_project_summary(project, project_status, num_threads, reads_file_coun
                        'project name': project,
                        '# of threads': num_threads,
                        'status': project_status,
+                       'end time': end_time,
                        'execution time(h:m:s)': exec_time
                        }
     if current_user.username != 'public':
@@ -738,8 +702,8 @@ def projects(username=None):
             os.makedirs(os.path.join(current_app.config['PROJECT_DIRECTORY'],
                                      display_user))
 
-        # projects_list = get_all_project_stats()
-        projects_list = [project for project in os.listdir(os.path.join(current_app.config['PROJECT_DIRECTORY'], display_user))]
+        projects_list = get_all_project_stats()
+        # projects_list = [project for project in os.listdir(os.path.join(current_app.config['PROJECT_DIRECTORY'], display_user))]
 
         logging.debug(f"projects project_stats {projects_list}")
         # logging.debug(f'projects proj_list {proj_list}')
@@ -770,28 +734,28 @@ def projects(username=None):
             # project_dir, workdir, results_dir, refdir = \
                 # set_directories(display_user, project['name'])
             project_dir, workdir, results_dir, refdir = \
-                set_directories(display_user, project)
+                set_directories(display_user, project['name'])
 
             # hack to fix tables for subsetted projects
-            # if re.search('_subset$', project['name']):
-            #     fix_subset_tables(project['name'], results_dir)
-            if re.search('_subset$', project):
-                fix_subset_tables(project, results_dir)
-
-            # summary_statistics_file = \
-            #     os.path.join(results_dir, 'tables',
-            #                  f"{project['name']}_summaryStatistics.txt")
+            if re.search('_subset$', project['name']):
+                fix_subset_tables(project['name'], results_dir)
+            # if re.search('_subset$', project):
+            #     fix_subset_tables(project, results_dir)
 
             summary_statistics_file = \
                 os.path.join(results_dir, 'tables',
-                             f"{project}_summaryStatistics.txt")
+                             f"{project['name']}_summaryStatistics.txt")
+
+            # summary_statistics_file = \
+            #     os.path.join(results_dir, 'tables',
+            #                  f"{project}_summaryStatistics.txt")
 
             # create output tables
             reads_file_count, contigs_file_count, full_genome_file_count = \
                 get_file_counts(refdir, workdir)
 
-            # num_threads = project['num_threads']
-            # exec_time= project['execution_time']
+            num_threads = project['num_threads']
+            exec_time= project['execution_time']
             num_threads = get_num_threads(project_dir)
 
             exec_time = get_exec_time(project_dir)
@@ -799,28 +763,29 @@ def projects(username=None):
 
             reference_genome = get_reference_file(summary_statistics_file)
 
-            project_task_status = set_project_status(project_statuses,
-                                                     project,
-                                                     reference_genome,
-                                                     results_dir)
             # project_task_status = set_project_status(project_statuses,
-            #                                          project['name'],
+            #                                          project,
             #                                          reference_genome,
             #                                          results_dir)
+            project_task_status = set_project_status(project_statuses,
+                                                     project['name'],
+                                                     reference_genome,
+                                                     results_dir)
 
-            project_summary = create_project_summary(project, project_task_status, num_threads, reads_file_count,
-                                                     contigs_file_count, full_genome_file_count, exec_time,
-                                                     reference_genome)
-            # project_summary = create_project_summary(project['name'],
-            #                                          project_task_status,
-            #                                          num_threads,
-            #                                          reads_file_count,
-            #                                          contigs_file_count,
-            #                                          full_genome_file_count,
-            #                                          exec_time,
-            #                                          project['end_time'],
+            # project_summary = create_project_summary(project, project_task_status, num_threads, reads_file_count,
+            #                                          contigs_file_count, full_genome_file_count, exec_time,
             #                                          reference_genome)
+            project_summary = create_project_summary(project['name'],
+                                                     project_task_status,
+                                                     num_threads,
+                                                     reads_file_count,
+                                                     contigs_file_count,
+                                                     full_genome_file_count,
+                                                     exec_time,
+                                                     project['end_time'],
+                                                     reference_genome)
             projects_display_list.append(project_summary)
+
 
         run_summary_df = pd.DataFrame(projects_display_list)
 
@@ -830,13 +795,13 @@ def projects(username=None):
                 ['project name', '# of genomes analyzed',
                  '# of contigs', '# of reads',
                  'reference genome used', '# of threads',
-                 'status', 'execution time(h:m:s)', 'delete']
+                 'status', 'execution time(h:m:s)', 'finish time','delete']
             # 'finish time',
         else:
             run_summary_columns = ['project name', '# of genomes analyzed',
                                    '# of contigs', '# of reads',
                                    'reference genome used', '# of threads',
-                                   'status', 'execution time(h:m:s)']
+                                   'status', 'execution time(h:m:s)', 'finish time']
 
         # Turn project name into a link to the display page if it's finished
         # running successfully
@@ -845,7 +810,7 @@ def projects(username=None):
             lambda x: '<a href="/phame/display/{0}/{1}">{1}</a>'.format(
                 display_user, x['project name']) if (x['status'] == 'SUCCESS')
             else x['project name'], axis=1)
-
+        logging.debug(f'run_summary_df {run_summary_df}')
         run_summary_df = run_summary_df[run_summary_columns]
 
         return render_template('projects.html',
@@ -1275,7 +1240,7 @@ def display(project, username=None):
     :param username: optional username of user
     :return: renders PhaME output page
     """
-    # update_stats(project)
+    update_stats(project)
     if not username:
         username = current_user.username
     project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'],
