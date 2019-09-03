@@ -512,8 +512,8 @@ def create_project_summary(project, project_status, num_threads, reads_file_coun
                        'project name': project,
                        '# of threads': num_threads,
                        'status': project_status,
-                       'end time': end_time,
-                       'execution time(h:m:s)': exec_time
+                       'execution time(h:m:s)': exec_time,
+                       'finish time': end_time
                        }
     if current_user.username != 'public':
         project_summary['delete'] = '<input name="deleteCheckBox" type="checkbox" value={0} unchecked">'.format(
