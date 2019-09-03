@@ -31,6 +31,9 @@ class TestingConfig(BaseConfig):
     WTF_CSRF_ENABLED = False
     LOGIN_DISABLED = True
     DEBUG = True
+    PROJECT_DIRECTORY = os.path.join('/test', 'media')
+    UPLOAD_DIRECTORY = os.path.join('/test', 'static', 'uploads')
+    PHAME_UPLOAD_DIR = os.path.join('/test', 'static', 'uploads')
 
 
 class ProductionConfig(BaseConfig):
