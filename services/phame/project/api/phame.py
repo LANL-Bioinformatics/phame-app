@@ -800,7 +800,7 @@ def projects(username=None):
         pd.set_option('display.max_colwidth', 1000)
 
         display_user = \
-            username if username and current_user.username == 'admin' else \
+            username if username and current_user.is_admin else \
             current_user.username
 
         logging.debug(f'display_user {display_user}')
