@@ -340,9 +340,11 @@ def upload_files_list():
 @phame_blueprint.route('/remove', methods=['POST'])
 def remove_files():
     """Remove all of user's uploaded files"""
+    logging.debug('removing files...')
     file_list = os.listdir(os.path.join(current_app.config['UPLOAD_DIRECTORY'],
                                         current_user.username))
     for file_name in file_list:
+        logging.debug(f'removing {file_name}')
         os.remove(os.path.join(current_app.config['UPLOAD_DIRECTORY'],
                                current_user.username, file_name))
     file_list = os.listdir(os.path.join(current_app.config['UPLOAD_DIRECTORY'],
@@ -767,7 +769,7 @@ def add_stats():
 #         return jsonify(response_object), 400
 
 
-def get_all_project_stats():
+def get_all_project_stats(display_user):
     """
     Get project stats
     :return: stats for all projects
@@ -777,7 +779,7 @@ def get_all_project_stats():
         'message': 'Invalid payload'
     }
     try:
-        user = User.query.filter_by(username=current_user.username).first()
+        user = User.query.filter_by(username=display_user).first()
 
         return [project.to_json() for project in Project.query.filter_by(user=user)]
     except IntegrityError:
@@ -801,7 +803,7 @@ def projects(username=None):
             username if username and current_user.username == 'admin' else \
             current_user.username
 
-        # logging.debug(f'display_user {display_user}')
+        logging.debug(f'display_user {display_user}')
         # list of all projects for this user
         if not os.path.exists(
                 os.path.join(current_app.config['PROJECT_DIRECTORY'],
@@ -809,7 +811,7 @@ def projects(username=None):
             os.makedirs(os.path.join(current_app.config['PROJECT_DIRECTORY'],
                                      display_user))
 
-        projects_list = get_all_project_stats()
+        projects_list = get_all_project_stats(display_user)
         # projects_list = [project for project in os.listdir(os.path.join(current_app.config['PROJECT_DIRECTORY'], display_user))]
 
         logging.debug(f"projects project_stats {projects_list}")

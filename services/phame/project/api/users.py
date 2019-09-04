@@ -156,7 +156,7 @@ def add_user():
 
 @users_blueprint.route('/profile', methods=['GET', 'POST'])
 def profile():
-    if current_user.username == 'admin':
+    if current_user.is_admin:
         form = AdminForm()
         user_list = User.query.all()
         # for a in user_list:
