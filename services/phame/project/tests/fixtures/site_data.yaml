@@ -1,0 +1,39 @@
+site_params:
+  PHAME_TEST_URL:
+    'https://localhost/phame'
+
+create_report_widget_list :
+  [{'widget_type':'combo', 'widget_id': 'location','widget_value': 'Ascension M1'},
+  {'widget_type':'combo', 'widget_id': 'instrument', 'widget_group':'Microwave Radiometers', 'widget_value': 'MWR'},
+  {'widget_type':'combo', 'widget_id': 'component','widget_value': 'GNDRAD-IRT'},
+  {'widget_type':'text', 'widget_id': 'correctiveaction','widget_value': 'test'},
+  {'widget_type':'text','widget_id': 'rootcause','widget_value': 'marmots'},
+  {'widget_type':'text','widget_id': 'description','widget_value': 'test report to be deleted'},
+  {'widget_type':'text','widget_id': 'outageended','widget_value': '2016-10-07'},
+  {'widget_type':'text','widget_id': 'outagestarted','widget_value': '2016-09-24'}]
+
+show_report_list :
+  [{'widget_id': 'locationtxt','widget_value': 'Ascension M1'},
+  {'widget_id': 'instrumenttxt', 'widget_value': 'TSI'},
+  {'widget_id': 'outagestartedtxt', 'widget_value': '2017-03-15 11:00'},
+  {'widget_id': 'outageendedtxt', 'widget_value': '2017-03-15 11:20'},
+  {'widget_id': 'operatortxt', 'widget_value': 'Bruno Cunha'},
+  {'widget_id': 'reportdatetxt', 'widget_value': '2017-03-15'},
+  {'widget_id': 'problemfixedtxt', 'widget_value': 'Not actually a problem'},
+  {'widget_id': 'correctiveactiontxt', 'widget_value': ''},
+  {'widget_id': 'descriptiontxt', 'widget_value': 'TEST REPORT DO NOT DELETE'},
+  {'widget_id': 'followupactionstxt', 'widget_value': u'\u2612Send email to distribution list'}]
+
+filter_reports_list :
+  operator :
+    'Vagner Castro (Castro)'
+  id_location :
+    'Manacapuru M1'
+  id_instrument:
+    'SASZE'
+  report_link:
+    'CM-2015-AMF1-VSN-1340'
+  filtered_out_report:
+    'CM-2017-AMF1-VSN-2212'
+  number_of_reports:
+    11

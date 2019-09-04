@@ -5,7 +5,7 @@ api/static/trees
 api/static/uploads
 .envs/.local/.email
 .envs/.local/.postgres
-
+services/phame/project/tests/fixtures/operator_data.yaml
 # IntelliJ project files
 .idea
 *.iml

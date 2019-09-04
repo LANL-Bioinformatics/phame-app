@@ -1,0 +1,4 @@
+admin_credentials = {'PHAME_ADMIN_USERNAME': 'fake_admin', 'PHAME_ADMIN_PASSWORD': 'fake_password', 'PHAME_ADMIN_NAME': 'fake_person'}
+operator_credentials = {'PHAME_OPERATOR_USERNAME': 'test_user', 'PHAME_OPERATOR_PASSWORD': 'NOT_A_PASSWORD',
+                        'PHAME_OPERATOR_NAME': 'User Name',
+                        'PHAME_OPERATOR_EMAIL': 'user@example.com'}
