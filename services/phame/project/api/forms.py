@@ -4,7 +4,7 @@ from wtforms import StringField, PasswordField, BooleanField, SubmitField, \
     SelectField, widgets, SelectMultipleField, \
     validators, HiddenField
 from wtforms.fields.html5 import DecimalRangeField
-from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
+from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, Regexp, Length
 from project.api.models import User
 
 
@@ -98,7 +98,7 @@ class InputForm(FlaskForm):
 
 
 class RegistrationForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
+    username = StringField('Username', validators=[DataRequired(), Regexp(r'^[\w.@+-]+$', message='Username cannot contain spaces'), Length(min=4, max=25)])
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
     password2 = PasswordField(
