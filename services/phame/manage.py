@@ -48,12 +48,26 @@ def recreate_db():
 
 @cli.command('seed_db')
 def seed_db():
-    """seeds db password='test'"""
-    password_hash = 'pbkdf2:sha256:50000$MP1SI8HV$d0a7a5403c7edaba6ca8c8bb69a925321488bcd090a80e0161383c20cb5ba943'
-    db.session.add(User(username='mark', password_hash = password_hash, email='mcflynn617@gmail.com'))
-    db.session.add(User(username='mflynn', password_hash = password_hash, email='mflynn@lanl.gov'))
-    db.session.add(User(username='public', password_hash = password_hash, email='public@example.com'))
-    db.session.add(User(username='admin', password_hash = password_hash, email='admin@example.com'))
+    user1 = User(username=os.environ.get('USER'),
+                 email=os.environ.get('EMAIL'),
+                 is_admin=False
+                 )
+    print(os.environ.get('USER'))
+    user1.set_password(os.environ.get('PASSWORD'))
+    db.session.add(user1)
+
+    print(os.environ.get('ADMIN'))
+    admin = User(username=os.environ.get('ADMIN'),
+                 email=os.environ.get('ADMIN_EMAIL'),
+                 is_admin=True
+                 )
+    admin.set_password(os.environ.get('ADMIN_PASSWORD'))
+    db.session.add(admin)
+
+    public = User(username=os.environ.get('PUBLIC'), email=os.environ.get('PUBLIC_EMAIL'),
+                 is_admin=False)
+    public.set_password(os.environ.get('PUBLIC_PASSWORD'))
+    db.session.add(public)
     db.session.commit()
 
 
@@ -66,6 +80,14 @@ def test():
         return 0
     return 1
 
+@cli.command()
+def func_test():
+    """ Runs the tests without code coverage"""
+    tests = unittest.TestLoader().discover('project/tests', pattern='functional_tests.py')
+    result = unittest.TextTestRunner(verbosity=2).run(tests)
+    if result.wasSuccessful():
+        return 0
+    return 1
 
 @cli.command()
 def insert_projects():
