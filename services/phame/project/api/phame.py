@@ -39,6 +39,103 @@ def index():
     return render_template('index.html', specs=specs)
 
 
+@phame_blueprint.route('/input', methods=['GET', 'POST'])
+@login_required
+def input():
+    """
+    Takes flask form, checks parameters to make sure they are correct for
+    PhaME, creates PhaME config
+    file
+    :return:
+    """
+    if current_user.username == 'public':
+        return redirect(url_for('phame.projects'))
+
+    form = InputForm()
+    if not os.path.exists(os.path.join(current_app.config['UPLOAD_DIRECTORY'],
+                                       current_user.username)):
+        os.makedirs(os.path.join(current_app.config['UPLOAD_DIRECTORY'],
+                                 current_user.username))
+    files_list = sorted(os.listdir(os.path.join(
+        current_app.config['UPLOAD_DIRECTORY'], current_user.username)))
+    form.reference_file.choices = []
+    form.complete_genomes.choices = [
+        (a, a) for a in files_list if (
+            a.endswith('fna') or a.endswith('fasta') or a.endswith('gff'))]
+    form.contigs.choices = [
+        (a, a) for a in files_list if (a.endswith('contig') or a.endswith('fasta'))]
+    form.reads.choices = [(a, a) for a in files_list if a.endswith('fastq')]
+
+    if request.method == 'POST':
+        # logging.debug(f'request method {request.method}')
+        # logging.debug(f'reference file {form.reference_file.data}')
+        if len(form.project.data) == 0:
+            error = 'Please enter a project name'
+            return render_template('input.html', title='Phame input',
+                                   form=form, error=error)
+        logging.debug(f'form {request.form}')
+        logging.debug(f'form flat {request.form.to_dict(flat=False)}')
+        # logging.debug(f'form {request.form.to_dict()}')
+        project_dir, ref_dir = project_setup(form)
+        # logging.debug(f'ref file {form.reference_file.data}')
+        if project_dir is None:
+            # project creation failed because there is an existing project
+            # that successfully completed
+            error = 'Project directory already exists'
+            return render_template('input.html', title='Phame input',
+                                   form=form, error=error)
+        if form.validate_on_submit():
+            # logging.debug(f"data {form.data_type.data}")
+
+            # Perform validation based on requirements of PhaME
+            # if (
+            #     '1' in form.data_type.data or '2' in form.data_type.data
+            # ) and len(form.reference_file.data) == 0:
+            #     error = 'You must upload a reference genome if you select ' \
+            #             'Contigs or Reads from Data'
+            #     remove_uploaded_files(project_dir)
+            #     return render_template('input.html', title='Phame input',
+            #                            form=form, error=error)
+
+            # Ensure each fasta file has a corresponding mapping file if
+            # Generate SNPs is yes and 'random' or 'ani'
+            if form.cds_snps.data == '1' and (
+                    form.reference.data == '0' or form.reference.data == '2'):
+                for fname in os.listdir(ref_dir):
+                    if fname.endswith(
+                            '.fa') or fname.endswith(
+                            '.fasta') or fname.endswith('.fna'):
+                        if not os.path.exists(os.path.join(
+                            ref_dir, f"{fname.split('.')[0]}.{'gff'}")
+                        ):
+                            remove_uploaded_files(project_dir)
+                            error = \
+                                'Each full genome file must have a ' \
+                                'corresponding .gff file if "Generate SNPs ' \
+                                'from coding regions" ' \
+                                'is yes and "Reference" is random or ANI'
+                            return render_template('input.html',
+                                                   title='Phame input',
+                                                   form=form, error=error)
+
+            # Ensure a reference file is selected if the Reference option
+            # selected is 'manual selection'
+            if form.reference.data == '1' and len(
+                    form.reference_file.data) == 0:
+                error = 'You must select a reference genome if you select ' \
+                        '"manual selection" from the Reference menu'
+                remove_uploaded_files(project_dir)
+                return render_template('input.html', title='Phame input',
+                                       form=form, error=error)
+            # Create config file
+            create_config_file(request.form.to_dict())
+
+            return redirect(url_for('phame.runphame',
+                                    project=form.project.data))
+
+    return render_template('input.html', title='Phame input', form=form)
+
+
 def symlink_uploaded_file(dest_dir, upload_file, source_file=None):
     if not source_file:
         source_file = upload_file
@@ -321,7 +418,7 @@ def get_all_task_statuses():
     """
     statuses = requests.get('http://monitor:5555/api/tasks')
     # logging.debug(f'status: {statuses.text}')
-    logging.debug(f'status json: {statuses.json()}')
+    # logging.debug(f'status json: {statuses.json()}')
     return statuses.json()
 
 
@@ -335,7 +432,7 @@ def get_project_statuses(display_user):
     project_statuses = []
     for task, status in task_statuses.items():
         args_list = ast.literal_eval(status['args'])
-        logging.debug(f"task: {task}, {args_list[1]}, {status['state']}")
+        # logging.debug(f"task: {task}, {args_list[1]}, {status['state']}")
         if args_list[0] == display_user:
             project_statuses.append({'project': args_list[1],
                                      'state': status['state']})
@@ -351,7 +448,7 @@ def get_num_threads(project_dir):
     try:
         num_threads = get_config_property(project_dir, 'threads')
         if num_threads is None:
-            num_threads = 'Unknown'
+            num_threads = 2
         return num_threads
     except IndexError as e:
         logging.debug(f'Could not get number of threads for {project_dir}')
@@ -435,9 +532,9 @@ def set_directories(display_user, project):
     """
     project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'],
                                display_user, project)
+    refdir = os.path.join(project_dir, 'refdir')
     workdir = os.path.join(project_dir, 'workdir')
     results_dir = os.path.join(workdir, 'results')
-    refdir = os.path.join(project_dir, 'refdir')
     return project_dir, workdir, results_dir, refdir
 
 
@@ -473,6 +570,7 @@ def get_file_counts(refdir, workdir):
     :return: Number of full, contig and read files
     """
     try:
+        logging.debug(f'refdir {refdir} exists {os.path.exists(refdir)}')
         reads_file_count = len(
             [fname for fname in os.listdir(refdir) if (
                 fname.endswith('.fq') or fname.endswith('.fastq'))])
@@ -484,6 +582,7 @@ def get_file_counts(refdir, workdir):
                                       (fname.endswith('.fna') or fname.endswith(
                                           '.fasta'))])
     except FileNotFoundError as e:
+        logging.debug(f'FileNotFoundError for {refdir}, {workdir}: {e}')
         return 0, 0, 0
 
     return reads_file_count, contigs_file_count, full_genome_file_count
@@ -527,10 +626,18 @@ def delete_projects():
     form = request.form
     projects = form.to_dict(flat=False)
     logging.debug(f'delete projects form {form.to_dict(flat=False)}')
-    for project in projects['deleteCheckBox']:
-        logging.debug(f'removing project: {project}')
-        shutil.rmtree(os.path.join(current_app.config['PROJECT_DIRECTORY'],
-                                   current_user.username, f'{project}'))
+    for project_name in projects['deleteCheckBox']:
+        logging.debug(f'removing project: {project_name}')
+        try:
+            shutil.rmtree(os.path.join(current_app.config['PROJECT_DIRECTORY'],
+                                   current_user.username, f'{project_name}'))
+            project = Project.query.filter_by(name=project_name).first()
+            logging.debug(f'project.name {project.name}')
+            db.session.delete(project)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+
     return redirect(url_for('phame.projects'))
 
 
@@ -568,7 +675,7 @@ def add_stats():
     :param project:
     :return:
     """
-    logging.debug('adding stats')
+    # logging.debug('adding stats')
     response_object = {
         'status': 'fail',
         'message': 'Invalid payload'
@@ -707,13 +814,9 @@ def projects(username=None):
 
         logging.debug(f"projects project_stats {projects_list}")
         # logging.debug(f'projects proj_list {proj_list}')
-        user = User.query.filter_by(username=current_user.username).first()
-        response_object = {'status': 'success', 'data': {
-            'projects': projects_list}}
-    #     return jsonify(response_object), 200
-    # except IntegrityError:
-    #     db.session.rollback()
-    #     return jsonify(response_object), 400
+        # user = User.query.filter_by(username=current_user.username).first()
+        # response_object = {'status': 'success', 'data': {
+        #     'projects': projects_list}}
 
         if len(projects_list) == 0 and current_user.username != 'public':
             return redirect(url_for('phame.input'))
@@ -730,51 +833,30 @@ def projects(username=None):
         for project in projects_list:
 
             logging.debug(f'{project}')
-
-            # project_dir, workdir, results_dir, refdir = \
-                # set_directories(display_user, project['name'])
             project_dir, workdir, results_dir, refdir = \
                 set_directories(display_user, project['name'])
-
             # hack to fix tables for subsetted projects
             if re.search('_subset$', project['name']):
                 fix_subset_tables(project['name'], results_dir)
-            # if re.search('_subset$', project):
-            #     fix_subset_tables(project, results_dir)
 
             summary_statistics_file = \
                 os.path.join(results_dir, 'tables',
                              f"{project['name']}_summaryStatistics.txt")
-
-            # summary_statistics_file = \
-            #     os.path.join(results_dir, 'tables',
-            #                  f"{project}_summaryStatistics.txt")
 
             # create output tables
             reads_file_count, contigs_file_count, full_genome_file_count = \
                 get_file_counts(refdir, workdir)
 
             num_threads = project['num_threads']
-            exec_time= project['execution_time']
-            num_threads = get_num_threads(project_dir)
-
-            exec_time = get_exec_time(project_dir)
-            # exec_time = convert_seconds_to_time(exec_time_secs)
+            exec_time = project['execution_time']
 
             reference_genome = get_reference_file(summary_statistics_file)
 
-            # project_task_status = set_project_status(project_statuses,
-            #                                          project,
-            #                                          reference_genome,
-            #                                          results_dir)
             project_task_status = set_project_status(project_statuses,
                                                      project['name'],
                                                      reference_genome,
                                                      results_dir)
 
-            # project_summary = create_project_summary(project, project_task_status, num_threads, reads_file_count,
-            #                                          contigs_file_count, full_genome_file_count, exec_time,
-            #                                          reference_genome)
             project_summary = create_project_summary(project['name'],
                                                      project_task_status,
                                                      num_threads,
@@ -823,103 +905,6 @@ def projects(username=None):
                                error={
                                    'msg': f'There was a problem displaying '
                                    f'projects: {str(e)}'})
-
-
-@phame_blueprint.route('/input', methods=['GET', 'POST'])
-@login_required
-def input():
-    """
-    Takes flask form, checks parameters to make sure they are correct for
-    PhaME, creates PhaME config
-    file
-    :return:
-    """
-    if current_user.username == 'public':
-        return redirect(url_for('phame.projects'))
-
-    form = InputForm()
-    if not os.path.exists(os.path.join(current_app.config['UPLOAD_DIRECTORY'],
-                                       current_user.username)):
-        os.makedirs(os.path.join(current_app.config['UPLOAD_DIRECTORY'],
-                                 current_user.username))
-    files_list = sorted(os.listdir(os.path.join(
-        current_app.config['UPLOAD_DIRECTORY'], current_user.username)))
-    form.reference_file.choices = []
-    form.complete_genomes.choices = [
-        (a, a) for a in files_list if (
-            a.endswith('fna') or a.endswith('fasta') or a.endswith('gff'))]
-    form.contigs.choices = [
-        (a, a) for a in files_list if (a.endswith('contig') or a.endswith('fasta'))]
-    form.reads.choices = [(a, a) for a in files_list if a.endswith('fastq')]
-
-    if request.method == 'POST':
-        # logging.debug(f'request method {request.method}')
-        # logging.debug(f'reference file {form.reference_file.data}')
-        if len(form.project.data) == 0:
-            error = 'Please enter a project name'
-            return render_template('input.html', title='Phame input',
-                                   form=form, error=error)
-        logging.debug(f'form {request.form}')
-        logging.debug(f'form flat {request.form.to_dict(flat=False)}')
-        # logging.debug(f'form {request.form.to_dict()}')
-        project_dir, ref_dir = project_setup(form)
-        # logging.debug(f'ref file {form.reference_file.data}')
-        if project_dir is None:
-            # project creation failed because there is an existing project
-            # that successfully completed
-            error = 'Project directory already exists'
-            return render_template('input.html', title='Phame input',
-                                   form=form, error=error)
-        if form.validate_on_submit():
-            # logging.debug(f"data {form.data_type.data}")
-
-            # Perform validation based on requirements of PhaME
-            # if (
-            #     '1' in form.data_type.data or '2' in form.data_type.data
-            # ) and len(form.reference_file.data) == 0:
-            #     error = 'You must upload a reference genome if you select ' \
-            #             'Contigs or Reads from Data'
-            #     remove_uploaded_files(project_dir)
-            #     return render_template('input.html', title='Phame input',
-            #                            form=form, error=error)
-
-            # Ensure each fasta file has a corresponding mapping file if
-            # Generate SNPs is yes and 'random' or 'ani'
-            if form.cds_snps.data == '1' and (
-                    form.reference.data == '0' or form.reference.data == '2'):
-                for fname in os.listdir(ref_dir):
-                    if fname.endswith(
-                            '.fa') or fname.endswith(
-                            '.fasta') or fname.endswith('.fna'):
-                        if not os.path.exists(os.path.join(
-                            ref_dir, f"{fname.split('.')[0]}.{'gff'}")
-                        ):
-                            remove_uploaded_files(project_dir)
-                            error = \
-                                'Each full genome file must have a ' \
-                                'corresponding .gff file if "Generate SNPs ' \
-                                'from coding regions" ' \
-                                'is yes and "Reference" is random or ANI'
-                            return render_template('input.html',
-                                                   title='Phame input',
-                                                   form=form, error=error)
-
-            # Ensure a reference file is selected if the Reference option
-            # selected is 'manual selection'
-            if form.reference.data == '1' and len(
-                    form.reference_file.data) == 0:
-                error = 'You must select a reference genome if you select ' \
-                        '"manual selection" from the Reference menu'
-                remove_uploaded_files(project_dir)
-                return render_template('input.html', title='Phame input',
-                                       form=form, error=error)
-            # Create config file
-            create_config_file(request.form.to_dict())
-
-            return redirect(url_for('phame.runphame',
-                                    project=form.project.data))
-
-    return render_template('input.html', title='Phame input', form=form)
 
 
 def get_config_property(project_dir, config_property):
@@ -1169,7 +1154,7 @@ def get_log(project):
             while f.read(1) != b"\n":  # Until EOL is found...
                 f.seek(-2, os.SEEK_CUR)  # ...jump back the read byte plus one more
             last = f.readline()
-        return jsonify({'log': str(last)})
+        return jsonify({'log': last.decode('utf-8').strip()})
     except OSError as e:
         logging.debug(f'Error reading log {e}')
         return jsonify({'log': 'null'})

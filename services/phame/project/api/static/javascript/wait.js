@@ -60,7 +60,7 @@ function update_progress(status_url, project) {
           console.log('status: '+status);
           if (result !== null) {
             console.log('result not null, sending status');
-            // send_stats(project, result);
+            send_stats(project, result);
           }
 
           let last_line;
@@ -75,6 +75,7 @@ function update_progress(status_url, project) {
           });
 
             if (result !== 'PENDING' && result !== 'PROGRESS')  {
+                //project has finished executing
               let loading_div = document.getElementById("loading");
               let content_div = document.getElementById("content");
               loading_div.style.display = 'none';

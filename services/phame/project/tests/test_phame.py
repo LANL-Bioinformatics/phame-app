@@ -29,7 +29,8 @@ class PhameTest(BaseTestCase):
     TESTING = True
 
     def setUp(self):
-        self.project_dir = os.path.join('/test', 'mark', 'test1')
+        self.project_name = 'test1'
+        self.project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], 'mark', self.project_name)
         self.ref_dir = os.path.join(self.project_dir, 'refdir')
         self.work_dir = os.path.join(self.project_dir, 'workdir')
         self.upload_dir = current_app.config['UPLOAD_DIRECTORY']
@@ -84,16 +85,15 @@ class PhameTest(BaseTestCase):
         return [test_file, test_file2]
 
     def create_project(self, project, exec_time, end_time, status, num_threads, user):
-        project_dir = os.path.join('/test', user.username, project)
-        if os.path.exists(project_dir):
-            shutil.rmtree(project_dir)
-        self.create_config_file()
-        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], user.username, project)
         ref_dir = os.path.join(project_dir, 'refdir')
         work_dir = os.path.join(project_dir, 'workdir')
+        if os.path.exists(project_dir):
+            shutil.rmtree(project_dir)
+        self.create_test_config_file()
         os.makedirs(ref_dir)
         os.makedirs(os.path.join(work_dir, 'results'))
-        print(f'ref_dir {ref_dir}')
+        print(f'project ref_dir {ref_dir} exists {os.path.exists(ref_dir)}')
         os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'], 'mark',
                                 'KJ660347.fasta'),
                    os.path.join(ref_dir, 'KJ660347.fasta'))
@@ -125,8 +125,8 @@ class PhameTest(BaseTestCase):
             if os.path.exists(file_name):
                 os.remove(file_name)
 
-    def create_config_file(self, field_dict=None):
-        form = dict(project='test1', ref_dir=self.ref_dir,
+    def create_test_config_file(self, field_dict=None):
+        form = dict(project=self.project_name, ref_dir=self.ref_dir,
                     work_dir=self.work_dir, reference='1',
                     reference_file='KJ660347.fasta', cds_snps='0',
                     buildSNPdb='1', first_time='1', data_type='4',
@@ -135,7 +135,6 @@ class PhameTest(BaseTestCase):
                     cutoff='0.2')
         if field_dict is not None:
             form[field_dict['field']] = field_dict['value']
-        current_app.config['PROJECT_DIRECTORY'] = '/test'
         self.add_user()
         os.makedirs(self.project_dir, exist_ok=True)
         with self.client:
@@ -150,7 +149,6 @@ class PhameTest(BaseTestCase):
                 open(os.path.join('project', 'tests', 'fixtures', f), 'rb'))
             fname_list.append(f)
         data = dict(file=file_list)
-        # print(current_app.config['PHAME_UPLOAD_DIR'])
         files = self.create_paths(
             os.path.join(current_app.config['PHAME_UPLOAD_DIR'], 'mark'),
             fname_list)
@@ -169,7 +167,6 @@ class PhameTest(BaseTestCase):
                 os.remove(os.path.join(self.ref_dir, 'KJ660347.fasta'))
             if os.path.exists(os.path.join(self.ref_dir, 'KJ660347.gff')):
                 os.remove(os.path.join(self.ref_dir, 'KJ660347.gff'))
-            # current_app.config['PROJECT_DIRECTORY'] = self.project_dir
             data = dict(file=[open(
                 os.path.join('project', 'tests', 'fixtures', 'KJ660347.fasta'),
                 'rb'), open(
@@ -221,14 +218,14 @@ class PhameTest(BaseTestCase):
                                             follow_redirects=True,
                                             content_type='multipart/form-data')
                 self.assertEqual(response.status_code, 200)
-                self.assertTrue(os.path.exists(os.path.exists(
+                self.assertTrue(os.path.exists(
                     os.path.join(current_app.config['UPLOAD_DIRECTORY'],
                                  'mark',
-                                 'KJ660347.fasta'))))
-                self.assertTrue(os.path.exists(os.path.exists(
+                                 'KJ660347.fasta')))
+                self.assertTrue(os.path.exists(
                     os.path.join(current_app.config['UPLOAD_DIRECTORY'],
                                  'mark',
-                                 'KJ660347.gff'))))
+                                 'KJ660347.gff')))
                 self.assertTrue(os.path.exists(
                     os.path.join(current_app.config['UPLOAD_DIRECTORY'],
                                  'mark', 'KJ660347.fasta')))
@@ -337,16 +334,15 @@ class PhameTest(BaseTestCase):
 
     @patch('project.api.phame.link_files')
     def test_project_setup(self, mock_link):
-        current_app.config['PROJECT_DIRECTORY'] = '/test'
-        form_dict = InputForm(project='test1', reference='Random',
+        form_dict = InputForm(project=self.project_name, reference='Random',
                               reference_file=[])
         self.add_user()
         with self.client:
             self.login()
             proj_dir, ref_dir = project_setup(form_dict)
         mock_link.assert_called_once()
-        self.assertEqual(proj_dir, '/test/mark/test1')
-        self.assertEqual(ref_dir, '/test/mark/test1/refdir')
+        self.assertEqual(proj_dir, self.project_dir)
+        self.assertEqual(ref_dir, os.path.join(self.project_dir, 'refdir'))
 
     @patch('project.api.phame.link_files')
     def test_project_setup_return_none(self, mock_link):
@@ -371,16 +367,15 @@ class PhameTest(BaseTestCase):
                                'test1', 'workdir', 'results', 'test1.log'))
 
     def test_create_config_file(self):
-        form = dict(project='test1', ref_dir=self.ref_dir,
+        form = dict(project=self.project_name, ref_dir=self.ref_dir,
                     work_dir=self.work_dir, reference='1',
                     reference_file='KJ660347.fasta', cds_snps='0',
                     buildSNPdb='1', first_time='1', data_type='4',
                     reads='1', aligner='bowtie', tree='1', bootstrap='1',
                     N='100', pos_select='2', code='0',
                     clean='0', threads='2', cutoff='0.2')
-        current_app.config['PROJECT_DIRECTORY'] = '/test'
         self.add_user()
-        os.makedirs(self.project_dir, exist_ok=True)
+        os.makedirs(self.project_dir)
         with self.client:
             self.login()
             create_config_file(form)
@@ -447,8 +442,17 @@ class PhameTest(BaseTestCase):
             strip().split('#')[0].strip()
         self.assertEqual(value, '0.2')
 
+    def test_create_test_config_file(self):
+        self.create_test_config_file()
+        config_df = pd.read_csv(os.path.join(self.project_dir, 'config.ctl'),
+                                sep='=', header=None, names=['field', 'val'])
+        config_df = config_df.loc[pd.notna(config_df['val']), :]
+        config_df['field'] = config_df['field'].apply(lambda x: x.strip())
+        value = config_df[config_df['field'] == 'project']['val'].values[0].strip().split('#')[0].strip()
+        self.assertEqual(value, 'test1')
+
     def test_get_config_property(self):
-        self.create_config_file()
+        self.create_test_config_file()
         value = get_config_property(self.project_dir, 'reference')
         self.assertEqual(value, '1')
         value = get_config_property(self.project_dir, 'N')
@@ -468,7 +472,7 @@ class PhameTest(BaseTestCase):
 
     def test_get_config_property_bad_value(self):
         value = None
-        self.create_config_file(field_dict=
+        self.create_test_config_file(field_dict=
                             {'field': 'threads',
                              'value': '<input id="threads" name="threads"'
                                       ' type="text" value="2">  # Number '
@@ -479,7 +483,7 @@ class PhameTest(BaseTestCase):
             self.assertFalse(value)
 
     def test_get_num_threads(self):
-        self.create_config_file()
+        self.create_test_config_file()
         num_threads = get_num_threads(self.project_dir)
         self.assertEqual(num_threads, '2')
 
@@ -580,26 +584,20 @@ class PhameTest(BaseTestCase):
         self.assertFalse('delete' in project_summary.keys())
 
     def test_delete_projects(self):
-        os.makedirs(self.ref_dir)
-        os.makedirs(self.work_dir)
-        os.makedirs(os.path.join(self.work_dir, 'results'))
-        files = self.upload_files()
-        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        user = self.add_user()
+        self.create_project('test1',
+                            end_time=datetime.datetime(2019, 5, 31, 5, 32, 32),
+                            exec_time=86400, num_threads=2, status='SUCCESS',
+                            user=user)
+        ref_file = os.path.join(self.ref_dir, 'KJ660347.fasta')
+        project = Project.query.filter_by(name='test1').first()
         with self.client:
             self.login()
-            symlinked_files = []
-            for f in \
-                os.listdir(os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
-                                        'mark')):
-                symlink_uploaded_file(self.ref_dir, f)
-                symlinked_files.append(os.path.join(self.ref_dir, f))
-            self.assertTrue(os.path.exists(symlinked_files[0]))
             response = self.client.post(url_for('phame.delete_projects'),
                                         data=dict(deleteCheckBox=['test1']))
             self.assertEqual(response.status_code, 302)
-            self.assertTrue(os.path.exists(files[0]))
-            for f in symlinked_files:
-                self.assertFalse(os.path.exists(f))
+            self.assertFalse(os.path.exists(ref_file))
+            self.assertFalse(Project.query.filter_by(name='test1').first())
 
     def test_get_log(self):
         os.makedirs(os.path.join(self.work_dir, 'results'))
@@ -613,7 +611,7 @@ class PhameTest(BaseTestCase):
                                                project='test1'))
             self.assertEqual(response.status_code, 200)
             resp_data = json.loads(response.data.decode())
-            self.assertEquals(resp_data['log'], 'null')
+            self.assertEquals(resp_data['log'], 'Tree phylogeny complete.')
 
     @patch('project.api.phame.send_mailgun')
     def test_notify(self, mock_send):
@@ -639,7 +637,7 @@ class PhameTest(BaseTestCase):
             self.assertEqual(mock_send.call_count, 0)
 
     def test_display_file(self):
-        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        # current_app.config['PROJECT_DIRECTORY'] = '/test'
         os.makedirs(os.path.join(self.work_dir, 'results'))
         shutil.copy(os.path.join('project', 'tests', 'fixtures', 'test1.log'),
                     os.path.join(self.work_dir, 'results', 'test1.log'))
@@ -673,7 +671,6 @@ class PhameTest(BaseTestCase):
     @patch('os.path.getmtime')
     def test_log_mod_time(self, mock_mtime):
         mock_mtime.return_value = 1559280752
-        current_app.config['PROJECT_DIRECTORY'] = '/test'
         os.makedirs(os.path.join(self.work_dir, 'results'))
         shutil.copy(os.path.join('project', 'tests', 'fixtures', 'test1.log'),
                     os.path.join(self.work_dir, 'results', 'test1.log'))
@@ -687,8 +684,7 @@ class PhameTest(BaseTestCase):
 
     @patch('project.api.phame.get_log_mod_time')
     def test_add_stats(self, mock_time):
-        self.create_config_file()
-        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        self.create_test_config_file()
         os.makedirs(os.path.join(self.work_dir, 'results'))
         with open(os.path.join(self.project_dir, 'time.log'), 'w') as fp:
             fp.write('86400000')
@@ -715,8 +711,7 @@ class PhameTest(BaseTestCase):
 
     @patch('project.api.phame.get_log_mod_time')
     def test_add_stats_bad_status(self, mock_time):
-        self.create_config_file()
-        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        self.create_test_config_file()
         os.makedirs(os.path.join(self.work_dir, 'results'))
         with open(os.path.join(self.project_dir, 'time.log'), 'w') as fp:
             fp.write('86400000')
@@ -735,8 +730,7 @@ class PhameTest(BaseTestCase):
 
     @patch('project.api.phame.get_log_mod_time')
     def test_add_stats_update(self, mock_time):
-        self.create_config_file()
-        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        self.create_test_config_file()
         os.makedirs(os.path.join(self.work_dir, 'results'))
         with open(os.path.join(self.project_dir, 'time.log'), 'w') as fp:
             fp.write('86400000')
@@ -765,8 +759,7 @@ class PhameTest(BaseTestCase):
 
     @patch('project.api.phame.get_log_mod_time')
     def test_update_stats(self, mock_time):
-        self.create_config_file()
-        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        self.create_test_config_file()
         os.makedirs(os.path.join(self.work_dir, 'results'))
         with open(os.path.join(self.project_dir, 'time.log'), 'w') as fp:
             fp.write('86400000')
@@ -825,30 +818,21 @@ class PhameTest(BaseTestCase):
                             exec_time=43200,
                             status='FAILURE',
                             num_threads=4, user=user)
-        current_app.config['PROJECT_DIRECTORY'] = '/test'
 
         with self.client:
             self.login()
             response = self.client.get(url_for('phame.projects'))
         self.assertEqual(response.status_code, 200)
-        # print(response.data)
-        # with open('project/tests/fixtures/projects.html', 'wb') as fp:
-        #     fp.write(response.data)
-        # with open('project/tests/fixtures/projects.html', 'r') as fp:
-        #     soup = BeautifulSoup(fp, 'html.parser')
         soup = BeautifulSoup(str(response.data), "html.parser")
         rows = soup.find_all('td')
-        print(rows[:20])
-        output = ['<td>test1</td>',
-                  '<td>3</td>',
-                  '<td>1</td>',
-                  '<td>1</td>',
-                  '<td></td>',
-                  '<td>2</td>',
-                  '<td>FAILURE</td>',
-                  '<td>24:00:00</td>',
-                  '<td>2019-05-31 05:32:32</td>',
-                  '<td><input name="deleteCheckBox" type="checkbox" unchecked"="" value="test1"/></td>',
+        print(rows[:10])
+        print(rows[10:])
+        output1 =['<td>test1</td>', '<td>3</td>', '<td>1</td>', '<td>1</td>',
+            '<td></td>', '<td>2</td>', '<td>FAILURE</td>', '<td>24:00:00</td>',
+            '<td>2019-05-31 05:32:32</td>',
+            '<td><input name="deleteCheckBox" type="checkbox" unchecked"="" value="test1"/></td>',
+        ]
+        output2 = [
                   '<td>test2</td>',
                   '<td>3</td>',
                   '<td>1</td>',
@@ -860,8 +844,8 @@ class PhameTest(BaseTestCase):
                   '<td>2019-05-31 05:46:02</td>',
                   '<td><input name="deleteCheckBox" type="checkbox" unchecked"="" value="test2"/></td>']
 
-
-        self.assertEqual(list(map(str, rows[:20])), output)
+        self.assertEqual(list(map(str, rows[:10])), output1)
+        self.assertEqual(list(map(str, rows[10:])), output2)
         self.assertEqual(len(soup.find_all('input')), 3)
 
     def test_projects_public(self):
@@ -912,7 +896,7 @@ class PhameTest(BaseTestCase):
             self.assertEqual(genome.get_text(), fname)
 
     def test_input_post(self):
-        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        # current_app.config['PROJECT_DIRECTORY'] = '/test'
         print(current_app.config['PROJECT_DIRECTORY'])
         current_app.config['PHAME_UPLOAD_DIR'] = os.path.join('/', 'test', 'uploads')
         complete_genomes_list = []
@@ -955,7 +939,7 @@ class PhameTest(BaseTestCase):
 
     def test_input_post_form_validation(self):
         """Test form validation"""
-        current_app.config['PROJECT_DIRECTORY'] = '/test'
+        # current_app.config['PROJECT_DIRECTORY'] = '/test'
         complete_genomes_list = []
         reads_list, contigs_list = [], []
         self.add_user()
