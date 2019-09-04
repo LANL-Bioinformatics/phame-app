@@ -40,8 +40,8 @@ services:
     expose:
       - 5000
     env_file:
-      - ./.envs/.local/.postgres
-      - ./.envs/.local/.email
+      - ./.envs/.prod/.phame
+      - ./.envs/.prod/.email
     environment:
       - FLASK_ENV=development
       - FLASK_APP=project/__init__.py
@@ -61,6 +61,8 @@ services:
       - postgres_backup_local:/backups
     ports:
     - 5435:5432
+    env_file:
+    - ./.envs/.prod/.postgres
     environment:
     - POSTGRES_USER=${POSTGRES_USER}
     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}

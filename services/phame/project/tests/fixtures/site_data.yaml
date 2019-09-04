@@ -1,6 +1,8 @@
 site_params:
   PHAME_TEST_URL:
-    'https://localhost/phame'
+    'http://localhost/phame'
+  PHAME_USERS_URL:
+    'http://localhost/users'
 
 create_report_widget_list :
   [{'widget_type':'combo', 'widget_id': 'location','widget_value': 'Ascension M1'},

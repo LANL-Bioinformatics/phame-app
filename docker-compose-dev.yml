@@ -41,6 +41,8 @@ services:
       - api_data:/usr/src/app/static/uploads
     expose:
       - 5000
+    env_file:
+      - ./.envs/.local/.phame
     environment:
       - FLASK_ENV=development
       - FLASK_APP=project/__init__.py

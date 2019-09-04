@@ -1,0 +1,3 @@
+API_KEY=fake-api-key
+EMAIL_URL=https:example.com
+SENDER=donotreply@example.com

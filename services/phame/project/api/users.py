@@ -167,6 +167,26 @@ def profile():
         return render_template('profile.html', user=current_user)
 
 
+@users_blueprint.route('/delete', methods=['POST'])
+def delete_user():
+    response_object = {'status': 'fail', 'message': 'Cannot delete user'}
+    try:
+        if not current_user.is_admin:
+            response_object['message'] = 'You must be an admin to delete users!'
+            return jsonify(response_object), 422
+        post_data = request.get_json()
+        if not post_data:
+            return jsonify(response_object), 400
+        username = post_data.get('username')
+        user = User.query.filter_by(username=username).first()
+        logging.debug(f'deleting user {username}')
+        db.session.delete(user)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(response_object), 400
+
+
 @users_blueprint.route('/ping', methods=['GET'])
 def ping_pong():
     return jsonify({

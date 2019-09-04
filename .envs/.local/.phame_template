@@ -1,0 +1,9 @@
+USER=fake_user
+PASSWORD=fake_password
+EMAIL=fake@example.com
+ADMIN=fake_admin
+ADMIN_PASSWORD=fake_admin_password
+ADMIN_EMAIL=fake_admin@example.com
+PUBLIC=public
+PUBLIC_PASSWORD=fake_public_password
+PUBLIC_EMAIL=fake_public@example.com
