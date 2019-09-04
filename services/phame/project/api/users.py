@@ -156,11 +156,9 @@ def add_user():
 
 @users_blueprint.route('/profile', methods=['GET', 'POST'])
 def profile():
-    if current_user.username == 'admin':
+    logging.debug(f'current_user {current_user.username} is admin {current_user.is_admin}')
+    if current_user.is_admin:
         form = AdminForm()
-        user_list = User.query.all()
-        # for a in user_list:
-            # logging.debug(a.username)
         if request.method == 'POST':
             return redirect(url_for('phame.projects',
                                     username=form.manage_username.data))

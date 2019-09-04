@@ -15,22 +15,27 @@ class UsersTest(BaseTestCase):
     SQLALCHEMY_DATABASE_URI = "sqlite://"
     TESTING = True
 
-    def add_user(self, username=None, email=None, password=None):
-        user = username if username else 'mark'
+    def add_user(self, username=None, email=None, password=None, is_admin=False):
+        username = username if username else 'mark'
         eml = email if email else 'mcflynn617@gmail.com'
         pssword = password if password else 'test1'
         pssword2 = password if password else 'test1'
-        with self.client:
-            response = self.client.post(url_for('users.register'),
-                                        data=json.dumps(
-                                            {'username': user,
-                                             'email': eml,
-                                             'password': pssword,
-                                             'password2': pssword2
-                                             }),
-                                        content_type='application/json', )
-            print(response.status_code)
-        return User.query.filter_by(username=user).first()
+        user = User(username=username, email=eml, is_admin=is_admin)
+        user.set_password(pssword)
+        db.session.add(user)
+        db.session.commit()
+        # with self.client:
+        #     response = self.client.post(url_for('users.register'),
+        #                                 data=json.dumps(
+        #                                     {'username': user,
+        #                                      'email': eml,
+        #                                      'password': pssword,
+        #                                      'password2': pssword2,
+        #                                      'is_admin': is_admin
+        #                                      }),
+        #                                 content_type='application/json', )
+        #     print(response.status_code)
+        return user
 
     def create_app(self):
         # pass in test configuration
@@ -191,7 +196,7 @@ class UsersTest(BaseTestCase):
 
     def test_profile_admin(self):
         self.add_user(username='admin', email='admin@example.com',
-                      password='test')
+                      password='test', is_admin=True)
 
         with self.client:
             self.client.post(url_for('users.login'),
@@ -201,6 +206,8 @@ class UsersTest(BaseTestCase):
                                   }),
                              content_type='application/json',
                              )
+            user = User.query.filter_by(username='admin').first()
+            print(f'user {user.username} is admin {user.is_admin}')
             response = self.client.get(url_for('users.profile'))
             self.assertIn('Username to view', str(response.data))
 
