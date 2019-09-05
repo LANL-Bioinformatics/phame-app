@@ -1049,38 +1049,45 @@ def subset(project):
                            form=form)
 
 
-@phame_blueprint.route('/download/<project>')
-def download(project):
+@phame_blueprint.route('/download/<project>/<username>')
+def download(project, username):
     """
     Calls function to zip project output files and downloads the zipfile when
     link is clicked
     :param project:
     :return:
     """
-    zip_name = zip_output_files(project)
+    zip_name = os.path.join(current_app.config['PROJECT_DIRECTORY'], username,
+                            project, f'{project}.zip')
     return send_file(zip_name, mimetype='zip', attachment_filename=zip_name,
                      as_attachment=True)
 
 
-def zip_output_files(project):
+def zip_output_files(project, username):
     """
     Create a zip file of all files in user's results directory
     :param project: name of project
     :return: zip_name: name of zip file
     """
     zip_name = os.path.join(current_app.config['PROJECT_DIRECTORY'],
-                            current_user.username, project, f'{project}.zip')
+                            username, project, f'{project}.zip')
     with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in \
             os.walk(os.path.join(current_app.config['PROJECT_DIRECTORY'],
-                                 current_user.username, project, 'workdir',
+                                 username, project, 'workdir',
                                  'results')):
             for file in files:
-                zipf.write(os.path.join(root,
-                                        file), os.path.relpath(
-                    os.path.join(root, file),
-                    os.path.join(current_app.config['PROJECT_DIRECTORY'],
-                                 current_user.username, project, '..')))
+                file_path = os.path.join(root,
+                                        file)
+                if os.path.getsize(file_path) < 2000000000:
+                    logging.debug(
+                        f'zipping file {file_path} with size {bytes2human(os.path.getsize(file_path))}')
+                    zipf.write(file_path, os.path.relpath(
+                        file_path,
+                        os.path.join(current_app.config['PROJECT_DIRECTORY'],
+                                     username, project, '..')))
+                else:
+                    logging.debug(f'skipping file {file_path} with size {bytes2human(os.path.getsize(file_path))}')
     return zip_name
 
 
@@ -1132,8 +1139,9 @@ def runphame(project):
     :param project: Project name
     :return:
     """
+    output_directory = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)
     task = celery.send_task('tasks.run_phame',
-                            args=[current_user.username, project])
+                            args=[project, output_directory])
     logging.debug('task id: {0}'.format(task.id))
     response = check_task(task.id)
     if isinstance(response, dict):
@@ -1273,27 +1281,30 @@ def display(project, username=None):
                                            output_file)):
                 if output_file == f'{project}_summaryStatistics.txt':
                     # run_time = '' if not log_time else log_time[:6]
-                    stats_df = pd.read_table(os.path.join(results_dir,
-                                                          'tables',
-                                                          output_file),
-                                             header=None, index_col=0)
-                    del stats_df.index.name
-                    stats_df.columns = ['']
+                    try:
+                        stats_df = pd.read_table(os.path.join(results_dir,
+                                                              'tables',
+                                                              output_file),
+                                                 header=None, index_col=0)
+                        del stats_df.index.name
+                        stats_df.columns = ['']
 
-                    run_summary_df = pd.DataFrame(
-                        {'# of genomes analyzed': num_genomes,
-                         '# of contigs': contigs_count,
-                         '# of reads': reads_count,
-                         '# of full genomes': full_genome_count,
-                         'reference genome used':
-                             stats_df.loc['Reference used'],
-                         'project name': project})
-                    output_tables_list.append(run_summary_df.to_html(
-                        classes='run_summary'))
-                    output_tables_list.append(
-                        stats_df.to_html(classes='stats'))
-                    titles_list.append('Run Summary')
-                    titles_list.append('Summary Statistics')
+                        run_summary_df = pd.DataFrame(
+                            {'# of genomes analyzed': num_genomes,
+                             '# of contigs': contigs_count,
+                             '# of reads': reads_count,
+                             '# of full genomes': full_genome_count,
+                             'reference genome used':
+                                 stats_df.loc['Reference used'],
+                             'project name': project})
+                        output_tables_list.append(run_summary_df.to_html(
+                            classes='run_summary'))
+                        output_tables_list.append(
+                            stats_df.to_html(classes='stats'))
+                        titles_list.append('Run Summary')
+                        titles_list.append('Summary Statistics')
+                    except pd.errors.EmptyDataError as e:
+                        logging.debug(f'Error reading summary table: {e}')
                 elif output_file == f'{project}_coverage.txt':
                     coverage_df = pd.read_table(os.path.join(results_dir,
                                                              'tables',
