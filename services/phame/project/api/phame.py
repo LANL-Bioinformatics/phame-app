@@ -1054,7 +1054,8 @@ def download(project, username):
     :param project:
     :return:
     """
-    zip_name = zip_output_files(project, username)
+    zip_name = os.path.join(current_app.config['PROJECT_DIRECTORY'], username,
+                            project, f'{project}.zip')
     return send_file(zip_name, mimetype='zip', attachment_filename=zip_name,
                      as_attachment=True)
 
@@ -1073,11 +1074,17 @@ def zip_output_files(project, username):
                                  username, project, 'workdir',
                                  'results')):
             for file in files:
-                zipf.write(os.path.join(root,
-                                        file), os.path.relpath(
-                    os.path.join(root, file),
-                    os.path.join(current_app.config['PROJECT_DIRECTORY'],
-                                 username, project, '..')))
+                file_path = os.path.join(root,
+                                        file)
+                if os.path.getsize(file_path) < 2000000000:
+                    logging.debug(
+                        f'zipping file {file_path} with size {bytes2human(os.path.getsize(file_path))}')
+                    zipf.write(file_path, os.path.relpath(
+                        file_path,
+                        os.path.join(current_app.config['PROJECT_DIRECTORY'],
+                                     username, project, '..')))
+                else:
+                    logging.debug(f'skipping file {file_path} with size {bytes2human(os.path.getsize(file_path))}')
     return zip_name
 
 
@@ -1129,8 +1136,9 @@ def runphame(project):
     :param project: Project name
     :return:
     """
+    output_directory = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)
     task = celery.send_task('tasks.run_phame',
-                            args=[current_user.username, project])
+                            args=[project, output_directory])
     logging.debug('task id: {0}'.format(task.id))
     response = check_task(task.id)
     if isinstance(response, dict):
