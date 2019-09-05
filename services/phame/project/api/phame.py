@@ -355,47 +355,50 @@ def remove_files():
 @phame_blueprint.route("/upload", methods=["POST"])
 def upload():
     """Handle the upload of a file."""
-    form = request.form
+    try:
+        form = request.form
 
-    # Create a unique "session ID" for this particular batch of uploads.
-    upload_key = str(uuid4())
-    # logging.debug(f'upload key {upload_key}')
+        # Create a unique "session ID" for this particular batch of uploads.
+        upload_key = str(uuid4())
+        # logging.debug(f'upload key {upload_key}')
 
-    # Is the upload using Ajax, or a direct POST by the form?
-    is_ajax = False
-    if form.get("__ajax", None) == "true":
-        is_ajax = True
+        # Is the upload using Ajax, or a direct POST by the form?
+        is_ajax = False
+        if form.get("__ajax", None) == "true":
+            is_ajax = True
 
-    # Target folder for these uploads.
-    target = os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
-                          current_user.username)
-    # logging.debug(f'target directory {target}')
-    if not os.path.exists(target):
-        try:
-            os.mkdir(target)
-        except IOError:
-            if is_ajax:
-                return ajax_response(False,
-                                     f"Couldn't create upload directory: "
-                                     f"{target}")
-            else:
-                return "Couldn't create upload directory: {}".format(target)
+        # Target folder for these uploads.
+        target = os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
+                              current_user.username)
+        # logging.debug(f'target directory {target}')
+        if not os.path.exists(target):
+            try:
+                os.mkdir(target)
+            except IOError:
+                if is_ajax:
+                    return ajax_response(False,
+                                         f"Couldn't create upload directory: "
+                                         f"{target}")
+                else:
+                    return "Couldn't create upload directory: {}".format(target)
 
-    # logging.debug("=== Form Data ===")
-    # for key, value in list(form.items()):
-    #     logging.debug(key, "=>", value)
+        # logging.debug("=== Form Data ===")
+        # for key, value in list(form.items()):
+        #     logging.debug(key, "=>", value)
 
-    # logging.debug(f'request files {request.files.getlist("file")}')
-    for upload in request.files.getlist("file"):
-        filename = os.path.basename(upload.filename)
-        destination = "/".join([target, filename])
-        # logging.debug(f"Accept incoming file: {filename}")
-        # logging.debug("Save it to:", destination)
-        upload.save(destination)
+        # logging.debug(f'request files {request.files.getlist("file")}')
+        for upload in request.files.getlist("file"):
+            filename = os.path.basename(upload.filename)
+            destination = "/".join([target, filename])
+            # logging.debug(f"Accept incoming file: {filename}")
+            # logging.debug("Save it to:", destination)
+            upload.save(destination)
 
-    if is_ajax:
-        return ajax_response(True, upload_key)
-    else:
+        if is_ajax:
+            return ajax_response(True, upload_key)
+        else:
+            return redirect(url_for("phame.input"))
+    except IsADirectoryError:
         return redirect(url_for("phame.input"))
 
 
