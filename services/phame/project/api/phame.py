@@ -1270,27 +1270,30 @@ def display(project, username=None):
                                            output_file)):
                 if output_file == f'{project}_summaryStatistics.txt':
                     # run_time = '' if not log_time else log_time[:6]
-                    stats_df = pd.read_table(os.path.join(results_dir,
-                                                          'tables',
-                                                          output_file),
-                                             header=None, index_col=0)
-                    del stats_df.index.name
-                    stats_df.columns = ['']
+                    try:
+                        stats_df = pd.read_table(os.path.join(results_dir,
+                                                              'tables',
+                                                              output_file),
+                                                 header=None, index_col=0)
+                        del stats_df.index.name
+                        stats_df.columns = ['']
 
-                    run_summary_df = pd.DataFrame(
-                        {'# of genomes analyzed': num_genomes,
-                         '# of contigs': contigs_count,
-                         '# of reads': reads_count,
-                         '# of full genomes': full_genome_count,
-                         'reference genome used':
-                             stats_df.loc['Reference used'],
-                         'project name': project})
-                    output_tables_list.append(run_summary_df.to_html(
-                        classes='run_summary'))
-                    output_tables_list.append(
-                        stats_df.to_html(classes='stats'))
-                    titles_list.append('Run Summary')
-                    titles_list.append('Summary Statistics')
+                        run_summary_df = pd.DataFrame(
+                            {'# of genomes analyzed': num_genomes,
+                             '# of contigs': contigs_count,
+                             '# of reads': reads_count,
+                             '# of full genomes': full_genome_count,
+                             'reference genome used':
+                                 stats_df.loc['Reference used'],
+                             'project name': project})
+                        output_tables_list.append(run_summary_df.to_html(
+                            classes='run_summary'))
+                        output_tables_list.append(
+                            stats_df.to_html(classes='stats'))
+                        titles_list.append('Run Summary')
+                        titles_list.append('Summary Statistics')
+                    except pd.errors.EmptyDataError as e:
+                        logging.debug(f'Error reading summary table: {e}')
                 elif output_file == f'{project}_coverage.txt':
                     coverage_df = pd.read_table(os.path.join(results_dir,
                                                              'tables',
