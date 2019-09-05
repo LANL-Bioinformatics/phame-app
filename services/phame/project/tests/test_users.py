@@ -7,7 +7,7 @@ from project.tests.base import BaseTestCase
 from project import create_app
 from project.api.models import User
 from project import db
-
+from project.tests.utils import add_user
 app = create_app()
 
 
@@ -57,13 +57,13 @@ class UsersTest(BaseTestCase):
 
     def test_single_user(self):
         """Ensure get single user behaves correctly."""
-        user = self.add_user()
+        user = add_user('test', 'test@test.com', 'test')
         with self.client:
             response = self.client.get(url_for('users.get_single_user', user_id=user.id))
             data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 200)
-            self.assertIn('mark', data['data']['username'])
-            self.assertIn('mcflynn617@gmail.com', data['data']['email'])
+            self.assertIn('test', data['data']['username'])
+            self.assertIn('test@test.com', data['data']['email'])
             self.assertIn('success', data['status'])
 
     def test_single_user_no_id(self):
@@ -85,35 +85,35 @@ class UsersTest(BaseTestCase):
             self.assertIn('fail', data['status'])
 
     def test_all_users(self):
-        self.add_user('mark', 'mcflynn617@gmail.com')
-        self.add_user('fletcher', 'fletch@fletch.com')
+        add_user('test', 'test@test.com', 'test')
+        add_user('test1', 'test1@test.com', 'test')
         with self.client:
             response = self.client.get(url_for('users.get_all_users'))
             data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(data['data']['users']), 2)
-            self.assertIn('mark', data['data']['users'][0]['username'])
-            self.assertIn('mcflynn617@gmail.com', data['data']['users'][0]
+            self.assertIn('test', data['data']['users'][0]['username'])
+            self.assertIn('test@test.com', data['data']['users'][0]
             ['email'])
-            self.assertIn('fletcher', data['data']['users'][1]['username'])
-            self.assertIn('fletch@fletch.com', data['data']['users'][1]
+            self.assertIn('test1', data['data']['users'][1]['username'])
+            self.assertIn('test1@test.com', data['data']['users'][1]
             ['email'])
             self.assertIn('success', data['status'])
 
     def test_login(self):
-        self.add_user()
+        add_user('test', 'test@test.com', 'test')
         with self.client:
             response = self.client.post(url_for('users.login'),
                                         data=json.dumps(
-                                            {'username': 'mark',
-                                             'password': 'test1'
+                                            {'username': 'test',
+                                             'password': 'test'
                                              }),
                                         content_type='application/json',
                                         )
             self.assertEquals(response.status_code, 302)
-            self.assertEquals(current_user.username, 'mark')
-            self.assertEquals(current_user.email, 'mcflynn617@gmail.com')
-            # self.assertIn('input', response.headers['Location'])
+            self.assertEquals(current_user.username, 'test')
+            self.assertEquals(current_user.email, 'test@test.com')
+            self.assertIn('input', response.headers['Location'])
 
     def test_logout(self):
             with self.client:
@@ -143,11 +143,11 @@ class UsersTest(BaseTestCase):
             self.assertEqual(user.email, 'mcflynn617@gmail.com')
 
     def test_login_bad_password(self):
-        self.add_user('mark', 'mcflynn617@gmail.com', 'test1')
+        add_user('test', 'test@test.com', 'test')
         with self.client:
             response = self.client.post(url_for('users.login'),
                                         data=json.dumps(
-                                            {'username': 'mark',
+                                            {'username': 'test',
                                              'password': 'testdfhfh1'
                                              }),
                                         content_type='application/json',
@@ -156,13 +156,13 @@ class UsersTest(BaseTestCase):
             self.assertIn('login', response.headers['Location'])
 
     def test_public_login(self):
-        self.add_user(username='public', email='public@example.com',
-                      password='test1')
+        add_user('public', 'test@test.com', 'test')
+
         with self.client:
             response = self.client.post(url_for('users.login'),
                                         data=json.dumps(
                                             {'username': 'public',
-                                             'password': 'test1',
+                                             'password': 'test',
                                              'public_login': True
                                              }),
                                         content_type='application/json',)
@@ -175,28 +175,26 @@ class UsersTest(BaseTestCase):
             self.assertEqual(data['data']['users'][0]['username'], 'public')
 
     def test_login_user(self):
-        self.add_user()
-        user = User.query.filter_by(username='mark').first()
+        add_user('test', 'test@test.com', 'test')
+        user = User.query.filter_by(username='test').first()
         with self.client:
             login_user(user)
             self.assertTrue(current_user.is_authenticated)
 
     def test_login_public(self):
-        self.add_user(username='public', email='public@example.com',
-                      password='test1')
+        add_user('public', 'test@test.com', 'test')
         user = User.query.filter_by(username='public').first()
         with self.client:
             login_user(user)
             self.assertTrue(current_user.is_authenticated)
 
     def test_profile_admin(self):
-        self.add_user(username='admin', email='admin@example.com',
-                      password='test')
+        add_user('test', 'test@test.com', 'test', is_admin=True)
 
         with self.client:
             self.client.post(url_for('users.login'),
                              data=json.dumps(
-                                 {'username': 'admin',
+                                 {'username': 'test',
                                   'password': 'test'
                                   }),
                              content_type='application/json',

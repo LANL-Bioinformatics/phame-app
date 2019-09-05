@@ -797,7 +797,7 @@ class PhameTest(BaseTestCase):
         db.session.commit()
         with self.client:
             self.login()
-            resp_data = get_all_project_stats()
+            resp_data = get_all_project_stats(user.username)
         # print(resp_data)
         self.assertEqual(resp_data[0]['name'], 'test1')
         self.assertEqual(resp_data[0]['num_threads'], 2)
