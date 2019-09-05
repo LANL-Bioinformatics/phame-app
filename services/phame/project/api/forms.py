@@ -124,3 +124,12 @@ class AdminForm(FlaskForm):
         super(AdminForm, self).__init__(*args, **kwargs)
         self.manage_username.choices = \
             [(u.username, u.username) for u in User.query.all()]
+
+class DeleteUserForm(FlaskForm):
+    manage_username = SelectField('Username to delete')
+    submit = SubmitField('Submit')
+
+    def __init__(self, *args, **kwargs):
+        super(DeleteUserForm, self).__init__(*args, **kwargs)
+        self.manage_username.choices = \
+            [(u.username, u.username) for u in User.query.all()]

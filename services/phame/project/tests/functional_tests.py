@@ -1,4 +1,6 @@
 import unittest
+import requests
+import json
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.support.ui import Select
@@ -50,15 +52,15 @@ class SiteTest(unittest.TestCase):
         self.admin_credentials = creds['admin_credentials']
 
     def tearDown(self):
-        self.driver.get(self.url + '/users/logout')
+        self.driver.get(self.users_url + '/logout')
         self.driver.close()
 
 
     def admin_login(self):
         self.logout()
         self.driver.get(f"{self.users_url}/login")
-        element = WebDriverWait(self.driver, 10).until(
-            lambda driver: self.driver.find_element_by_tag_name('a'))
+        # element = WebDriverWait(self.driver, 10).until(
+        #     lambda driver: self.driver.find_element_by_tag_name('a'))
         username = self.driver.find_element_by_name("username")
         password = self.driver.find_element_by_name("password")
         username.clear()
@@ -102,8 +104,14 @@ class SiteTest(unittest.TestCase):
         header = self.driver.find_element_by_xpath('// *[ @ id = "content"] / h1')
         self.assertIn('PhaME Input', header.text)
 
+    def delete_user(self):
+        self.admin_login()
+        self.driver.get(self.users_url + "/delete")
+# //*[@id="manage_username"]/option[1]
     def test_create_user(self):
         # delete operator user
+        self.admin_login()
+
         self.driver.get(self.users_url + "/register")
         username = self.driver.find_element_by_name("username")
         password = self.driver.find_element_by_name("password")
@@ -111,4 +119,10 @@ class SiteTest(unittest.TestCase):
         email = self.driver.find_element_by_name("email")
         username.send_keys('test_user')
         password.send_keys('test_password')
+        password2.send_keys('test_password')
+        email.send_keys('test@test.com')
+        self.driver.find_element_by_name("submit").click()
+        header = self.driver.find_element_by_xpath('/html/body/div[2]/h1') # /html/body/div[2]/h1
+        self.assertIn('Sign In', header.text)
+        self.assertEqual(r.status_code, 200)
 

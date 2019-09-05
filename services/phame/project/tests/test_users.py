@@ -215,7 +215,13 @@ class UsersTest(BaseTestCase):
         self.assertEqual(len(data['data']['users']), 2)
         self.assertEqual(data['data']['users'][1]['username'], 'mark')
         with self.client:
-            login_user(admin)
+            self.client.post(url_for('users.login'),
+                             data=json.dumps(
+                                 {'username': 'admin',
+                                  'password': 'test'
+                                  }),
+                             content_type='application/json',
+                             )
             response = self.client.post(url_for('users.delete_user'),
                              data=json.dumps(
                                  {'username': user.username
@@ -233,7 +239,7 @@ class UsersTest(BaseTestCase):
             self.assertTrue(deleted)
 
     def test_delete_user_not_admin(self):
-        admin = self.add_user(username='admin', email='admin@example.com',
+        self.add_user(username='admin', email='admin@example.com',
                       password='test', is_admin=False)
         user = self.add_user()
         response = self.client.get(url_for('users.get_all_users'))
@@ -241,7 +247,13 @@ class UsersTest(BaseTestCase):
         self.assertEqual(len(data['data']['users']), 2)
         self.assertEqual(data['data']['users'][1]['username'], 'mark')
         with self.client:
-            login_user(admin)
+            self.client.post(url_for('users.login'),
+                             data=json.dumps(
+                                 {'username': 'admin',
+                                  'password': 'test'
+                                  }),
+                             content_type='application/json',
+                             )
             response = self.client.post(url_for('users.delete_user'),
                              data=json.dumps(
                                  {'username': user.username
@@ -251,12 +263,35 @@ class UsersTest(BaseTestCase):
             self.assertEqual(response.status_code, 422)
             response = self.client.get(url_for('users.get_all_users'))
             data = json.loads(response.data.decode())
-            self.assertEqual(len(data['data']['users']), 1)
+            self.assertEqual(len(data['data']['users']), 2)
             deleted = True
             for user in data['data']['users']:
                 if user['username'] == 'mark':
                     deleted = False
-            self.assertTrue(deleted)
+            self.assertFalse(deleted)
+
+    def test_delete_user_does_not_exist(self):
+        self.add_user(username='admin', email='admin@example.com',
+                      password='test', is_admin=True)
+
+        with self.client:
+            self.client.post(url_for('users.login'),
+                             data=json.dumps(
+                                 {'username': 'admin',
+                                  'password': 'test'
+                                  }),
+                             content_type='application/json',
+                             )
+            response = self.client.post(url_for('users.delete_user'),
+                             data=json.dumps(
+                                 {'username': 'fake_user'
+                                  }),
+                             content_type='application/json',
+                             )
+            self.assertEqual(response.status_code, 400)
+            data = json.loads(response.data.decode())
+            self.assertEqual(data['status'], 'fail')
+            self.assertEqual(data['message'], 'Cannot delete user')
 
 
 if __name__ == '__main__':
