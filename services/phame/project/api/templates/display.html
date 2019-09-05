@@ -54,6 +54,6 @@
 
 <h2>Download</h2>
 </div>
-  <div><a href="{{ url_for('phame.download', project=project) }}" target="_blank">download output files for {{ project }}</a></div>
+  <div><a href="{{ url_for('phame.download', project=project, username=username) }}" target="_blank">download output files for {{ project }}</a></div>
 </div>
 {% endblock %}
