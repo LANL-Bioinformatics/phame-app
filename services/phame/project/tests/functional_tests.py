@@ -1,5 +1,4 @@
 import unittest
-import requests
 import json
 from selenium import webdriver
 from selenium.webdriver import ActionChains
@@ -107,11 +106,10 @@ class SiteTest(unittest.TestCase):
     def delete_user(self):
         self.admin_login()
         self.driver.get(self.users_url + "/delete")
-# //*[@id="manage_username"]/option[1]
-    def test_create_user(self):
-        # delete operator user
-        self.admin_login()
+        self.driver.find_element_by_xpath("//select[@id='manage_username']/option[text()='test_user']").click()
+        self.driver.find_element_by_name("submit").click()
 
+    def create_user(self):
         self.driver.get(self.users_url + "/register")
         username = self.driver.find_element_by_name("username")
         password = self.driver.find_element_by_name("password")
@@ -122,7 +120,23 @@ class SiteTest(unittest.TestCase):
         password2.send_keys('test_password')
         email.send_keys('test@test.com')
         self.driver.find_element_by_name("submit").click()
+
+    def test_create_user(self):
+        self.create_user()
         header = self.driver.find_element_by_xpath('/html/body/div[2]/h1') # /html/body/div[2]/h1
         self.assertIn('Sign In', header.text)
-        self.assertEqual(r.status_code, 200)
+        self.delete_user()
 
+    def test_delete_user(self):
+        self.create_user()
+        self.delete_user()
+        self.driver.get(self.users_url + "/profile")
+
+        user_names = self.driver.find_element_by_xpath("//select[@id='manage_username']")
+        for user_name in user_names.text.split('\n'):
+            self.assertFalse(user_name == 'test_user')
+
+    def test_file_upload(self):
+        self.create_user()
+        self.driver.find_element_by_id("file-picker").send_keys(os.path.join('tests', 'fixtures', 'KJ660347.fasta'))
+        self.driver.find_element_by_id("submit").click()  # file-picker
