@@ -1046,38 +1046,38 @@ def subset(project):
                            form=form)
 
 
-@phame_blueprint.route('/download/<project>')
-def download(project):
+@phame_blueprint.route('/download/<project>/<username>')
+def download(project, username):
     """
     Calls function to zip project output files and downloads the zipfile when
     link is clicked
     :param project:
     :return:
     """
-    zip_name = zip_output_files(project)
+    zip_name = zip_output_files(project, username)
     return send_file(zip_name, mimetype='zip', attachment_filename=zip_name,
                      as_attachment=True)
 
 
-def zip_output_files(project):
+def zip_output_files(project, username):
     """
     Create a zip file of all files in user's results directory
     :param project: name of project
     :return: zip_name: name of zip file
     """
     zip_name = os.path.join(current_app.config['PROJECT_DIRECTORY'],
-                            current_user.username, project, f'{project}.zip')
+                            username, project, f'{project}.zip')
     with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in \
             os.walk(os.path.join(current_app.config['PROJECT_DIRECTORY'],
-                                 current_user.username, project, 'workdir',
+                                 username, project, 'workdir',
                                  'results')):
             for file in files:
                 zipf.write(os.path.join(root,
                                         file), os.path.relpath(
                     os.path.join(root, file),
                     os.path.join(current_app.config['PROJECT_DIRECTORY'],
-                                 current_user.username, project, '..')))
+                                 username, project, '..')))
     return zip_name
 
 
