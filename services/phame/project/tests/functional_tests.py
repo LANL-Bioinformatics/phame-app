@@ -140,3 +140,4 @@ class SiteTest(unittest.TestCase):
         self.create_user()
         self.driver.find_element_by_id("file-picker").send_keys(os.path.join('tests', 'fixtures', 'KJ660347.fasta'))
         self.driver.find_element_by_id("submit").click()  # file-picker
+        self.delete_user()
