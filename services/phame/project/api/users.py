@@ -66,7 +66,7 @@ def login():
                 return redirect(url_for('users.login'))
         else:
             user = User.query.filter_by(username='public').first()
-        # logging.debug(f'logged in user {user.username}')
+        logging.debug(f'logged in user {user.username}')
 
         # logging.debug(f"request next page {request.args.get('next')}")
         login_user(user, remember=form.remember_me.data)
@@ -197,13 +197,17 @@ def profile():
 
 
 @users_blueprint.route('/delete', methods=['GET', 'POST'])
-def delete():
+def delete_user():
     logging.debug(f'current_user {current_user.username} is admin {current_user.is_admin}')
     if current_user.is_admin:
         admin_form = DeleteUserForm()
         if request.method == 'POST':
-
+            logging.debug(f'admin_form.manage_username.data {admin_form.manage_username.data}')
             user = User.query.filter_by(username=admin_form.manage_username.data).first()
+            if not user:
+                return render_template('admin.html', user=current_user,
+                                       form=admin_form,
+                                       error='User does not exist')
             projects = Project.query.filter_by(user=user)
             for project in projects:
                 logging.debug(f'project {project}')

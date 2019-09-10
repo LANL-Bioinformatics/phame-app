@@ -1,6 +1,7 @@
 import json
 import os
 import unittest
+from bs4 import BeautifulSoup
 from flask_login import login_user, current_user
 from flask import current_app, url_for
 from project.tests.base import BaseTestCase
@@ -194,7 +195,7 @@ class UsersTest(BaseTestCase):
                                   }),
                              content_type='application/json',
                              )
-            user = User.query.filter_by(username='admin').first()
+            user = User.query.filter_by(username='test').first()
             print(f'user {user.username} is admin {user.is_admin}')
             response = self.client.get(url_for('users.profile'))
             self.assertIn('Username to view', str(response.data))
@@ -206,7 +207,7 @@ class UsersTest(BaseTestCase):
             self.assertIn('login', response.headers['Location'])
 
     def test_delete_user(self):
-        admin = self.add_user(username='admin', email='admin@example.com',
+        admin = self.add_user(username='admin_de', email='admin@example.com',
                       password='test', is_admin=True)
         user = self.add_user()
         response = self.client.get(url_for('users.get_all_users'))
@@ -216,18 +217,18 @@ class UsersTest(BaseTestCase):
         with self.client:
             self.client.post(url_for('users.login'),
                              data=json.dumps(
-                                 {'username': 'admin',
+                                 {'username': 'admin_de',
                                   'password': 'test'
                                   }),
                              content_type='application/json',
                              )
             response = self.client.post(url_for('users.delete_user'),
                              data=json.dumps(
-                                 {'username': user.username
+                                 {'manage_username': user.username
                                   }),
                              content_type='application/json',
                              )
-            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.status_code, 302)
             response = self.client.get(url_for('users.get_all_users'))
             data = json.loads(response.data.decode())
             self.assertEqual(len(data['data']['users']), 1)
@@ -255,11 +256,11 @@ class UsersTest(BaseTestCase):
                              )
             response = self.client.post(url_for('users.delete_user'),
                              data=json.dumps(
-                                 {'username': user.username
+                                 {'manage_username': user.username
                                   }),
                              content_type='application/json',
                              )
-            self.assertEqual(response.status_code, 422)
+            # self.assertEqual(response.status_code, 422)
             response = self.client.get(url_for('users.get_all_users'))
             data = json.loads(response.data.decode())
             self.assertEqual(len(data['data']['users']), 2)
@@ -283,14 +284,14 @@ class UsersTest(BaseTestCase):
                              )
             response = self.client.post(url_for('users.delete_user'),
                              data=json.dumps(
-                                 {'username': 'fake_user'
+                                 {'manage_username': 'fake_user'
                                   }),
                              content_type='application/json',
                              )
-            self.assertEqual(response.status_code, 400)
-            data = json.loads(response.data.decode())
-            self.assertEqual(data['status'], 'fail')
-            self.assertEqual(data['message'], 'Cannot delete user')
+            self.assertEqual(response.status_code, 200)
+            soup = BeautifulSoup(str(response.data), "html.parser")
+            self.assertIn('User does not exist',
+                          soup.find("p", class_='error').get_text())
 
 
 if __name__ == '__main__':
