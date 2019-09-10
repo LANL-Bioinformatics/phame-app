@@ -232,6 +232,15 @@ class SiteTest(unittest.TestCase):
         self.driver.find_element_by_xpath("//*[@id='phylogram1']")
         self.assertIn('KJ660347', self.driver.find_element_by_xpath('//*[@id="phylogram1"]').text)
 
+        #subset
+        self.driver.get(self.url + '/display/mark/test-project')
+        self.driver.find_element_by_partial_link_text("subset").click()
+        option1 = self.driver.find_element_by_xpath("//*[@id='subset_files']/option[1]")
+        option2 = self.driver.find_element_by_xpath("//*[@id='subset_files']/option[2]")
+        ActionChains(self.driver).key_down(Keys.CONTROL).click(option1).key_up(Keys.CONTROL).perform()
+        ActionChains(self.driver).key_down(Keys.CONTROL).click(option2).key_up(Keys.CONTROL).perform()
+        self.driver.find_element_by_name("submit").click()
+
         # delete test-project
         self.driver.get(self.url + '/projects')
         self.driver.find_element_by_xpath("//input[@value='test-project']").click()
