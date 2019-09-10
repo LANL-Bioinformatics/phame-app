@@ -36,17 +36,22 @@ class SiteTest(unittest.TestCase):
         chromeOptions.add_experimental_option("prefs", prefs)
         chrome_driver = os.path.join(base_dir, 'tests', 'extra', 'chromedriver')
         self.driver = webdriver.Chrome(chrome_driver, options=chromeOptions)
-        operator_data = os.path.join(base_dir, 'tests', 'fixtures', 'operator_data.yaml')
-        if not os.path.exists(operator_data):
+        operator_data_file = os.environ['OPERATOR_DATA'] if 'OPERATOR_DATA' in os.environ.keys() \
+            else os.path.join(base_dir, 'tests', 'fixtures', 'operator_data.yaml')
+
+        if not os.path.exists(operator_data_file):
+            print('site_data.yaml does not exist, copy example_operator_data.yaml and add your credentials')
+            sys.exit(0)
+            
+        with open(operator_data_file) as fp:
+            creds = yaml.load(fp, Loader=yaml.FullLoader)
+
+        site_date_file = os.environ['SITE_DATA'] if 'SITE_DATA' in os.environ.keys() \
+            else os.path.join(base_dir, 'tests', 'fixtures', 'site_data.yaml')
+
+        if not os.path.exists(site_date_file):
             print('site_data.yaml does not exist, copy example_site_data.yaml and add your credentials')
             sys.exit(0)
-        with open(operator_data) as fp:
-            creds = yaml.load(fp, Loader=yaml.FullLoader)
-        print(os.environ['SITE_DATA'])
-        # if key == '':
-        site_date_file = os.path.join(base_dir, 'tests', 'fixtures', 'site_data.yaml')
-        # else:
-        #     site_data_file = key
 
         with open(site_date_file, 'r') as fp:
             site_data = yaml.safe_load(fp)
