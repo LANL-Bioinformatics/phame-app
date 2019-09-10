@@ -14,6 +14,35 @@ from project.api.forms import LoginForm, RegistrationForm, AdminForm, DeleteUser
 users_blueprint = Blueprint('users', __name__, template_folder='templates',
                             static_folder='static')
 
+@users_blueprint.route('/api/login', methods=['POST'])
+def api_login():
+    response_object = {'status': 'fail', 'message': 'Invalid payload'}
+    try:
+        logging.debug('api_login')
+        post_data = request.json
+        logging.debug(f'post_data {post_data}')
+        logging.debug(f"username {post_data['username']}")
+        logging.debug(f"password {post_data['password']}")
+        if not post_data:
+            return jsonify(response_object), 400
+        username = post_data['username']
+        password = post_data['password']
+        user = User.query.filter_by(username=username).first()
+        logging.debug(f'user {user.username}')
+        if not user:
+            return jsonify(response_object), 404
+        if user.check_password(password):
+            logging.debug('password checked')
+            login_user(user)
+            logging.debug('user logged int')
+            response_object['message'] = 'Successfully logged in'
+            response_object['status'] = 'success'
+            return jsonify(response_object), 200
+    except ValueError:
+        logging.debug('could not login')
+        return jsonify(response_object), 404
+    except DataError:
+        return jsonify(response_object), 404
 
 @users_blueprint.route('/login', methods=['GET', 'POST'])
 def login():
@@ -244,6 +273,34 @@ def get_single_user(user_id):
     }
     try:
         user = User.query.filter_by(id=user_id).first()
+        if not user:
+            return jsonify(response_object), 404
+        else:
+            response_object = {
+                'status': 'success',
+                'data': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'active': user.active
+                }
+            }
+        return jsonify(response_object), 200
+    except ValueError:
+        return jsonify(response_object), 404
+    except DataError:
+        return jsonify(response_object), 404
+
+
+@users_blueprint.route('/users/name/<username>', methods=['GET'])
+def get_single_username(username):
+    """Get single user details for given username"""
+    response_object = {
+        'status': 'fail',
+        'message': 'User does not exist'
+    }
+    try:
+        user = User.query.filter_by(username=username).first()
         if not user:
             return jsonify(response_object), 404
         else:
