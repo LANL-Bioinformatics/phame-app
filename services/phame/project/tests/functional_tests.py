@@ -14,6 +14,7 @@ import sys
 import yaml
 import requests
 import ast
+from zipfile import ZipFile
 sys.path.append(os.path.dirname(__file__))
 
 class SiteTest(unittest.TestCase):
@@ -27,6 +28,8 @@ class SiteTest(unittest.TestCase):
 
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.base_dir = base_dir
+        self.project = 'test-project'
+        self.project_subset = 'test-project_subset'
         chromeOptions = webdriver.ChromeOptions()
         prefs = {"download.default_directory": os.path.join(base_dir, 'project', 'tests', 'fixtures')}
         chromeOptions.add_experimental_option("prefs", prefs)
@@ -172,20 +175,25 @@ class SiteTest(unittest.TestCase):
         self.assertEqual(response.json()['uploads'], [])
         self.delete_user()
 
-    def get_flower_task_id(self):
+    def get_flower_task_id(self, task_name):
         task_id = None
         tasks = requests.get('http://localhost:5555/api/tasks?state=STARTED')
         tasks_dict = tasks.json()
         for key, value in tasks_dict.items():
-            for k2, v2 in value.items():
-                if k2 == 'args':
-                    values = ast.literal_eval(v2)
-                    if values[0] == 'test-project':
-                        task_id = key
+            values = ast.literal_eval(value['args'])
+            if values[0] == task_name:
+                task_id = key
+        # if not task_id:
+        #     tasks_all = requests.get('http://localhost:5555/api/tasks')
+        #     tasks_all_dict = tasks_all.json()
+        #     for key, value in tasks_all_dict.items():
+        #         values = ast.literal_eval(value['args'])
+        #         if values[0] == task_name:
+        #             received_time = datetime.fromtimestamp(value['received'])
         return task_id
 
-    def get_test_task_state(self):
-        task_id = self.get_flower_task_id()
+    def get_test_task_state(self, task_name):
+        task_id = self.get_flower_task_id(task_name)
         state = None
         if task_id:
             state = 'STARTED'
@@ -200,24 +208,24 @@ class SiteTest(unittest.TestCase):
 
         self.driver.get(self.url + '/projects')
         try:
-            test_project = self.driver.find_element_by_partial_link_text('test-project')
+            test_project = self.driver.find_element_by_partial_link_text(self.project)
             if test_project:
                 self.driver.find_element_by_xpath(
-                    "//input[@value='test-project']").click()
+                    f"//input[@value='{self.project}']").click()
             self.driver.find_element_by_id("delete-button").click()
         except:
             pass
         self.driver.get(self.url + '/input')
         project = self.driver.find_element_by_name("project")
-        project.send_keys('test-project')
+        project.send_keys(self.project)
         self.driver.find_element_by_xpath(("//*[@id='complete_genomes_div']/div/div[2]/span/div/button/span")).click()
         button = self.driver.find_element_by_xpath("//*[@id='complete_genomes_div']/div/div[2]/span/div/ul/li[1]/a/label/input")
         self.driver.implicitly_wait(10)
         button.click()
         self.driver.find_element_by_id("submit").click()
-        if not self.get_test_task_state():
+        if not self.get_test_task_state(self.project):
             self.assertFalse(True)
-        self.driver.get(self.url + '/display/mark/test-project')
+        self.driver.get(self.url + f'/display/mark/{self.project}')
         run_summary = self.driver.find_element_by_xpath('//*[@class="dataframe run_summary"]/thead').text
         self.assertIn('# of genomes analyzed # of contigs # of reads # of full genomes reference genome used project name', run_summary)
         self.assertEqual('0', self.driver.find_element_by_xpath('//*[@class="dataframe run_summary"]/tbody/tr/td[2]').text)
@@ -225,24 +233,133 @@ class SiteTest(unittest.TestCase):
             '//*[@class="dataframe run_summary"]/tbody/tr/td[1]').text)
         self.assertEqual('KJ660347', self.driver.find_element_by_xpath(
             '//*[@class="dataframe run_summary"]/tbody/tr/td[5]').text)
-        self.assertEqual('test-project', self.driver.find_element_by_xpath(
+        self.assertEqual(self.project, self.driver.find_element_by_xpath(
             '//*[@class="dataframe run_summary"]/tbody/tr/td[6]').text)
+
+        # Summary statistics
+        self.assertEqual(self.driver.find_element_by_xpath('//*[@class="dataframe stats"]/tbody/tr[1]/td').text, 'KJ660347')
+        self.assertEqual(self.driver.find_element_by_xpath('//*[@class="dataframe stats"]/tbody/tr[2]/td').text, '18959')
+        self.assertEqual(self.driver.find_element_by_xpath('//*[@class="dataframe stats"]/tbody/tr[3]/td').text, '4')
+        self.assertEqual(self.driver.find_element_by_xpath('//*[@class="dataframe stats"]/tbody/tr[4]/td').text, '18955')
+        self.assertEqual(self.driver.find_element_by_xpath('//*[@class="dataframe stats"]/tbody/tr[5]/td').text, '764')
+
+        #SNP pairwise matrix
+        self.assertEqual(len(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe snp_pairwiseMatrix"]/thead/tr').text.split()),
+                         3)
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe snp_pairwiseMatrix"]/tbody/tr[1]/th').text, 'KJ660347')
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe snp_pairwiseMatrix"]/tbody/tr[1]/td[1]').text, '0')
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe snp_pairwiseMatrix"]/tbody/tr[1]/td[2]').text, '593')
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe snp_pairwiseMatrix"]/tbody/tr[1]/td[3]').text, '536')
+
+        # Genome Length
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe genome_lengths"]/tbody/tr[1]/td[1]').text,
+                         'KJ660347')
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe genome_lengths"]/tbody/tr[1]/td[2]').text,
+                         '18959')
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe genome_lengths"]/tbody/tr[2]/td[1]').text,
+                         'ZEBOV_2002_Ilembe')
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe genome_lengths"]/tbody/tr[2]/td[2]').text,
+                         '18958')
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe genome_lengths"]/tbody/tr[3]/td[1]').text,
+                         'ZEBOV_2007_0Luebo')
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe genome_lengths"]/tbody/tr[3]/td[2]').text,
+                         '18958')
+
+        # trees
         self.driver.find_element_by_partial_link_text(
             'fasttree').click()
         self.driver.find_element_by_xpath("//*[@id='phylogram1']")
         self.assertIn('KJ660347', self.driver.find_element_by_xpath('//*[@id="phylogram1"]').text)
 
         #subset
-        self.driver.get(self.url + '/display/mark/test-project')
+        self.driver.get(self.url + f'/display/mark/{self.project}')
         self.driver.find_element_by_partial_link_text("subset").click()
-        option1 = self.driver.find_element_by_xpath("//*[@id='subset_files']/option[1]")
-        option2 = self.driver.find_element_by_xpath("//*[@id='subset_files']/option[2]")
-        ActionChains(self.driver).key_down(Keys.CONTROL).click(option1).key_up(Keys.CONTROL).perform()
-        ActionChains(self.driver).key_down(Keys.CONTROL).click(option2).key_up(Keys.CONTROL).perform()
+        queues = Select(self.driver.find_element_by_css_selector("#subset_files"))
+        queues.select_by_visible_text("KJ660347.fasta")
+        queues.select_by_visible_text("ZEBOV_2002_Ilembe.fna")
         self.driver.find_element_by_name("submit").click()
+        # time.sleep(3)
+        if not self.get_test_task_state(self.project_subset):
+            self.assertFalse(True)
+        self.driver.get(self.url + f'/display/mark/{self.project_subset}')
+
+        # Run Summary
+        self.assertEqual('0', self.driver.find_element_by_xpath(
+            '//*[@class="dataframe run_summary"]/tbody/tr/td[2]').text)
+        self.assertEqual('2', self.driver.find_element_by_xpath(
+            '//*[@class="dataframe run_summary"]/tbody/tr/td[1]').text)
+        self.assertEqual('KJ660347', self.driver.find_element_by_xpath(
+            '//*[@class="dataframe run_summary"]/tbody/tr/td[5]').text)
+        self.assertEqual(self.project_subset, self.driver.find_element_by_xpath(
+            '//*[@class="dataframe run_summary"]/tbody/tr/td[6]').text)
+
+        # Summary statistics
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe stats"]/tbody/tr[1]/td').text, 'KJ660347')
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe stats"]/tbody/tr[2]/td').text, '18959')
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe stats"]/tbody/tr[3]/td').text, '4')
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe stats"]/tbody/tr[4]/td').text, '18955')
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe stats"]/tbody/tr[5]/td').text, '590')
+
+        # SNP pairwise matrix
+        self.assertEqual(len(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe snp_pairwiseMatrix"]/thead/tr').text.split()), 2)
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe snp_pairwiseMatrix"]/tbody/tr[1]/th').text,
+                         'KJ660347')
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe snp_pairwiseMatrix"]/tbody/tr[1]/td[1]').text,
+                         '0')
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//*[@class="dataframe snp_pairwiseMatrix"]/tbody/tr[1]/td[2]').text,
+                         '593')
+
+        # trees
+        self.driver.find_element_by_partial_link_text(f'{self.project}_all.fasttree').click()
+        self.driver.find_element_by_xpath("//*[@id='phylogram1']")
+        self.assertIn('KJ660347', self.driver.find_element_by_xpath(
+            '//*[@id="phylogram1"]').text)
+        self.driver.find_element_by_partial_link_text(f'{self.project}').click()
+        self.driver.find_element_by_partial_link_text(
+            f'{self.project_subset}_all.fasttree').click()
+        self.driver.find_element_by_xpath("//*[@id='phylogram1']")
+        self.assertIn('KJ660347', self.driver.find_element_by_xpath(
+            '//*[@id="phylogram1"]').text)
+
+        # test download
+        self.driver.get(self.url + f'/display/mark/{self.project}')
+        self.driver.find_element_by_partial_link_text('download').click()
+        zip_name = f'_phame_api_media_mark_{self.project}_{self.project}.zip'
+        with ZipFile(os.path.join(self.base_dir, 'project', 'tests', 'fixtures', zip_name)) as myzip:
+            zip_list = myzip.namelist()
+        zip_base_dir = os.path.join(self.project, 'workdir', 'results')
+        self.assertIn(os.path.join(zip_base_dir, 'KJ660347_KJ660347.snpfilter'), zip_list)
+        self.assertIn(os.path.join(zip_base_dir, 'KJ660347_KJ660347.gapfilter'), zip_list)
+        self.assertIn(os.path.join(zip_base_dir, f'{self.project}.log'), zip_list)
+        self.assertIn(os.path.join(zip_base_dir, f'{self.project}.error'), zip_list)
+        self.assertIn(os.path.join(zip_base_dir, 'tables', f'{self.project}_snp_pairwiseMatrix.txt'), zip_list)
+        self.assertIn(os.path.join(zip_base_dir, 'alignments', f'{self.project}_all_snp_alignment.fna'), zip_list)
+        self.assertIn(os.path.join(zip_base_dir, 'stats', 'KJ660347_ZEBOV_2002_Ilembe.coords'), zip_list)
+        os.remove(os.path.join(self.base_dir, 'project', 'tests', 'fixtures', zip_name))
 
         # delete test-project
         self.driver.get(self.url + '/projects')
-        self.driver.find_element_by_xpath("//input[@value='test-project']").click()
+        self.driver.find_element_by_xpath(f"//input[@value='{self.project}']").click()
+        self.driver.find_element_by_xpath(f"//input[@value='{self.project_subset}']").click()
         self.driver.find_element_by_id("delete-button").click()
-        # self.delete_user()
+
