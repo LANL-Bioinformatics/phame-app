@@ -14,6 +14,7 @@ import sys
 import yaml
 import requests
 import ast
+import argparse
 from zipfile import ZipFile
 sys.path.append(os.path.dirname(__file__))
 
@@ -41,13 +42,14 @@ class SiteTest(unittest.TestCase):
             sys.exit(0)
         with open(operator_data) as fp:
             creds = yaml.load(fp, Loader=yaml.FullLoader)
+        print(os.environ['SITE_DATA'])
+        # if key == '':
+        site_date_file = os.path.join(base_dir, 'tests', 'fixtures', 'site_data.yaml')
+        # else:
+        #     site_data_file = key
 
-        if len(sys.argv) > 1:
-            with open(os.path.join(base_dir, 'extra', 'fixtures', sys.argv[1])) as fp:
-                site_data = yaml.safe_load(fp)
-        else:
-            with open(os.path.join(base_dir, 'tests', 'fixtures', 'site_data.yaml')) as fp:
-                site_data = yaml.safe_load(fp)
+        with open(site_date_file, 'r') as fp:
+            site_data = yaml.safe_load(fp)
 
         self.url = site_data['site_params']['PHAME_TEST_URL']
         self.users_url = site_data['site_params']['PHAME_USERS_URL']
@@ -363,3 +365,6 @@ class SiteTest(unittest.TestCase):
         self.driver.find_element_by_xpath(f"//input[@value='{self.project_subset}']").click()
         self.driver.find_element_by_id("delete-button").click()
 
+
+if __name__ == '__main__':
+    unittest.main()
