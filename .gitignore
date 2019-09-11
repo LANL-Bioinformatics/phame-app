@@ -5,8 +5,11 @@ api/static/trees
 api/static/uploads
 .envs/.local/.email
 .envs/.local/.postgres
+.envs/.local/.phame
+*.ipynb
 services/phame/project/tests/fixtures/operator_data.yaml
 services/phame/project/tests/extra
+services/phame/project/api/static/trees
 # IntelliJ project files
 .idea
 *.iml
