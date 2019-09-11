@@ -15,6 +15,7 @@ class BaseConfig:
     PROJECT_DIRECTORY = os.path.join('/phame_api', 'media')
     UPLOAD_DIRECTORY = os.path.join('static', 'uploads')
     PHAME_UPLOAD_DIR = os.path.join('/usr', 'src', 'app', 'static', 'uploads')
+    PUBLIC_PROJECTS_DIR = os.path.join('/usr', 'src', 'app', 'project', 'api', 'public')
     SEND_NOTIFICATIONS = False
 
 
