@@ -58,17 +58,24 @@ def login():
     #     current_user.username == 'public' else
     #     redirect(url_for('phame.index'))
     form = LoginForm()
+
+    if form.public_login.data:
+        user = User.query.filter_by(username='public').first()
+        if user is None:
+            flash('Public user does not exist. Please contact administrator')
+            return redirect(url_for('users.login'))
+        login_user(user)
+        next_page = url_for('phame.projects')
+        return redirect(url_for('.'.join(next_page.split('/')[-2:])))
+
     if form.validate_on_submit():
-        if not form.public_login.data:
-            user = User.query.filter_by(username=form.username.data).first()
-            if user is None or not user.check_password(form.password.data):
-                flash('Invalid username or password')
-                return redirect(url_for('users.login'))
-        else:
-            user = User.query.filter_by(username='public').first()
-            if user is None:
-                flash('Public user does not exist. Please contact administrator')
-                return redirect(url_for('users.login'))
+
+        user = User.query.filter_by(username=form.username.data).first()
+        if user is None or not user.check_password(form.password.data):
+            flash('Invalid username or password')
+            return redirect(url_for('users.login'))
+
+
         logging.debug(f'logged in user {user.username}')
 
         # logging.debug(f"request next page {request.args.get('next')}")
