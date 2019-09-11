@@ -1079,15 +1079,14 @@ def zip_output_files(project, username):
             for file in files:
                 file_path = os.path.join(root,
                                         file)
-                if os.path.getsize(file_path) < 2000000000:
-                    logging.debug(
-                        f'zipping file {file_path} with size {bytes2human(os.path.getsize(file_path))}')
-                    zipf.write(file_path, os.path.relpath(
-                        file_path,
-                        os.path.join(current_app.config['PROJECT_DIRECTORY'],
-                                     username, project, '..')))
-                else:
-                    logging.debug(f'skipping file {file_path} with size {bytes2human(os.path.getsize(file_path))}')
+
+                logging.debug(
+                    f'zipping file {file_path} with size {bytes2human(os.path.getsize(file_path))}')
+                zipf.write(file_path, os.path.relpath(
+                    file_path,
+                    os.path.join(current_app.config['PROJECT_DIRECTORY'],
+                                 username, project, '..')))
+
     return zip_name
 
 
