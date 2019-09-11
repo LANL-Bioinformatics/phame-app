@@ -1,0 +1,5 @@
+Reference used	KJ660347
+Reference genome length	18959
+Total gap length	4
+Core genome length	18955
+Total SNPs	784
