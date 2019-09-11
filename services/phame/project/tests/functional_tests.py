@@ -28,11 +28,12 @@ class SiteTest(unittest.TestCase):
     def setUp(self):
 
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        print(base_dir)
         self.base_dir = base_dir
         self.project = 'test-project'
         self.project_subset = 'test-project_subset'
         chromeOptions = webdriver.ChromeOptions()
-        prefs = {"download.default_directory": os.path.join(base_dir, 'project', 'tests', 'fixtures')}
+        prefs = {"download.default_directory": os.path.join(base_dir, 'tests', 'fixtures')}
         chromeOptions.add_experimental_option("prefs", prefs)
         chrome_driver = os.path.join(base_dir, 'tests', 'extra', 'chromedriver')
         self.driver = webdriver.Chrome(chrome_driver, options=chromeOptions)
@@ -86,14 +87,18 @@ class SiteTest(unittest.TestCase):
     def logout(self):
         self.driver.get(self.users_url + '/logout')
 
-    def login(self, user_name=):
+    def login(self, username=None, password=None):
         self.logout()
+        if not username:
+            username = self.operator_credentials['PHAME_USER_USERNAME']
+        if not password:
+            password = self.operator_credentials['PHAME_USER_PASSWORD']
         self.driver.get(f"{self.users_url}/login")
-        username = self.driver.find_element_by_name("username")
-        password = self.driver.find_element_by_name("password")
-        username.clear()
-        username.send_keys()
-        password.send_keys(self.operator_credentials['PHAME_USER_PASSWORD'])
+        username_box = self.driver.find_element_by_name("username")
+        password_box = self.driver.find_element_by_name("password")
+        username_box.clear()
+        username_box.send_keys(username)
+        password_box.send_keys(password)
         self.driver.find_element_by_name("submit").click()
 
     @staticmethod
@@ -177,13 +182,13 @@ class SiteTest(unittest.TestCase):
 
     def test_public_login(self):
         self.create_user(user_name='public', email_address='public@example.com')
-        self.login()
+        self.login(username='public', password='test_password')
         self.run_project()
         self.logout()
         self.driver.get(f"{self.users_url}/login")
         self.driver.find_element_by_xpath("//input[@id='public_login]").click()
         self.driver.find_element_by_name("submit").click()
-        self.assertEqual()
+        # self.assertEqual()
 
     def test_create_user(self):
         self.create_user()
@@ -250,10 +255,10 @@ class SiteTest(unittest.TestCase):
         return state
 
     def run_project(self, delete_duplicate=True):
-        self.login()
+
         # remove test_project if it already exists
-        self.driver.get(self.url + '/projects')
         if delete_duplicate:
+            self.driver.get(self.url + '/projects')
             try:
                 test_project = self.driver.find_element_by_partial_link_text(self.project)
                 if test_project:
@@ -270,6 +275,7 @@ class SiteTest(unittest.TestCase):
         self.driver.find_element_by_id("submit").click()
 
     def test_run_project_duplicate(self):
+        self.login()
         self.run_project()
         if not self.get_test_task_state(self.project):
             self.assertFalse(True)
@@ -281,6 +287,7 @@ class SiteTest(unittest.TestCase):
         self.driver.find_element_by_id("delete-button").click()
 
     def test_run_project(self):
+        self.login()
         self.run_project()
         if not self.get_test_task_state(self.project):
             self.assertFalse(True)
@@ -414,7 +421,7 @@ class SiteTest(unittest.TestCase):
         self.assertIn(os.path.join(zip_base_dir, 'tables', f'{self.project}_snp_pairwiseMatrix.txt'), zip_list)
         self.assertIn(os.path.join(zip_base_dir, 'alignments', f'{self.project}_all_snp_alignment.fna'), zip_list)
         self.assertIn(os.path.join(zip_base_dir, 'stats', 'KJ660347_ZEBOV_2002_Ilembe.coords'), zip_list)
-        os.remove(os.path.join(self.base_dir, 'project', 'tests', 'fixtures', zip_name))
+        os.remove(os.path.join(self.base_dir, 'tests', 'fixtures', zip_name))
 
         # delete test-project
         self.driver.get(self.url + '/projects')
