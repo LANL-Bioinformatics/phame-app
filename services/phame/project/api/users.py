@@ -66,6 +66,9 @@ def login():
                 return redirect(url_for('users.login'))
         else:
             user = User.query.filter_by(username='public').first()
+            if user is None:
+                flash('Public user does not exist. Please contact administrator')
+                return redirect(url_for('users.login'))
         logging.debug(f'logged in user {user.username}')
 
         # logging.debug(f"request next page {request.args.get('next')}")

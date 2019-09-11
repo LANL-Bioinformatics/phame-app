@@ -42,7 +42,7 @@ class SiteTest(unittest.TestCase):
         if not os.path.exists(operator_data_file):
             print('site_data.yaml does not exist, copy example_operator_data.yaml and add your credentials')
             sys.exit(0)
-            
+
         with open(operator_data_file) as fp:
             creds = yaml.load(fp, Loader=yaml.FullLoader)
 
@@ -86,31 +86,20 @@ class SiteTest(unittest.TestCase):
     def logout(self):
         self.driver.get(self.users_url + '/logout')
 
-    def login(self):
+    def login(self, user_name=):
         self.logout()
         self.driver.get(f"{self.users_url}/login")
         username = self.driver.find_element_by_name("username")
         password = self.driver.find_element_by_name("password")
         username.clear()
-        username.send_keys(self.operator_credentials['PHAME_USER_USERNAME'])
+        username.send_keys()
         password.send_keys(self.operator_credentials['PHAME_USER_PASSWORD'])
         self.driver.find_element_by_name("submit").click()
 
+    @staticmethod
     def login_test_user(self):
         r = requests.post('http://localhost/users/api/login', json={'username': 'test_user', 'password': 'test_password'})
         return True if r.status_code == 200 else False
-
-
-
-    def test_admin_login(self):
-        self.admin_login()
-        header = self.driver.find_element_by_xpath('// *[ @ id = "content"] / h1')
-        self.assertIn('PhaME Input', header.text)
-
-    def test_login(self):
-        self.login()
-        header = self.driver.find_element_by_xpath('// *[ @ id = "content"] / h1')
-        self.assertIn('PhaME Input', header.text)
 
     def delete_user(self):
         self.admin_login()
@@ -118,36 +107,30 @@ class SiteTest(unittest.TestCase):
         self.driver.find_element_by_xpath("//select[@id='manage_username']/option[text()='test_user']").click()
         self.driver.find_element_by_name("submit").click()
 
-    def create_user(self):
+    def remove_test_user(self):
+        # Check to see if test_user has been created, if so, delete
         response = requests.get('http://localhost/users/users/name/test_user')
         if response.status_code == 200:
             self.delete_user()
             self.logout()
+
+    def create_user(self, user_name='test_user', email_address='test@test.com', delete_duplicate=True):
+        """
+        Creates test_user
+        :return:
+        """
+        if user_name == 'test_user' and delete_duplicate:
+            self.remove_test_user()
         self.driver.get(self.users_url + "/register")
         username = self.driver.find_element_by_name("username")
         password = self.driver.find_element_by_name("password")
         password2 = self.driver.find_element_by_name("password2")
         email = self.driver.find_element_by_name("email")
-        username.send_keys('test_user')
+        username.send_keys(user_name)
         password.send_keys('test_password')
         password2.send_keys('test_password')
-        email.send_keys('test@test.com')
+        email.send_keys(email_address)
         self.driver.find_element_by_name("submit").click()
-
-    def test_create_user(self):
-        self.create_user()
-        header = self.driver.find_element_by_xpath('/html/body/div[2]/h1') # /html/body/div[2]/h1
-        self.assertIn('Sign In', header.text)
-        self.delete_user()
-
-    def test_delete_user(self):
-        self.create_user()
-        self.delete_user()
-        self.driver.get(self.users_url + "/profile")
-
-        user_names = self.driver.find_element_by_xpath("//select[@id='manage_username']")
-        for user_name in user_names.text.split('\n'):
-            self.assertFalse(user_name == 'test_user')
 
     def upload_files(self):
         # upload files
@@ -167,6 +150,66 @@ class SiteTest(unittest.TestCase):
         self.driver.get(self.url + '/input')
         self.driver.find_element_by_css_selector("#remove-button").click()
 
+    def test_admin_login(self):
+        self.admin_login()
+        header = self.driver.find_element_by_xpath('//*[@id="content"]/h1')
+        self.assertIn('PhaME Input', header.text)
+        profile_username = self.driver.find_element_by_xpath("//*[@class='navbar-text']").text
+        self.assertEqual(profile_username, 'admin')
+
+    def test_login(self):
+        self.login()
+        header = self.driver.find_element_by_xpath('//*[@id="content"]/h1')
+        self.assertIn('PhaME Input', header.text)
+        profile_username = self.driver.find_element_by_xpath("//*[@class='navbar-text']").text
+        self.assertEqual(profile_username, 'mark')
+
+    def test_login_invalid(self):
+        self.logout()
+        self.driver.get(f"{self.users_url}/login")
+        username = self.driver.find_element_by_name("username")
+        password = self.driver.find_element_by_name("password")
+        username.clear()
+        username.send_keys('fake_user')
+        password.send_keys('fake_password')
+        self.driver.find_element_by_name("submit").click()
+        self.assertEqual(self.driver.find_element_by_xpath("/html/body/div[2]/ul/li").text, 'Invalid username or password')
+
+    def test_public_login(self):
+        self.create_user(user_name='public', email_address='public@example.com')
+        self.login()
+        self.run_project()
+        self.logout()
+        self.driver.get(f"{self.users_url}/login")
+        self.driver.find_element_by_xpath("//input[@id='public_login]").click()
+        self.driver.find_element_by_name("submit").click()
+        self.assertEqual()
+
+    def test_create_user(self):
+        self.create_user()
+        header = self.driver.find_element_by_xpath('/html/body/div[2]/h1') # /html/body/div[2]/h1
+        self.assertIn('Sign In', header.text)
+        self.delete_user()
+
+    def test_create_user_invalid_username(self):
+        self.create_user('test user')
+        self.assertEqual(self.driver.find_element_by_xpath('//label[@for="username"]/following-sibling::span').text, '[Username cannot contain spaces]')
+
+    def test_create_user_duplicate_username_password(self):
+        self.create_user()
+        self.create_user(delete_duplicate=False)
+        self.assertEqual(self.driver.find_element_by_xpath('//label[@for="username"]/following-sibling::span').text, '[Please use a different username.]')
+        self.assertEqual(self.driver.find_element_by_xpath('//label[@for="email"]/following-sibling::span').text, '[Please use a different email address.]')
+
+    def test_delete_user(self):
+        self.create_user()
+        self.delete_user()
+        self.driver.get(self.users_url + "/profile")
+
+        user_names = self.driver.find_element_by_xpath("//select[@id='manage_username']")
+        for user_name in user_names.text.split('\n'):
+            self.assertFalse(user_name == 'test_user')
+
     def test_file_upload(self):
         self.create_user()
         self.login()
@@ -182,24 +225,20 @@ class SiteTest(unittest.TestCase):
         self.assertEqual(response.json()['uploads'], [])
         self.delete_user()
 
-    def get_flower_task_id(self, task_name):
+    @staticmethod
+    def get_flower_task_id(task_name):
+        """ Gets task id from flower celery monitor"""
         task_id = None
         tasks = requests.get('http://localhost:5555/api/tasks?state=STARTED')
         tasks_dict = tasks.json()
         for key, value in tasks_dict.items():
-            values = ast.literal_eval(value['args'])
-            if values[0] == task_name:
+            args = ast.literal_eval(value['args'])
+            if args[0] == task_name:
                 task_id = key
-        # if not task_id:
-        #     tasks_all = requests.get('http://localhost:5555/api/tasks')
-        #     tasks_all_dict = tasks_all.json()
-        #     for key, value in tasks_all_dict.items():
-        #         values = ast.literal_eval(value['args'])
-        #         if values[0] == task_name:
-        #             received_time = datetime.fromtimestamp(value['received'])
         return task_id
 
     def get_test_task_state(self, task_name):
+        """ Gets task state for running project """
         task_id = self.get_flower_task_id(task_name)
         state = None
         if task_id:
@@ -210,26 +249,39 @@ class SiteTest(unittest.TestCase):
                 state = result_json['state']
         return state
 
-    def test_run_project(self):
+    def run_project(self, delete_duplicate=True):
         self.login()
-
+        # remove test_project if it already exists
         self.driver.get(self.url + '/projects')
-        try:
-            test_project = self.driver.find_element_by_partial_link_text(self.project)
-            if test_project:
-                self.driver.find_element_by_xpath(
-                    f"//input[@value='{self.project}']").click()
-            self.driver.find_element_by_id("delete-button").click()
-        except:
-            pass
+        if delete_duplicate:
+            try:
+                test_project = self.driver.find_element_by_partial_link_text(self.project)
+                if test_project:
+                    self.driver.find_element_by_xpath(
+                        f"//input[@value='{self.project}']").click()
+                self.driver.find_element_by_id("delete-button").click()
+            except:
+                pass
         self.driver.get(self.url + '/input')
         project = self.driver.find_element_by_name("project")
         project.send_keys(self.project)
-        self.driver.find_element_by_xpath(("//*[@id='complete_genomes_div']/div/div[2]/span/div/button/span")).click()
-        button = self.driver.find_element_by_xpath("//*[@id='complete_genomes_div']/div/div[2]/span/div/ul/li[1]/a/label/input")
-        self.driver.implicitly_wait(10)
-        button.click()
+        self.driver.find_element_by_xpath("//button/span[@class='multiselect-selected-text']").click()
+        self.driver.find_element_by_xpath("//input[@value='multiselect-all']").click()
         self.driver.find_element_by_id("submit").click()
+
+    def test_run_project_duplicate(self):
+        self.run_project()
+        if not self.get_test_task_state(self.project):
+            self.assertFalse(True)
+        self.run_project(delete_duplicate=False)
+        self.assertEqual(self.driver.find_element_by_xpath('//p[@class="error"]').text, 'Error: Project directory already exists')
+        # delete test-project
+        self.driver.get(self.url + '/projects')
+        self.driver.find_element_by_xpath(f"//input[@value='{self.project}']").click()
+        self.driver.find_element_by_id("delete-button").click()
+
+    def test_run_project(self):
+        self.run_project()
         if not self.get_test_task_state(self.project):
             self.assertFalse(True)
         self.driver.get(self.url + f'/display/mark/{self.project}')
@@ -352,7 +404,7 @@ class SiteTest(unittest.TestCase):
         self.driver.get(self.url + f'/display/mark/{self.project}')
         self.driver.find_element_by_partial_link_text('download').click()
         zip_name = f'_phame_api_media_mark_{self.project}_{self.project}.zip'
-        with ZipFile(os.path.join(self.base_dir, 'project', 'tests', 'fixtures', zip_name)) as myzip:
+        with ZipFile(os.path.join(self.base_dir,  'tests', 'fixtures', zip_name)) as myzip:
             zip_list = myzip.namelist()
         zip_base_dir = os.path.join(self.project, 'workdir', 'results')
         self.assertIn(os.path.join(zip_base_dir, 'KJ660347_KJ660347.snpfilter'), zip_list)
