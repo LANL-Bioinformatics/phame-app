@@ -183,7 +183,6 @@ class SiteTest(unittest.TestCase):
     def test_public_login(self):
         self.create_user(user_name='public', email_address='public@example.com')
         self.login(username='public', password='test_password')
-        self.run_project()
         self.logout()
         self.driver.get(f"{self.users_url}/login")
         self.driver.find_element_by_xpath("//input[@id='public_login]").click()
