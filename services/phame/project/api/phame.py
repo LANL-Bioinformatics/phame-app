@@ -13,6 +13,7 @@ import json
 import re
 import pandas as pd
 from uuid import uuid4
+import gzip
 import celery.states as states
 import ast
 from sqlalchemy.exc import TimeoutError, IntegrityError, DataError
@@ -393,6 +394,11 @@ def upload():
             # logging.debug(f"Accept incoming file: {filename}")
             # logging.debug("Save it to:", destination)
             upload.save(destination)
+            if filename.endswith(('.gz')):
+                new_filename = '.'.join(filename.split('.')[:-1])
+                with gzip.open(os.path.join(target, filename), 'rb') as f, open(os.path.join(target, new_filename), 'w') as f2:
+                    f2.write(f.read().decode('utf-8'))
+                os.remove(os.path.join(target, filename))
 
         if is_ajax:
             return ajax_response(True, upload_key)

@@ -337,6 +337,15 @@ class SiteTest(unittest.TestCase):
         self.create_user()
         self.login()
         self.upload_files()
+        self.assertIn('KJ660347.fasta', self.driver.find_element_by_xpath("//textarea[@id='uploads']").text)
+        self.delete_user()
+
+    def test_upload_gz_file(self):
+        self.create_user()
+        self.login()
+        self.upload_files('GCA_000010485.contig.gz')
+        self.assertIn('GCA_000010485.contig', self.driver.find_element_by_xpath("//textarea[@id='uploads']").text)
+        self.assertNotIn('GCA_000010485.contig.gz', self.driver.find_element_by_xpath("//textarea[@id='uploads']").text)
         self.delete_user()
 
     def test_delete_file_uploads(self):

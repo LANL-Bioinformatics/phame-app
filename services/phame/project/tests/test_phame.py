@@ -276,6 +276,31 @@ class PhameTest(BaseTestCase):
         finally:
             self.remove_files(files)
 
+    def test_upload_gz(self):
+        self.add_user()
+        data = dict(file=[open(os.path.join('project', 'tests', 'fixtures',
+                                            'GCA_000010485.contig.gz'), 'rb')])
+        files = self.create_paths(os.path.join(
+            current_app.config['PHAME_UPLOAD_DIR'], 'mark'),
+            ['GCA_000010485.contig.gz'])
+        print(current_app.config['PHAME_UPLOAD_DIR'])
+        try:
+            with self.client:
+                self.login()
+                self.remove_files(files)
+                response = self.client.post(url_for('phame.upload'), data=data,
+                                            follow_redirects=True,
+                                            content_type='multipart/form-data')
+                self.assertEqual(response.status_code, 200)
+                self.assertFalse(os.path.exists(
+                    os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
+                                 'mark', 'GCA_000010485.contig.gz')))
+                self.assertTrue(os.path.exists(
+                    os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
+                                 'mark', 'GCA_000010485.contig')))
+        finally:
+            self.remove_files(files)
+
     def test_upload_files_list(self):
         self.add_user()
         data = dict(file=(io.BytesIO(b"abcdef"), 'test.jpg'))
