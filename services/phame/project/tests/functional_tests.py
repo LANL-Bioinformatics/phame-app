@@ -124,7 +124,7 @@ class SiteTest(unittest.TestCase):
 
     def remove_test_user(self):
         # Check to see if test_user has been created, if so, delete
-        response = requests.get('http://localhost/users/users/name/test_user')
+        response = requests.get(f'{self.users_url}/users/name/test_user')
         if response.status_code == 200:
             self.delete_user()
             self.logout()
@@ -148,6 +148,14 @@ class SiteTest(unittest.TestCase):
         email.send_keys(email_address)
         self.driver.find_element_by_name("submit").click()
 
+    def append_gz(self, gz_files, upload_files):
+        for z_file in gz_files:
+            if z_file in upload_files:
+                upload_files[upload_files.index(z_file)] = upload_files[
+                                                                   upload_files.index(
+                                                                       z_file)] + '.gz'
+        return upload_files
+
     def upload_files(self, *files_list):
         """
         Uploads a default list of complete genome files plus an arbitrary list of optional files
@@ -162,10 +170,24 @@ class SiteTest(unittest.TestCase):
         files_to_upload = set(files_to_upload_list)
         s = self.get_cookies()
         response = s.get(self.url + '/files')
-        already_uploaded_files = set(response.json()['uploads'])
+        print(response.status_code)
+        print(response.json())
+
+        # get list of .gz files to upload
+        gz_files = []
+        for f in files_to_upload_list:
+            if f.endswith('.gz'):
+                gz_files.append('.'.join(f.split('.')[:-1]))
+
+        already_uploaded_files_list = response.json()['uploads']
+
+        # find any corresponding uncompressed files already uploaded and append gz
+        already_uploaded_files_list = self.append_gz(gz_files, already_uploaded_files_list)
+
         # get list of files that still need to be uploaded by taking the difference between
         # the list of files that must be uploaded and the list of files that have already been
         # uploaded
+        already_uploaded_files = set(already_uploaded_files_list)
         upload_files_list = list(files_to_upload.difference(already_uploaded_files))
 
         for item in upload_files_list:
@@ -177,10 +199,11 @@ class SiteTest(unittest.TestCase):
         while not done_uploading:
             response = s.get(self.url + '/files')
             uploaded_files = response.json()['uploads']
+            uploaded_files = self.append_gz(gz_files, uploaded_files)
             if len(set(files_to_upload_list).difference(set(uploaded_files))) == 0:
                 done_uploading = True
         s.close()
-        # time.sleep(2)
+        time.sleep(2)
 
     def remove_files(self):
         self.driver.get(self.url + '/input')
@@ -336,17 +359,19 @@ class SiteTest(unittest.TestCase):
     def test_file_upload(self):
         self.create_user()
         self.login()
+        self.remove_files()
         self.upload_files()
         self.assertIn('KJ660347.fasta', self.driver.find_element_by_xpath("//textarea[@id='uploads']").text)
         self.delete_user()
 
     def test_upload_gz_file(self):
-        self.create_user()
+        # self.create_user()
         self.login()
+        self.remove_files()
         self.upload_files('GCA_000010485.contig.gz')
         self.assertIn('GCA_000010485.contig', self.driver.find_element_by_xpath("//textarea[@id='uploads']").text)
         self.assertNotIn('GCA_000010485.contig.gz', self.driver.find_element_by_xpath("//textarea[@id='uploads']").text)
-        self.delete_user()
+        # self.delete_user()
 
     def test_delete_file_uploads(self):
         self.create_user()
@@ -372,19 +397,30 @@ class SiteTest(unittest.TestCase):
 
     def get_test_task_state(self, task_name):
         """ Gets task state for running project """
-        task_id = self.get_flower_task_id(task_name)
-        state = None
-        if task_id:
-            state = 'STARTED'
-            while state != 'SUCCESS':
-                result = requests.get(
-                    f'http://localhost:5555/api/task/result/{task_id}')
-                result_json = result.json()
-                state = result_json['state']
+        # task_id = self.get_flower_task_id(task_name)
+        # state = None
+        # if task_id:
+        state = 'STARTED'
+        s = self.get_cookies()
+        while state != 'SUCCESS':
+            result = s.get(f'{self.url}/stats/{self.project}')
+            result_json = result.json()
+            state = result_json['data']
         return state
+
+    def delete_projects(self, projects_list):
+        self.driver.get(self.url + '/projects')
+        for project in projects_list:
+            try:
+                self.driver.find_element_by_xpath(
+                    f"//input[@value='{project}']").click()
+            except:
+                pass
+        self.driver.find_element_by_id("delete-button").click()
 
     def test_run_project_duplicate(self):
         self.login()
+        self.delete_projects([self.project])
         self.run_project('complete')
         time.sleep(6)
         # if not self.get_test_task_state(self.project):
@@ -394,18 +430,14 @@ class SiteTest(unittest.TestCase):
             '//p[@class="error"]').text,
                          'Error: Project directory already exists')
         # delete test-project
-        self.driver.get(self.url + '/projects')
-        self.driver.find_element_by_xpath(
-            f"//input[@value='{self.project}']").click()
-        self.driver.find_element_by_id("delete-button").click()
+        self.delete_projects([self.project])
 
     def test_run_project(self):
         self.login()
         self.upload_files()
+        self.delete_projects([self.project, self.project_subset])
         self.run_project('complete')
-        # if not self.get_test_task_state(self.project):
-        #     self.assertFalse(True)
-        time.sleep(6)
+        self.get_test_task_state(self.project)
         self.driver.get(self.url + f"/display/{self.operator_credentials['PHAME_USER_USERNAME']}/{self.project}")
         run_summary = self.driver.find_element_by_xpath(
             '//*[@class="dataframe run_summary"]/thead').text
@@ -483,7 +515,7 @@ class SiteTest(unittest.TestCase):
         queues.select_by_visible_text("KJ660347.fasta")
         queues.select_by_visible_text("ZEBOV_2002_Ilembe.fna")
         self.driver.find_element_by_name("submit").click()
-        time.sleep(3)
+        self.get_test_task_state(self.project_subset)
         # if not self.get_test_task_state(self.project_subset):
         #     self.assertFalse(True)
         self.driver.get(self.url + f"/display/{self.operator_credentials['PHAME_USER_USERNAME']}/{self.project_subset}")
@@ -553,10 +585,7 @@ class SiteTest(unittest.TestCase):
         os.remove(os.path.join(self.base_dir, 'tests', 'extra', zip_name))
 
         # delete test-project
-        self.driver.get(self.url + '/projects')
-        self.driver.find_element_by_xpath(f"//input[@value='{self.project}']").click()
-        self.driver.find_element_by_xpath(f"//input[@value='{self.project_subset}']").click()
-        self.driver.find_element_by_id("delete-button").click()
+        self.delete_projects([self.project, self.project_subset])
 
     def test_run_project_reads(self):
         self.login()
@@ -565,4 +594,4 @@ class SiteTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(argv=['functional_tests.py', '/Devel/phame-app/services/phame/project/tests/prod_site_data.yaml'])
+    unittest.main()

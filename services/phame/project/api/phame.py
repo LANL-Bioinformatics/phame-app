@@ -679,6 +679,20 @@ def update_stats(project):
         logging.debug(f'Error updating project {project}')
 
 
+@phame_blueprint.route('/stats/<project_name>', methods=['GET'])
+def get_stats(project_name):
+    response_object = {'status': 'fail', 'message': 'Unable to get stats'}
+    try:
+        user = User.query.filter_by(username=current_user.username).first()
+        project = Project.query.filter_by(name=project_name, user=user).first()
+        response_object = {'status': 'success',
+                           'data': project.status}
+        return jsonify(response_object), 200
+    except Exception as e:
+        logging.debug(f'Could not get stats for {project_name}: {e}')
+        return jsonify(response_object), 400
+
+
 @phame_blueprint.route('/stats', methods=['POST'])
 def add_stats():
     """
@@ -1151,6 +1165,10 @@ def runphame(project):
     response = check_task(task.id)
     if isinstance(response, dict):
         logging.debug(f'check task {response.__dict__}')
+    user = User.query.filter_by(username=current_user.username).first()
+    db.session.add(
+        Project(name=project, start_time=datetime.now(), user=user))
+    db.session.commit()
     return redirect(url_for('phame.wait', task_id=task.id, project=project))
 
 
