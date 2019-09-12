@@ -18,6 +18,7 @@ import argparse
 from zipfile import ZipFile
 sys.path.append(os.path.dirname(__file__))
 
+
 class SiteTest(unittest.TestCase):
 
     """
@@ -102,6 +103,8 @@ class SiteTest(unittest.TestCase):
         username_box.clear()
         username_box.send_keys(username)
         password_box.send_keys(password)
+        # self.driver.find_element_by_xpath(
+        #     "//input[@id='remember_me']").click()
         self.driver.find_element_by_name("submit").click()
 
     @staticmethod
@@ -145,24 +148,67 @@ class SiteTest(unittest.TestCase):
         email.send_keys(email_address)
         self.driver.find_element_by_name("submit").click()
 
-    def upload_files(self):
-        # upload files
-        self.driver.find_element_by_id("file-picker").send_keys(
-            os.path.join(self.base_dir, 'tests', 'fixtures', 'KJ660347.fasta'))
-        self.driver.find_element_by_id("file-picker").send_keys(
-            os.path.join(self.base_dir, 'tests', 'fixtures', 'KJ660347.gff'))
-        self.driver.find_element_by_id("file-picker").send_keys(
-            os.path.join(self.base_dir, 'tests', 'fixtures',
-                         'ZEBOV_2002_Ilembe.fna'))
-        self.driver.find_element_by_id("file-picker").send_keys(
-            os.path.join(self.base_dir, 'tests', 'fixtures',
-                         'ZEBOV_2007_0Luebo.fna'))
+    def upload_files(self, *files_list):
+        """
+        Uploads a default list of complete genome files plus an arbitrary list of optional files
+        Checks which files have been already uploaded and waits until the files that have not yet been uploaded
+        have finished uploading
+        :param files_list:
+        :return:
+        """
+        # add complete genome files
+        default_files = ['KJ660347.fasta', 'KJ660347.gff', 'ZEBOV_2002_Ilembe.fna', 'ZEBOV_2007_0Luebo.fna']
+        files_to_upload_list = [*default_files, *files_list]
+        files_to_upload = set(files_to_upload_list)
+        s = self.get_cookies()
+        response = s.get(self.url + '/files')
+        already_uploaded_files = set(response.json()['uploads'])
+        # get list of files that still need to be uploaded by taking the difference between
+        # the list of files that must be uploaded and the list of files that have already been
+        # uploaded
+        upload_files_list = list(files_to_upload.difference(already_uploaded_files))
+
+        for item in upload_files_list:
+            self.driver.find_element_by_id("file-picker").send_keys(
+                os.path.join(self.base_dir, 'tests', 'fixtures', item))
+
         self.driver.find_element_by_css_selector("#upload-button").click()
-        time.sleep(2)
+        done_uploading = False
+        while not done_uploading:
+            response = s.get(self.url + '/files')
+            uploaded_files = response.json()['uploads']
+            if len(set(files_to_upload_list).difference(set(uploaded_files))) == 0:
+                done_uploading = True
+        s.close()
+        # time.sleep(2)
 
     def remove_files(self):
         self.driver.get(self.url + '/input')
         self.driver.find_element_by_css_selector("#remove-button").click()
+
+    def run_project(self, *options, delete_duplicate=True):
+
+        # remove test_project if it already exists
+        if delete_duplicate:
+            self.driver.get(self.url + '/projects')
+            try:
+                test_project = self.driver.find_element_by_partial_link_text(
+                    self.project)
+                if test_project:
+                    self.driver.find_element_by_xpath(
+                        f"//input[@value='{self.project}']").click()
+                self.driver.find_element_by_id("delete-button").click()
+            except:
+                pass
+        self.driver.get(self.url + '/input')
+        project = self.driver.find_element_by_name("project")
+        project.send_keys(self.project)
+        if 'complete' in *options:
+        self.driver.find_element_by_xpath(
+            "//button/span[@class='multiselect-selected-text']").click()
+        self.driver.find_element_by_xpath(
+            "//input[@value='multiselect-all']").click()
+        self.driver.find_element_by_id("submit").click()
 
     def test_admin_login(self):
         self.admin_login()
@@ -191,6 +237,26 @@ class SiteTest(unittest.TestCase):
         self.driver.find_element_by_name("submit").click()
         self.assertEqual(self.driver.find_element_by_xpath(
             "/html/body/div[2]/ul/li").text, 'Invalid username or password')
+
+    def test_login_remember(self):
+        self.logout()
+        self.driver.get(f"{self.users_url}/login")
+        username = self.driver.find_element_by_name("username")
+        password = self.driver.find_element_by_name("password")
+        username.clear()
+        username.send_keys(self.operator_credentials['PHAME_USER_USERNAME'])
+        password.send_keys(self.operator_credentials['PHAME_USER_PASSWORD'])
+        self.driver.find_element_by_xpath(
+            "//input[@id='remember_me']").click()
+        self.driver.find_element_by_name("submit").click()
+        s = self.get_cookies()
+        self.assertTrue('remember_token' in s.cookies._cookies['']['/'].keys())
+        header = self.driver.find_element_by_xpath('//*[@id="content"]/h1')
+        self.assertIn('PhaME Input', header.text)
+        profile_username = self.driver.find_element_by_xpath(
+            "//*[@class='navbar-text']").text
+        self.assertEqual(profile_username, self.operator_credentials['PHAME_USER_USERNAME'])
+
 
     def test_public_login(self):
         self.create_user(user_name='public',
@@ -258,8 +324,8 @@ class SiteTest(unittest.TestCase):
     def test_delete_file_uploads(self):
         self.create_user()
         self.login()
-        self.remove_files()
         s = self.get_cookies()
+        self.remove_files()
         response = s.get(self.url + '/files')
         s.close()
         self.assertEqual(response.json()['uploads'], [])
@@ -289,29 +355,6 @@ class SiteTest(unittest.TestCase):
                 result_json = result.json()
                 state = result_json['state']
         return state
-
-    def run_project(self, delete_duplicate=True):
-
-        # remove test_project if it already exists
-        if delete_duplicate:
-            self.driver.get(self.url + '/projects')
-            try:
-                test_project = self.driver.find_element_by_partial_link_text(
-                    self.project)
-                if test_project:
-                    self.driver.find_element_by_xpath(
-                        f"//input[@value='{self.project}']").click()
-                self.driver.find_element_by_id("delete-button").click()
-            except:
-                pass
-        self.driver.get(self.url + '/input')
-        project = self.driver.find_element_by_name("project")
-        project.send_keys(self.project)
-        self.driver.find_element_by_xpath(
-            "//button/span[@class='multiselect-selected-text']").click()
-        self.driver.find_element_by_xpath(
-            "//input[@value='multiselect-all']").click()
-        self.driver.find_element_by_id("submit").click()
 
     def test_run_project_duplicate(self):
         self.login()
@@ -487,6 +530,10 @@ class SiteTest(unittest.TestCase):
         self.driver.find_element_by_xpath(f"//input[@value='{self.project}']").click()
         self.driver.find_element_by_xpath(f"//input[@value='{self.project_subset}']").click()
         self.driver.find_element_by_id("delete-button").click()
+
+    def test_run_contigs(self):
+        self.login()
+        self.upload_files('SRR3359589_R1.fastq', 'SRR3359589_R2.fastq')
 
 
 if __name__ == '__main__':
