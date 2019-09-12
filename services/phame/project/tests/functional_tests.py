@@ -203,11 +203,29 @@ class SiteTest(unittest.TestCase):
         self.driver.get(self.url + '/input')
         project = self.driver.find_element_by_name("project")
         project.send_keys(self.project)
-        if 'complete' in *options:
-        self.driver.find_element_by_xpath(
-            "//button/span[@class='multiselect-selected-text']").click()
-        self.driver.find_element_by_xpath(
-            "//input[@value='multiselect-all']").click()
+        if 'complete' in options:
+            self.driver.find_element_by_xpath(
+                "//button/span[@class='multiselect-selected-text']").click()
+            self.driver.find_element_by_xpath(
+                "//input[@value='multiselect-all']").click()
+        if 'contig' in options:
+            self.driver.find_element_by_xpath(
+                "//input[@id='data_type-1']").click()
+            self.driver.find_element_by_xpath("//select[@id='contigs']/following-sibling::div/button/span[@class='multiselect-selected-text']").click()
+            self.driver.find_element_by_xpath(
+                "//input[@value='multiselect-all']").click()
+        if 'read' in options:
+            self.driver.find_element_by_xpath(
+                "//input[@id='data_type-2']").click()
+            self.driver.find_element_by_xpath(
+                "//select[@id='reads_type']").click()
+            self.driver.find_element_by_xpath("//select[@id='reads']/following-sibling::div/button/span[@class='multiselect-selected-text']").click()
+            # self.driver.find_element_by_xpath(
+            #     "//input[@value='multiselect-all']").click()
+            self.driver.find_element_by_xpath(
+                "//input[@value='SRR3359589_R1.fastq']").click()
+            self.driver.find_element_by_xpath(
+                "//input[@value='SRR3359589_R2.fastq']").click()
         self.driver.find_element_by_id("submit").click()
 
     def test_admin_login(self):
@@ -358,11 +376,11 @@ class SiteTest(unittest.TestCase):
 
     def test_run_project_duplicate(self):
         self.login()
-        self.run_project()
+        self.run_project('complete')
         time.sleep(6)
         # if not self.get_test_task_state(self.project):
         #     self.assertFalse(True)
-        self.run_project(delete_duplicate=False)
+        self.run_project('complete', delete_duplicate=False)
         self.assertEqual(self.driver.find_element_by_xpath(
             '//p[@class="error"]').text,
                          'Error: Project directory already exists')
@@ -375,7 +393,7 @@ class SiteTest(unittest.TestCase):
     def test_run_project(self):
         self.login()
         self.upload_files()
-        self.run_project()
+        self.run_project('complete')
         # if not self.get_test_task_state(self.project):
         #     self.assertFalse(True)
         time.sleep(6)
@@ -531,9 +549,10 @@ class SiteTest(unittest.TestCase):
         self.driver.find_element_by_xpath(f"//input[@value='{self.project_subset}']").click()
         self.driver.find_element_by_id("delete-button").click()
 
-    def test_run_contigs(self):
+    def test_run_project_reads(self):
         self.login()
         self.upload_files('SRR3359589_R1.fastq', 'SRR3359589_R2.fastq')
+        self.run_project('complete', 'read')
 
 
 if __name__ == '__main__':
