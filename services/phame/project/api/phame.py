@@ -64,7 +64,9 @@ def input():
         (a, a) for a in files_list if (
             a.endswith('fna') or a.endswith('fasta') or a.endswith('gff'))]
     form.contigs.choices = [
-        (a, a) for a in files_list if (a.endswith('contig') or a.endswith('fasta'))]
+        (a, a) for a in files_list if (a not in form.complete_genomes.choices and (a.endswith('contig') or a.endswith('fasta')))]
+    logging.debug(f'complete genome choices {form.complete_genomes.choices}')
+    logging.debug(f'contig choices {form.contigs.choices}')
     form.reads.choices = [(a, a) for a in files_list if a.endswith('fastq')]
 
     if request.method == 'POST':
@@ -181,6 +183,7 @@ def link_files(project_dir, ref_dir, work_dir, form):
             symlink_uploaded_file(ref_dir, upload_file)
         form.reference_file.choices = \
             [(a, a) for a in form.complete_genomes.data]
+
     if len(form.reads.data) > 0:
         # symlink reads files
         for file_name in form.reads.data:
