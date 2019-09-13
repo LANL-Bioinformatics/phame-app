@@ -64,7 +64,7 @@ def input():
         (a, a) for a in files_list if (
             a.endswith('fna') or a.endswith('fasta') or a.endswith('gff'))]
     form.contigs.choices = [
-        (a, a) for a in files_list if (a not in form.complete_genomes.choices and (a.endswith('contig') or a.endswith('fasta')))]
+        (a, a) for a in files_list if (a.endswith('contig') or a.endswith('fasta'))]
     logging.debug(f'complete genome choices {form.complete_genomes.choices}')
     logging.debug(f'contig choices {form.contigs.choices}')
     form.reads.choices = [(a, a) for a in files_list if a.endswith('fastq')]
