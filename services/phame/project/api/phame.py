@@ -1210,29 +1210,32 @@ def num_results_files(project):
 
 
 def send_mailgun(message, project):
-    key = os.environ['API_KEY']
-    sender = os.environ['SENDER']
-    recipient = current_user.email
-    # logging.info('current_user.email: {0}'.format(recipient))
-    request_url = os.environ['EMAIL_URL']
-    results_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'],
-                               current_user.username, project, 'workdir',
-                               'results')
-    log_file = '{0}.log'.format(project)
-    log_fh = open(os.path.join(results_dir, log_file), "rb").read()
-    error_file = f'{project}.error'
-    error_fh = open(os.path.join(results_dir, error_file), "rb").read()
-    mail_request = requests.post(
-        request_url,
-        auth=('api', key),
-        files=[("attachment", log_fh), ("attachment", error_fh)],
-        data={'from': sender, 'to': recipient,
-              'subject': f'Project {project}', 'text': message})
-    # logging.debug(f"from: {'donotreply@edgebioinformatics.org'} to: "
-    #               f"{recipient} subject: Project {project} text: {message}")
-    # logging.debug(f'log file: {log_file}, error file: {error_file}')
-    # logging.info('Status: {0}'.format(mail_request.status_code))
-    return mail_request.status_code
+    try:
+        key = os.environ['API_KEY']
+        sender = os.environ['SENDER']
+        recipient = current_user.email
+        logging.info(f'current_user.email: {recipient}, project {project}')
+        request_url = os.environ['EMAIL_URL']
+        results_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'],
+                                   current_user.username, project, 'workdir',
+                                   'results')
+        log_file = '{0}.log'.format(project)
+        log_fh = open(os.path.join(results_dir, log_file), "rb").read()
+        error_file = f'{project}.error'
+        error_fh = open(os.path.join(results_dir, error_file), "rb").read()
+        mail_request = requests.post(
+            request_url,
+            auth=('api', key),
+            files=[("attachment", log_fh), ("attachment", error_fh)],
+            data={'from': sender, 'to': recipient,
+                  'subject': f'Project {project}', 'text': message})
+        # logging.debug(f"from: {'donotreply@edgebioinformatics.org'} to: "
+        #               f"{recipient} subject: Project {project} text: {message}")
+        # logging.debug(f'log file: {log_file}, error file: {error_file}')
+        logging.info('Status: {0}'.format(mail_request.status_code))
+        return mail_request.status_code
+    except KeyError as e:
+        logging.debug(f'KeyError {e}')
 
 
 @phame_blueprint.route('/notify/<project>', methods=['GET'])
