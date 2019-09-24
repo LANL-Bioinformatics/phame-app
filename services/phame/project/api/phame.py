@@ -64,7 +64,9 @@ def input():
         (a, a) for a in files_list if (
             a.endswith('fna') or a.endswith('fasta') or a.endswith('gff'))]
     form.contigs.choices = [
-        (a, a) for a in files_list if (a.endswith('contig') or a.endswith('fasta'))]
+        (a, a) for a in files_list if (a not in form.complete_genomes.choices and (a.endswith('contig') or a.endswith('fasta')))]
+    logging.debug(f'complete genome choices {form.complete_genomes.choices}')
+    logging.debug(f'contig choices {form.contigs.choices}')
     form.reads.choices = [(a, a) for a in files_list if a.endswith('fastq')]
 
     if request.method == 'POST':
@@ -137,6 +139,32 @@ def input():
     return render_template('input.html', title='Phame input', form=form)
 
 
+def symlink_files(source_dir, dest_dir, *files):
+    for source_file in files:
+        source_file_path = os.path.join(source_dir, source_file)
+        dest_file_path = os.path.join(dest_dir, source_file)
+        if os.path.exists(dest_file_path):
+            os.remove(dest_file_path)
+        try:
+            os.symlink(source_file_path, dest_file_path)
+            # logging.debug(f"symlink exists {os.path.exists(dest_file_path)}")
+        except FileNotFoundError as e:
+            logging.debug(f'file {dest_file_path} not found: {e}')
+
+
+def symlink_directory(source_dir, dest_dir):
+    for source_file in os.listdir(source_dir):
+        source_file_path = os.path.join(source_dir, source_file)
+        dest_file_path = os.path.join(dest_dir, source_file)
+        if os.path.exists(dest_file_path):
+            os.remove(dest_file_path)
+        try:
+            os.symlink(source_file_path, dest_file_path)
+            # logging.debug(f"symlink exists {os.path.exists(dest_file_path)}")
+        except FileNotFoundError as e:
+            logging.debug(f'file {dest_file_path} not found: {e}')
+
+
 def symlink_uploaded_file(dest_dir, upload_file, source_file=None):
     if not source_file:
         source_file = upload_file
@@ -181,6 +209,7 @@ def link_files(project_dir, ref_dir, work_dir, form):
             symlink_uploaded_file(ref_dir, upload_file)
         form.reference_file.choices = \
             [(a, a) for a in form.complete_genomes.data]
+
     if len(form.reads.data) > 0:
         # symlink reads files
         for file_name in form.reads.data:
@@ -810,6 +839,59 @@ def get_all_project_stats(display_user):
         return jsonify(response_object), 400
 
 
+def get_directory_size(start_path):
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(start_path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            # skip if it is symbolic link
+            if not os.path.islink(fp):
+                total_size += os.path.getsize(fp)
+
+    return total_size
+
+
+@phame_blueprint.route('/dashboard')
+def show_dashboard():
+    """
+    Display admin dashboard
+    :return:
+    """
+    response_object = {'status': 'fail', 'message': 'Invalid payload'}
+    try:
+        users = User.query.all()
+        users_list = []
+        for user in users:
+            user_projects = Project.query.filter_by(user=user)
+            directory_size = get_directory_size(os.path.join(current_app.config['PROJECT_DIRECTORY'], user.username))
+            cpu_time = 0
+            for project in user_projects:
+                cpu_time += project.execution_time/360 * project.num_threads
+                logging.debug(f'project {project.name} cpu_time {cpu_time}')
+            # cpu_time = [cpu_time + (x.num_threads * x.execution_time/360) for x in user_projects]
+            users_list.append({'username': user.username, 'total cpu-hours': cpu_time,
+                               'total disk space': bytes2human(directory_size)})
+        users_df = pd.DataFrame(users_list)
+        # users_df['project name'] = \
+        #     users_df[['project name', 'status']].apply(
+        #         lambda x: '<a href="/phame/display/{0}">{1}</a>'.format(
+        #             x['project name'])
+        users_df['username'] = \
+            users_df['username'].apply(
+                lambda x: '<a href="/phame/projects/{0}">{0}</a>'.format(x))
+        logging.debug(users_df['username'])
+        return render_template('admin_dashboard.html',
+                               users_list=users_df.to_html(
+                                   escape=False, classes='user summary',
+                                   index=False))
+    except Exception as e:
+        logging.exception(str(e))
+        return render_template('error.html',
+                               error={
+                                   'msg': f'There was a problem displaying '
+                                   f'projects: {str(e)}'})
+
+
 @phame_blueprint.route('/projects/<username>')
 @phame_blueprint.route('/projects')
 @login_required
@@ -1003,31 +1085,41 @@ def subset(project):
         os.makedirs(os.path.join(new_project_path, 'refdir'), exist_ok=True)
         os.makedirs(os.path.join(new_project_path, 'workdir'), exist_ok=True)
 
-        # Change project name in config file
-        shutil.copy(os.path.join(project_path, 'config.ctl'),
-                    os.path.join(new_project_path))
-
         # copy selected results directories to new project
         dir_list = ['gaps', 'miscs', 'snps', 'stats', 'temp', 'trees',
                     'tables']
         for results_dir in dir_list:
-            shutil.copytree(os.path.join(project_path, 'workdir', 'results',
-                                         results_dir),
-                            os.path.join(new_project_path, 'workdir',
-                                         'results', results_dir))
+            source_dir = os.path.join(project_path, 'workdir', 'results',
+                         results_dir)
+            dest_dir = os.path.join(new_project_path, 'workdir',
+                                         'results', results_dir)
+            symlink_directory(source_dir, dest_dir)
+            # shutil.copytree(os.path.join(project_path, 'workdir', 'results',
+            #                              results_dir),
+            #                 os.path.join(new_project_path, 'workdir',
+            #                              'results', results_dir))
 
         # copy files from results directory
-        results_files = os.listdir(os.path.join(project_path, 'workdir',
-                                                'results'))
-        for result_file in results_files:
-            if not os.path.isdir(os.path.join(project_path, 'workdir',
-                                              'results', result_file)):
-                # logging.debug(f'result file {result_file}')
-                # logging.debug(f'isdir {os.path.isdir(result_file)}')
-                shutil.copy(os.path.join(project_path, 'workdir', 'results',
-                                         result_file),
-                            os.path.join(new_project_path, 'workdir',
-                                         'results'))
+        # symlink_directory(os.path.join(project_path, 'workdir',
+        #                                         'results'), os.path.join(new_project_path, 'workdir',
+        #                                         'results'))
+        # results_files = os.listdir(os.path.join(project_path, 'workdir',
+        #                                         'results'))
+        # symlink_files(os.path.join(project_path, 'workdir', 'results'),
+        #               os.path.join(new_project_path, 'workdir', 'results', results_files))
+        # for result_file in results_files:
+        #     if not os.path.isdir(os.path.join(project_path, 'workdir',
+        #                                       'results', result_file)):
+        #         # logging.debug(f'result file {result_file}')
+        #         # logging.debug(f'isdir {os.path.isdir(result_file)}')
+        #         os.symlink(os.path.join(project_path, 'workdir', 'results',
+        #                                  result_file),
+        #                    os.path.join(new_project_path, 'workdir',
+        #                                 'results'))
+                # shutil.copy(os.path.join(project_path, 'workdir', 'results',
+                #                          result_file),
+                #             os.path.join(new_project_path, 'workdir',
+                #                          'results'))
 
         # create new working_list.txt file and copy files
         if not os.path.exists(os.path.join(new_project_path, 'workdir',
@@ -1050,47 +1142,56 @@ def subset(project):
         # reference file name
         properties = ['project', 'data']
         values = [new_project, '7']
+        # Change project name in config file
+        shutil.copy(os.path.join(project_path, 'config.ctl'),
+                    os.path.join(new_project_path))
         logging.debug(f'new_project_path {new_project_path}')
-        set_config_properties(new_project_path, properties, values)
-        # fh, abs_path = mkstemp()
-        # with os.fdopen(fh, 'w') \
-        #         as tmp, open(os.path.join(new_project_path,
-        #                                   'config.ctl'), 'r') as config:
-        #     lines = config.readlines()
-        #     reference_file = ''
-        #     for line in lines:
-        #         if re.search(project, line):
-        #             tmp.write(re.sub(project, new_project, line))
-        #         elif re.search('data', line):
-        #             tmp.write('data = 7\n')
-        #         else:
-        #             tmp.write(line)
-        #
-        #         # get name of reference file for form validation
-        #         if re.search('reffile', line):
-        #             # m = re.search('=\s*(\w*)', line)
-        #             reference_file = line.split('=')[1].split()[0]
-        #             # logging.debug('reference line {0}'.format(line))
-        # shutil.move(abs_path, os.path.join(new_project_path, 'config.ctl'))
+        # set_config_properties(new_project_path, properties, values)
+        fh, abs_path = mkstemp()
+        with os.fdopen(fh, 'w') \
+                as tmp, open(os.path.join(new_project_path,
+                                          'config.ctl'), 'r') as config:
+            lines = config.readlines()
+            reference_file = ''
+            for line in lines:
+                if re.search(project, line):
+                    tmp.write(re.sub(project, new_project, line))
+                elif re.search('data', line):
+                    tmp.write('data = 7\n')
+                else:
+                    tmp.write(line)
+
+                # get name of reference file for form validation
+                if re.search('reffile', line):
+                    # m = re.search('=\s*(\w*)', line)
+                    reference_file = line.split('=')[1].split()[0]
+                    # logging.debug('reference line {0}'.format(line))
+        shutil.move(abs_path, os.path.join(new_project_path, 'config.ctl'))
 
         # symlink subset of reference genome files
-        for file_name in form.subset_files.data:
-
-            # logging.debug(f'file {file_name}')
-            os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
-                                    current_user.username, file_name),
-                       os.path.join(new_project_path, 'refdir', file_name))
+        symlink_files(os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
+                                    current_user.username),  os.path.join(new_project_path, 'refdir'),
+                      form.subset_files.data)
+        # for file_name in form.subset_files.data:
+        #
+        #     # logging.debug(f'file {file_name}')
+        #     os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
+        #                             current_user.username, file_name),
+        #                os.path.join(new_project_path, 'refdir', file_name))
 
         # symlink contig files
-        for file_name in os.listdir(os.path.join(project_path, 'workdir')):
-            if file_name.endswith('.contig'):
-                os.symlink(os.path.join(
-                    current_app.config['PHAME_UPLOAD_DIR'],
-                    current_user.username, file_name),
-                    os.path.join(new_project_path, 'workdir', file_name))
+        contig_files = []
+        [contig_files.append(file_name) for file_name in os.listdir(os.path.join(project_path, 'workdir')) if file_name.endswith('.contig')]
+        symlink_files(os.path.join(project_path, 'workdir'), os.path.join(new_project_path, 'workdir'), contig_files)
+        # for file_name in os.listdir(os.path.join(project_path, 'workdir')):
+        #     if file_name.endswith('.contig'):
+        #         os.symlink(os.path.join(
+        #             current_app.config['PHAME_UPLOAD_DIR'],
+        #             current_user.username, file_name),
+        #             os.path.join(new_project_path, 'workdir', file_name))
 
         if form.validate_on_submit():
-            reference_file = get_config_property(new_project_path, 'reffile')
+            # reference_file = get_config_property(new_project_path, 'reffile')
             if reference_file and reference_file not in form.subset_files.data:
                 flash(f'Please include the reference file {reference_file}')
                 return redirect(url_for('subset', project=project))

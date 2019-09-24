@@ -103,8 +103,8 @@ class SiteTest(unittest.TestCase):
         username_box.clear()
         username_box.send_keys(username)
         password_box.send_keys(password)
-        # self.driver.find_element_by_xpath(
-        #     "//input[@id='remember_me']").click()
+        self.driver.find_element_by_xpath(
+            "//input[@id='remember_me']").click()
         self.driver.find_element_by_name("submit").click()
 
     @staticmethod
