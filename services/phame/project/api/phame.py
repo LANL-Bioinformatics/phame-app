@@ -942,6 +942,8 @@ def get_config_property(project_dir, config_property):
         # logging.debug(f'config_property {config_property}')
         # logging.debug(f"config_field {config_df[config_df['field'] == config_property]['val']}")
         value = config_df[config_df['field'] == config_property]['val'].values[0].strip().split('#')[0].strip()
+        if len(value) == 0:
+            value = None
     except IOError as e:
         logging.exception(f'Cannot get config property {config_property} for project '
                           f'directory {project_dir}: {e}')
@@ -949,6 +951,31 @@ def get_config_property(project_dir, config_property):
         logging.debug(f'IndexError Cannot get config property {config_property} for project ' 
                       f'directory {project_dir}: {e}')
     return value
+
+
+def set_config_properties(project_path, config_properties, values):
+    # modify config.ctl file to change config_properties
+    fh, abs_path = mkstemp()
+    with os.fdopen(fh, 'w') \
+        as tmp, open(os.path.join(project_path, 'config.ctl'),
+                     'r') as config:
+        lines = config.readlines()
+        reference_file = ''
+        for line in lines:
+            replace = False
+            for (config_prop, value) in zip(config_properties, values):
+                if re.search(f'^{config_prop}', line):
+                    logging.debug(f'config_prop {config_prop}, value {value}')
+                    tmp.write(f'{config_prop} = {value}\n')
+                    replace = True
+            # if re.search(project, line):
+            #     tmp.write(re.sub(project, new_project, line))
+            # elif re.search(f'^{config_property}', line):
+            #     tmp.write(f'{config_property} = {value}\n')
+            # else:
+            if not replace:
+                tmp.write(line)
+        shutil.move(abs_path, os.path.join(project_path, 'config.ctl'))
 
 
 @phame_blueprint.route('/subset/<project>', methods=['GET', 'POST'])
@@ -968,13 +995,13 @@ def subset(project):
 
     if request.method == 'POST':
         # logging.debug('POST')
-        # logging.debug('post subset files: {0}'.format(form.subset_files.data))
+        logging.debug('post subset files: {0}'.format(form.subset_files.data))
 
         # Delete subset directory tree and create new directories
         if os.path.exists(new_project_path):
             shutil.rmtree(new_project_path)
-        os.makedirs(os.path.join(new_project_path, 'refdir'))
-        os.makedirs(os.path.join(new_project_path, 'workdir'))
+        os.makedirs(os.path.join(new_project_path, 'refdir'), exist_ok=True)
+        os.makedirs(os.path.join(new_project_path, 'workdir'), exist_ok=True)
 
         # Change project name in config file
         shutil.copy(os.path.join(project_path, 'config.ctl'),
@@ -1021,26 +1048,30 @@ def subset(project):
 
         # modify config.ctl file to change project to new name and get
         # reference file name
-        fh, abs_path = mkstemp()
-        with os.fdopen(fh, 'w') \
-                as tmp, open(os.path.join(new_project_path,
-                                          'config.ctl'), 'r') as config:
-            lines = config.readlines()
-            reference_file = ''
-            for line in lines:
-                if re.search(project, line):
-                    tmp.write(re.sub(project, new_project, line))
-                elif re.search('data', line):
-                    tmp.write('data = 7\n')
-                else:
-                    tmp.write(line)
-
-                # get name of reference file for form validation
-                if re.search('reffile', line):
-                    # m = re.search('=\s*(\w*)', line)
-                    reference_file = line.split('=')[1].split()[0]
-                    # logging.debug('reference line {0}'.format(line))
-        shutil.move(abs_path, os.path.join(new_project_path, 'config.ctl'))
+        properties = ['project', 'data']
+        values = [new_project, '7']
+        logging.debug(f'new_project_path {new_project_path}')
+        set_config_properties(new_project_path, properties, values)
+        # fh, abs_path = mkstemp()
+        # with os.fdopen(fh, 'w') \
+        #         as tmp, open(os.path.join(new_project_path,
+        #                                   'config.ctl'), 'r') as config:
+        #     lines = config.readlines()
+        #     reference_file = ''
+        #     for line in lines:
+        #         if re.search(project, line):
+        #             tmp.write(re.sub(project, new_project, line))
+        #         elif re.search('data', line):
+        #             tmp.write('data = 7\n')
+        #         else:
+        #             tmp.write(line)
+        #
+        #         # get name of reference file for form validation
+        #         if re.search('reffile', line):
+        #             # m = re.search('=\s*(\w*)', line)
+        #             reference_file = line.split('=')[1].split()[0]
+        #             # logging.debug('reference line {0}'.format(line))
+        # shutil.move(abs_path, os.path.join(new_project_path, 'config.ctl'))
 
         # symlink subset of reference genome files
         for file_name in form.subset_files.data:
@@ -1059,7 +1090,8 @@ def subset(project):
                     os.path.join(new_project_path, 'workdir', file_name))
 
         if form.validate_on_submit():
-            if reference_file not in form.subset_files.data:
+            reference_file = get_config_property(new_project_path, 'reffile')
+            if reference_file and reference_file not in form.subset_files.data:
                 flash(f'Please include the reference file {reference_file}')
                 return redirect(url_for('subset', project=project))
 

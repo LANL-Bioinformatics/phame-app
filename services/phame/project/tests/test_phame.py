@@ -18,7 +18,8 @@ from project.api.phame import link_files, get_data_type, \
     symlink_uploaded_file, project_setup, get_config_property, \
     create_config_file, get_num_threads, get_exec_time, set_directories, \
     get_file_counts, create_project_summary, get_log, get_system_specs, \
-    get_log_mod_time, bytes2human, get_all_project_stats, update_stats
+    get_log_mod_time, bytes2human, get_all_project_stats, update_stats, \
+    set_config_properties
 
 
 app = create_app()
@@ -507,6 +508,23 @@ class PhameTest(BaseTestCase):
         except IndexError as e:
             self.assertFalse(value)
 
+    def test_get_config_property_empty(self):
+        self.create_test_config_file({'field':'reference_file', 'value': ''})
+        value = get_config_property(self.project_dir, 'reffile')
+        print(value)
+        self.assertEqual(value, None)
+
+    def test_set_config_properties(self):
+        self.create_test_config_file()
+        properties = ['project', 'data']
+        values = [f'{self.project_name}_subset', '7']
+        set_config_properties(self.project_dir, properties, values)
+        with open(os.path.join(self.project_dir, 'config.ctl'), 'r') as fp:
+            lines = fp.readlines()
+            print(lines)
+        self.assertEqual(lines[6], f'project = {self.project_name}_subset\n')
+        self.assertIn(f'data = 7\n', lines[14])
+
     def test_get_num_threads(self):
         self.create_test_config_file()
         num_threads = get_num_threads(self.project_dir)
@@ -946,6 +964,33 @@ class PhameTest(BaseTestCase):
         self.assertEqual(response.status_code, 302)
         soup = BeautifulSoup(str(response.data), "html.parser")
         self.assertEqual(soup.find(style='color: red;'), None)
+
+    def test_project_subset(self):
+        print(current_app.config['PROJECT_DIRECTORY'])
+        current_app.config['PHAME_UPLOAD_DIR'] = os.path.join('/', 'test',
+                                                              'uploads')
+        complete_genomes_list = []
+        reads_list, contigs_list = [], []
+        self.add_user()
+        self.upload_files()
+        for f in os.listdir(os.path.join('project', 'tests', 'fixtures')):
+            if f.endswith('.fna') or f.endswith('.gff'):
+                complete_genomes_list.append(f)
+            if f.endswith('.fasta'):
+                contigs_list.append(f)
+            if f.endswith('.fastq'):
+                reads_list.append(f)
+        form = dict(complete_genomes=complete_genomes_list, reads=reads_list,
+                    contigs=contigs_list, project='test1',
+                    reference_file=complete_genomes_list[0], data_type=[1])
+        with self.client:
+            self.login()
+            self.client.post(url_for('phame.input'),
+                             data=dict(form))
+            response = self.client.post(url_for('phame.subset', project=self.project_name), data=dict(reference_file=complete_genomes_list[0]))
+        # with open('project/tests/fixtures/test_input.html', 'w') as fp:
+        #     fp.write(str(response.data))
+        self.assertEqual(response.status_code, 302)
 
     @patch('project.api.phame.project_setup')
     def test_input_post_no_project_dir(self, mock_setup):

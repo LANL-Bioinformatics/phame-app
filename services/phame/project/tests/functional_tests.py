@@ -419,24 +419,22 @@ class SiteTest(unittest.TestCase):
         self.driver.find_element_by_id("delete-button").click()
 
     def test_run_project_duplicate(self):
-        try:
-            self.login()
-            self.delete_projects([self.project])
-            self.run_project('complete')
-            time.sleep(6)
-            # if not self.get_test_task_state(self.project):
-            #     self.assertFalse(True)
-            self.run_project('complete', delete_duplicate=False)
-            self.assertEqual(self.driver.find_element_by_xpath(
-                '//p[@class="error"]').text,
-                             'Error: Project directory already exists')
-        finally:
-            # delete test-project
-            self.delete_projects([self.project])
+        self.login()
+        self.delete_projects([self.project, self.project_subset])
+        self.run_project('complete')
+        time.sleep(6)
+        # if not self.get_test_task_state(self.project):
+        #     self.assertFalse(True)
+        self.run_project('complete', delete_duplicate=False)
+        self.assertEqual(self.driver.find_element_by_xpath(
+            '//p[@class="error"]').text,
+                         'Error: Project directory already exists')
+        # delete test-project
+        self.delete_projects([self.project])
 
     def test_run_project(self):
-        self.login()
         try:
+            self.login()
             self.upload_files()
             self.delete_projects([self.project, self.project_subset])
             self.run_project('complete')
@@ -519,7 +517,8 @@ class SiteTest(unittest.TestCase):
             queues.select_by_visible_text("ZEBOV_2002_Ilembe.fna")
             self.driver.find_element_by_name("submit").click()
             self.get_test_task_state(self.project_subset)
-
+            # if not self.get_test_task_state(self.project_subset):
+            #     self.assertFalse(True)
             self.driver.get(self.url + f"/display/{self.operator_credentials['PHAME_USER_USERNAME']}/{self.project_subset}")
 
             # Run Summary
@@ -593,25 +592,8 @@ class SiteTest(unittest.TestCase):
 
     def test_run_project_reads(self):
         self.login()
-        try:
-            self.upload_files('SRR3359589_R1.fastq', 'SRR3359589_R2.fastq')
-            self.run_project('complete', 'read')
-            self.get_test_task_state(self.project)
-            self.driver.get(self.url + f"/display/{self.operator_credentials['PHAME_USER_USERNAME']}/{self.project}")
-            # Run Summary
-            self.assertEqual('5', self.driver.find_element_by_xpath(
-                '//*[@class="dataframe run_summary"]/tbody/tr/td[1]').text)
-            self.assertEqual('2', self.driver.find_element_by_xpath(
-                '//*[@class="dataframe run_summary"]/tbody/tr/td[3]').text)
-            self.assertEqual('3', self.driver.find_element_by_xpath(
-                '//*[@class="dataframe run_summary"]/tbody/tr/td[4]').text)
-            self.assertEqual('KJ660347', self.driver.find_element_by_xpath(
-                '//*[@class="dataframe run_summary"]/tbody/tr/td[5]').text)
-            self.assertEqual(self.project,
-                             self.driver.find_element_by_xpath(
-                                 '//*[@class="dataframe run_summary"]/tbody/tr/td[6]').text)
-        finally:
-            self.delete_projects([self.project])
+        self.upload_files('SRR3359589_R1.fastq', 'SRR3359589_R2.fastq')
+        self.run_project('complete', 'read')
 
 
 if __name__ == '__main__':
