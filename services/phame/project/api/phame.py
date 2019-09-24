@@ -139,15 +139,18 @@ def input():
     return render_template('input.html', title='Phame input', form=form)
 
 
-def symlink_files(source_dir, dest_dir, *files):
+def symlink_files(source_dir, dest_dir, files):
+    # logging.debug(f'dest_dir exists {os.path.exists(dest_dir)}')
     for source_file in files:
         source_file_path = os.path.join(source_dir, source_file)
+        logging.debug(f'source_file_path exists {os.path.exists(source_file_path)}')
         dest_file_path = os.path.join(dest_dir, source_file)
         if os.path.exists(dest_file_path):
             os.remove(dest_file_path)
         try:
+            logging.debug(f'source_file_path {source_file_path} dest_file_path {dest_file_path}')
             os.symlink(source_file_path, dest_file_path)
-            # logging.debug(f"symlink exists {os.path.exists(dest_file_path)}")
+            logging.debug(f"symlink {dest_file_path} exists {os.path.exists(dest_file_path)}")
         except FileNotFoundError as e:
             logging.debug(f'file {dest_file_path} not found: {e}')
 
@@ -1090,10 +1093,13 @@ def subset(project):
                     'tables']
         for results_dir in dir_list:
             source_dir = os.path.join(project_path, 'workdir', 'results',
-                         results_dir)
+                                      results_dir)
             dest_dir = os.path.join(new_project_path, 'workdir',
                                          'results', results_dir)
-            symlink_directory(source_dir, dest_dir)
+            os.makedirs(dest_dir, exist_ok=True)
+            logging.debug(f'symlink results_dir {results_dir}')
+            logging.debug(f'source files {os.listdir(source_dir)}')
+            symlink_files(source_dir, dest_dir, os.listdir(source_dir))
             # shutil.copytree(os.path.join(project_path, 'workdir', 'results',
             #                              results_dir),
             #                 os.path.join(new_project_path, 'workdir',
@@ -1103,41 +1109,39 @@ def subset(project):
         # symlink_directory(os.path.join(project_path, 'workdir',
         #                                         'results'), os.path.join(new_project_path, 'workdir',
         #                                         'results'))
-        # results_files = os.listdir(os.path.join(project_path, 'workdir',
-        #                                         'results'))
-        # symlink_files(os.path.join(project_path, 'workdir', 'results'),
-        #               os.path.join(new_project_path, 'workdir', 'results', results_files))
-        # for result_file in results_files:
-        #     if not os.path.isdir(os.path.join(project_path, 'workdir',
-        #                                       'results', result_file)):
-        #         # logging.debug(f'result file {result_file}')
-        #         # logging.debug(f'isdir {os.path.isdir(result_file)}')
-        #         os.symlink(os.path.join(project_path, 'workdir', 'results',
-        #                                  result_file),
-        #                    os.path.join(new_project_path, 'workdir',
-        #                                 'results'))
-                # shutil.copy(os.path.join(project_path, 'workdir', 'results',
-                #                          result_file),
-                #             os.path.join(new_project_path, 'workdir',
-                #                          'results'))
+        results_files = []
+        # results_files = [results_files.append(f) for f in os.listdir(os.path.join(project_path, 'workdir','results')) if not os.path.isdir(f)]
+        for f in os.listdir(os.path.join(project_path, 'workdir','results')):
+            if not os.path.isdir(os.path.join(os.path.join(project_path, 'workdir','results', f))):
+                logging.debug(f'file {f}')
+                results_files.append(f)
+        logging.debug(f'SUBSET {results_files}')
+        logging.debug(f"workdir exists {os.path.exists(os.path.join(new_project_path, 'workdir'))}")
+        symlink_files(os.path.join(project_path, 'workdir', 'results'),
+                      os.path.join(new_project_path, 'workdir', 'results'), results_files)
 
         # create new working_list.txt file and copy files
-        if not os.path.exists(os.path.join(new_project_path, 'workdir',
-                                           'files')):
-            os.mkdir(os.path.join(new_project_path, 'workdir', 'files'))
+        # if not os.path.exists(os.path.join(new_project_path, 'workdir',
+        #                                    'files')):
+        #     os.mkdir(os.path.join(new_project_path, 'workdir', 'files'))
+        logging.debug('creating working_list.txt')
         with open(os.path.join(new_project_path, 'workdir',
                                'working_list.txt'), 'w') as fp:
+            ref_files = []
             for ref_file in form.subset_files.data:
                 fp.write(f'{os.path.splitext(ref_file)[0]}\n')
                 if ref_file.endswith('fasta'):
                     ref_file = os.path.splitext(ref_file)[0] + '.fna'
                 if os.path.exists(os.path.join(project_path, 'workdir',
                                                'files', ref_file)):
-                    shutil.copy(os.path.join(project_path, 'workdir', 'files',
-                                             ref_file),
-                                os.path.join(new_project_path, 'workdir',
-                                             'files', ref_file))
-
+                    ref_files.append(ref_file)
+                    # shutil.copy(os.path.join(project_path, 'workdir', 'files',
+                    #                          ref_file),
+                    #             os.path.join(new_project_path, 'workdir',
+                    #                          'files', ref_file))
+            logging.debug(f"symlinking workdir files {os.path.join(project_path, 'workdir', 'files')}")
+            symlink_files(os.path.join(project_path, 'workdir', 'files'), os.path.join(new_project_path, 'workdir',
+                                             'files'), ref_files)
         # modify config.ctl file to change project to new name and get
         # reference file name
         properties = ['project', 'data']
@@ -1169,6 +1173,8 @@ def subset(project):
         shutil.move(abs_path, os.path.join(new_project_path, 'config.ctl'))
 
         # symlink subset of reference genome files
+
+        logging.debug(f'symlink reference genomes {form.subset_files.data}')
         symlink_files(os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
                                     current_user.username),  os.path.join(new_project_path, 'refdir'),
                       form.subset_files.data)

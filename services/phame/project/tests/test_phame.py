@@ -6,10 +6,12 @@ import psutil
 import io
 import pandas as pd
 import datetime
+import time
 from bs4 import BeautifulSoup
 from unittest.mock import patch, Mock, PropertyMock
 from flask_login import current_user
 from flask import current_app, url_for
+from project.tests.utils import add_user
 from project.tests.base import BaseTestCase
 from project import db, create_app
 from project.api.forms import InputForm
@@ -19,7 +21,7 @@ from project.api.phame import link_files, get_data_type, \
     create_config_file, get_num_threads, get_exec_time, set_directories, \
     get_file_counts, create_project_summary, get_log, get_system_specs, \
     get_log_mod_time, bytes2human, get_all_project_stats, update_stats, \
-    set_config_properties
+    set_config_properties, symlink_files
 
 
 app = create_app()
@@ -34,7 +36,7 @@ class PhameTest(BaseTestCase):
         self.project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], 'mark', self.project_name)
         self.ref_dir = os.path.join(self.project_dir, 'refdir')
         self.work_dir = os.path.join(self.project_dir, 'workdir')
-        self.upload_dir = current_app.config['UPLOAD_DIRECTORY']
+        self.upload_dir = os.path.join(current_app.config['UPLOAD_DIRECTORY'], 'mark')
         db.create_all()
         db.session.commit()
 
@@ -161,6 +163,37 @@ class PhameTest(BaseTestCase):
         return files
 
     def test_symlink_files(self):
+        self.add_user()
+        os.makedirs(self.ref_dir, exist_ok=True)
+        try:
+            if os.path.exists(os.path.join(self.ref_dir, 'KJ660347.fasta')):
+                os.remove(os.path.join(self.ref_dir, 'KJ660347.fasta'))
+            if os.path.exists(os.path.join(self.ref_dir, 'KJ660347.gff')):
+                os.remove(os.path.join(self.ref_dir, 'KJ660347.gff'))
+            data = dict(file=[open(
+                os.path.join('project', 'tests', 'fixtures', 'KJ660347.fasta'),
+                'rb'), open(
+                os.path.join('project', 'tests', 'fixtures', 'KJ660347.gff'),
+                'rb')])
+            with self.client:
+                self.login()
+                self.client.post(url_for('phame.upload'), data=data,
+                                 follow_redirects=True,
+                                 content_type='multipart/form-data')
+                self.assertTrue(os.path.exists(
+                    os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
+                                 'mark', 'KJ660347.fasta')))
+                symlink_files(self.upload_dir, self.ref_dir, ['KJ660347.fasta', 'KJ660347.gff'])
+
+                self.assertTrue(os.path.exists(
+                    os.path.join(self.ref_dir, 'KJ660347.fasta')))
+        finally:
+            if os.path.exists(os.path.join(self.ref_dir, 'KJ660347.fasta')):
+                os.remove(os.path.join(self.ref_dir, 'KJ660347.fasta'))
+            if os.path.exists(os.path.join(self.ref_dir, 'KJ660347.gff')):
+                os.remove(os.path.join(self.ref_dir, 'KJ660347.gff'))
+
+    def test_symlink_upload_files(self):
         self.add_user()
         os.makedirs(self.ref_dir, exist_ok=True)
         try:
@@ -987,6 +1020,7 @@ class PhameTest(BaseTestCase):
             self.login()
             self.client.post(url_for('phame.input'),
                              data=dict(form))
+            time.sleep(10)
             response = self.client.post(url_for('phame.subset', project=self.project_name), data=dict(reference_file=complete_genomes_list[0]))
         # with open('project/tests/fixtures/test_input.html', 'w') as fp:
         #     fp.write(str(response.data))
