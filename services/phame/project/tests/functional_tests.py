@@ -6,6 +6,7 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 import time
+import re
 import os
 from selenium.webdriver.common.by import By
 import argparse
@@ -178,6 +179,10 @@ class SiteTest(unittest.TestCase):
         for f in files_to_upload_list:
             if f.endswith('.gz'):
                 gz_files.append('.'.join(f.split('.')[:-1]))
+            # else:
+            #     gz_files.append(re.sub('[^A-Za-z0-9]+', '_',
+            #                       os.path.splitext(f)[0]) + \
+            #                os.path.splitext(f)[1])
 
         already_uploaded_files_list = response.json()['uploads']
 
@@ -373,6 +378,13 @@ class SiteTest(unittest.TestCase):
         self.assertNotIn('GCA_000010485.contig.gz', self.driver.find_element_by_xpath("//textarea[@id='uploads']").text)
         # self.delete_user()
 
+    def test_upload_special_char_file(self):
+        # self.create_user()
+        self.login()
+        self.remove_files()
+        self.upload_files('C.diff_ATCC9689.fna')
+        self.assertIn('C_diff_ATCC9689.fna', self.driver.find_element_by_xpath("//textarea[@id='uploads']").text)
+
     def test_delete_file_uploads(self):
         self.create_user()
         self.login()
@@ -515,9 +527,7 @@ class SiteTest(unittest.TestCase):
             queues.select_by_visible_text("KJ660347.fasta")
             queues.select_by_visible_text("ZEBOV_2002_Ilembe.fna")
             self.driver.find_element_by_name("submit").click()
-            # time.sleep(0.865)
             self.wait_task_success(self.project_subset)
-
             self.driver.get(self.url + f"/display/{self.operator_credentials['PHAME_USER_USERNAME']}/{self.project_subset}")
 
             # Run Summary

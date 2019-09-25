@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import unittest
 import psutil
@@ -58,7 +59,6 @@ class PhameTest(BaseTestCase):
         eml = email if email else 'mcflynn617@gmail.com'
         pssword = password if password else 'test1'
         pssword2 = password if password else 'test1'
-        print(f'usr {usr}')
         with self.client:
             response = self.client.post(url_for('users.register'),
                              data=json.dumps(
@@ -293,7 +293,6 @@ class PhameTest(BaseTestCase):
         files = self.create_paths(os.path.join(
             current_app.config['PHAME_UPLOAD_DIR'], 'mark'),
             ['KJ660347.fasta', 'KJ660347.gff'])
-        print(current_app.config['PHAME_UPLOAD_DIR'])
         try:
             with self.client:
                 self.login()
@@ -308,6 +307,32 @@ class PhameTest(BaseTestCase):
                 self.assertTrue(os.path.exists(
                     os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
                                  'mark', 'KJ660347.gff')))
+        finally:
+            self.remove_files(files)
+
+    def test_upload_special_char_file(self):
+        self.add_user()
+        data = dict(file=[open(os.path.join('project', 'tests', 'fixtures',
+                                            'KJ660347.fasta'), 'rb'),
+                          open(os.path.join('project', 'tests', 'fixtures',
+                                            'C.diff_ATCC9689.fna'), 'rb')])
+        files = self.create_paths(os.path.join(
+            current_app.config['PHAME_UPLOAD_DIR'], 'mark'),
+            ['KJ660347.fasta', 'C_diff_ATCC9689.fna'])
+        try:
+            with self.client:
+                self.login()
+                self.remove_files(files)
+                response = self.client.post(url_for('phame.upload'), data=data,
+                                            follow_redirects=True,
+                                            content_type='multipart/form-data')
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(os.path.exists(
+                    os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
+                                 'mark', 'KJ660347.fasta')))
+                self.assertTrue(os.path.exists(
+                    os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
+                                 'mark', 'C_diff_ATCC9689.fna')))
         finally:
             self.remove_files(files)
 
@@ -962,6 +987,9 @@ class PhameTest(BaseTestCase):
         files_list = []
         for f in os.listdir(os.path.join('project', 'tests', 'fixtures')):
             if f.endswith('.fna') or f.endswith('.gff') or f.endswith('.fasta'):
+                f = re.sub('[^A-Za-z0-9]+', '_',
+                                  os.path.splitext(f)[0]) + \
+                           os.path.splitext(f)[1]
                 files_list.append(f)
         with self.client:
             self.login()
@@ -996,11 +1024,11 @@ class PhameTest(BaseTestCase):
             self.login()
             response = self.client.post(url_for('phame.input'),
                                         data=dict(form))
-        # with open('project/tests/fixtures/test_input.html', 'w') as fp:
-        #     fp.write(str(response.data))
-        self.assertEqual(response.status_code, 302)
+        with open('project/tests/fixtures/test_input.html', 'w') as fp:
+            fp.write(str(response.data))
         soup = BeautifulSoup(str(response.data), "html.parser")
         self.assertEqual(soup.find(style='color: red;'), None)
+        self.assertEqual(response.status_code, 302)
 
     def DO_NOT_test_project_subset(self):
         print(current_app.config['PROJECT_DIRECTORY'])

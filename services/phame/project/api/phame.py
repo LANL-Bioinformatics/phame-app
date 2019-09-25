@@ -419,14 +419,23 @@ def upload():
         # for key, value in list(form.items()):
         #     logging.debug(key, "=>", value)
 
-        # logging.debug(f'request files {request.files.getlist("file")}')
+        logging.debug(f'request files {request.files.getlist("file")}')
         for upload in request.files.getlist("file"):
             filename = os.path.basename(upload.filename)
+            logging.debug(f'upload filename {filename}')
+            # remove special characters from filenames
+            if filename.endswith('.gz'):
+                filename = re.sub('[^A-Za-z0-9]+', '_', os.path.splitext(os.path.splitext(filename)[0])[0]) + os.path.splitext(os.path.splitext(filename)[0])[1] + os.path.splitext(filename)[1]
+            else:
+                filename = re.sub('[^A-Za-z0-9]+', '_',
+                                  os.path.splitext(filename)[0]) + \
+                           os.path.splitext(filename)[1]
+            logging.debug(f'new filename {filename}')
             destination = "/".join([target, filename])
             # logging.debug(f"Accept incoming file: {filename}")
             # logging.debug("Save it to:", destination)
             upload.save(destination)
-            if filename.endswith(('.gz')):
+            if filename.endswith('.gz'):
                 new_filename = '.'.join(filename.split('.')[:-1])
                 with gzip.open(os.path.join(target, filename), 'rb') as f, open(os.path.join(target, new_filename), 'w') as f2:
                     f2.write(f.read().decode('utf-8'))
