@@ -143,7 +143,7 @@ def symlink_files(source_dir, dest_dir, files):
     # logging.debug(f'dest_dir exists {os.path.exists(dest_dir)}')
     for source_file in files:
         source_file_path = os.path.join(source_dir, source_file)
-        logging.debug(f'source_file_path exists {os.path.exists(source_file_path)}')
+        logging.debug(f'source_file_path {source_file_path} exists {os.path.exists(source_file_path)}')
         dest_file_path = os.path.join(dest_dir, source_file)
         if os.path.exists(dest_file_path):
             os.remove(dest_file_path)
@@ -1110,8 +1110,9 @@ def subset(project):
         #                                         'results'), os.path.join(new_project_path, 'workdir',
         #                                         'results'))
         results_files = []
-        # results_files = [results_files.append(f) for f in os.listdir(os.path.join(project_path, 'workdir','results')) if not os.path.isdir(f)]
-        for f in os.listdir(os.path.join(project_path, 'workdir','results')):
+        results_dir = os.path.join(project_path, 'workdir','results')
+        # results_files = [results_files.append(f) for f in os.listdir(results_dir) if not os.path.isdir(os.path.join(results_dir, f))]
+        for f in os.listdir(results_dir):
             if not os.path.isdir(os.path.join(os.path.join(project_path, 'workdir','results', f))):
                 logging.debug(f'file {f}')
                 results_files.append(f)
@@ -1121,10 +1122,9 @@ def subset(project):
                       os.path.join(new_project_path, 'workdir', 'results'), results_files)
 
         # create new working_list.txt file and copy files
-        # if not os.path.exists(os.path.join(new_project_path, 'workdir',
-        #                                    'files')):
-        #     os.mkdir(os.path.join(new_project_path, 'workdir', 'files'))
+
         logging.debug('creating working_list.txt')
+        os.makedirs(os.path.join(new_project_path, 'workdir', 'files'), exist_ok=True)
         with open(os.path.join(new_project_path, 'workdir',
                                'working_list.txt'), 'w') as fp:
             ref_files = []
@@ -1135,10 +1135,7 @@ def subset(project):
                 if os.path.exists(os.path.join(project_path, 'workdir',
                                                'files', ref_file)):
                     ref_files.append(ref_file)
-                    # shutil.copy(os.path.join(project_path, 'workdir', 'files',
-                    #                          ref_file),
-                    #             os.path.join(new_project_path, 'workdir',
-                    #                          'files', ref_file))
+
             logging.debug(f"symlinking workdir files {os.path.join(project_path, 'workdir', 'files')}")
             symlink_files(os.path.join(project_path, 'workdir', 'files'), os.path.join(new_project_path, 'workdir',
                                              'files'), ref_files)
