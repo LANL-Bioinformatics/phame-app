@@ -1121,11 +1121,11 @@ def subset(project):
                                'working_list.txt'), 'w') as fp:
             ref_files = []
             for ref_file in form.subset_files.data:
-                logging.debug(f'ref_file {ref_file}')
+                # logging.debug(f'ref_file {ref_file}')
                 fp.write(f'{os.path.splitext(ref_file)[0]}\n')
                 if ref_file.endswith('fasta'):
-
                     ref_file = os.path.splitext(ref_file)[0] + '.fna'
+                logging.debug(f"ref_file {os.path.join(project_path, 'workdir', 'files', ref_file)}")
                 logging.debug(f"ref_file exists {os.path.exists(os.path.join(project_path, 'workdir', 'files', ref_file))}")
                 if os.path.exists(os.path.join(project_path, 'workdir',
                                                'files', ref_file)):
