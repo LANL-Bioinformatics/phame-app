@@ -1102,11 +1102,6 @@ def subset(project):
             logging.debug(f'source files {os.listdir(source_dir)}')
             symlink_files(source_dir, dest_dir, os.listdir(source_dir))
 
-
-        # copy files from results directory
-        # symlink_directory(os.path.join(project_path, 'workdir',
-        #                                         'results'), os.path.join(new_project_path, 'workdir',
-        #                                         'results'))
         results_files = []
         results_dir = os.path.join(project_path, 'workdir','results')
         # results_files = [results_files.append(f) for f in os.listdir(results_dir) if not os.path.isdir(os.path.join(results_dir, f))]
@@ -1133,7 +1128,7 @@ def subset(project):
                                                'files', ref_file)):
                     ref_files.append(ref_file)
 
-            logging.debug(f"symlinking workdir files {os.path.join(project_path, 'workdir', 'files')}")
+            logging.debug(f"symlinking workdir files {os.path.join(project_path, 'workdir', 'files')} ref_files {ref_files}")
             symlink_files(os.path.join(project_path, 'workdir', 'files'), os.path.join(new_project_path, 'workdir',
                                              'files'), ref_files)
 
