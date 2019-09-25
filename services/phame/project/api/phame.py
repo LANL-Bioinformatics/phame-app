@@ -132,7 +132,7 @@ def input():
                                        form=form, error=error)
             # Create config file
             create_config_file(request.form.to_dict())
-
+            logging.debug(f'config file created for {form.project.data}, calling runphame')
             return redirect(url_for('phame.runphame',
                                     project=form.project.data))
 
@@ -1080,13 +1080,14 @@ def subset(project):
 
     if request.method == 'POST':
         # logging.debug('POST')
-        logging.debug('post subset files: {0}'.format(form.subset_files.data))
+        logging.debug(f'project {project} post subset files: {form.subset_files.data}')
 
         # Delete subset directory tree and create new directories
         if os.path.exists(new_project_path):
             shutil.rmtree(new_project_path)
         os.makedirs(os.path.join(new_project_path, 'refdir'), exist_ok=True)
         os.makedirs(os.path.join(new_project_path, 'workdir'), exist_ok=True)
+        os.makedirs(os.path.join(new_project_path, 'workdir', 'files'), exist_ok=True)
 
         # copy selected results directories to new project
         dir_list = ['gaps', 'miscs', 'snps', 'stats', 'temp', 'trees',
@@ -1100,10 +1101,7 @@ def subset(project):
             logging.debug(f'symlink results_dir {results_dir}')
             logging.debug(f'source files {os.listdir(source_dir)}')
             symlink_files(source_dir, dest_dir, os.listdir(source_dir))
-            # shutil.copytree(os.path.join(project_path, 'workdir', 'results',
-            #                              results_dir),
-            #                 os.path.join(new_project_path, 'workdir',
-            #                              'results', results_dir))
+
 
         # copy files from results directory
         # symlink_directory(os.path.join(project_path, 'workdir',
@@ -1117,14 +1115,13 @@ def subset(project):
                 logging.debug(f'file {f}')
                 results_files.append(f)
         logging.debug(f'SUBSET {results_files}')
-        logging.debug(f"workdir exists {os.path.exists(os.path.join(new_project_path, 'workdir'))}")
+        logging.debug(f"workdir exists {os.path.exists(os.path.join(new_project_path, 'workdir', 'results'))}")
         symlink_files(os.path.join(project_path, 'workdir', 'results'),
-                      os.path.join(new_project_path, 'workdir', 'results'), results_files)
+                      os.path.join(new_project_path, 'workdir', 'results'),
+                      results_files)
 
         # create new working_list.txt file and copy files
-
         logging.debug('creating working_list.txt')
-        os.makedirs(os.path.join(new_project_path, 'workdir', 'files'), exist_ok=True)
         with open(os.path.join(new_project_path, 'workdir',
                                'working_list.txt'), 'w') as fp:
             ref_files = []
@@ -1139,6 +1136,7 @@ def subset(project):
             logging.debug(f"symlinking workdir files {os.path.join(project_path, 'workdir', 'files')}")
             symlink_files(os.path.join(project_path, 'workdir', 'files'), os.path.join(new_project_path, 'workdir',
                                              'files'), ref_files)
+
         # modify config.ctl file to change project to new name and get
         # reference file name
         properties = ['project', 'data']
@@ -1170,28 +1168,15 @@ def subset(project):
         shutil.move(abs_path, os.path.join(new_project_path, 'config.ctl'))
 
         # symlink subset of reference genome files
-
         logging.debug(f'symlink reference genomes {form.subset_files.data}')
         symlink_files(os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
                                     current_user.username),  os.path.join(new_project_path, 'refdir'),
                       form.subset_files.data)
-        # for file_name in form.subset_files.data:
-        #
-        #     # logging.debug(f'file {file_name}')
-        #     os.symlink(os.path.join(current_app.config['PHAME_UPLOAD_DIR'],
-        #                             current_user.username, file_name),
-        #                os.path.join(new_project_path, 'refdir', file_name))
 
         # symlink contig files
         contig_files = []
         [contig_files.append(file_name) for file_name in os.listdir(os.path.join(project_path, 'workdir')) if file_name.endswith('.contig')]
         symlink_files(os.path.join(project_path, 'workdir'), os.path.join(new_project_path, 'workdir'), contig_files)
-        # for file_name in os.listdir(os.path.join(project_path, 'workdir')):
-        #     if file_name.endswith('.contig'):
-        #         os.symlink(os.path.join(
-        #             current_app.config['PHAME_UPLOAD_DIR'],
-        #             current_user.username, file_name),
-        #             os.path.join(new_project_path, 'workdir', file_name))
 
         if form.validate_on_submit():
             # reference_file = get_config_property(new_project_path, 'reffile')
@@ -1294,7 +1279,9 @@ def runphame(project):
     :param project: Project name
     :return:
     """
-    output_directory = os.path.join(current_app.config['PROJECT_DIRECTORY'], current_user.username, project)
+    output_directory = os.path.join(current_app.config['PROJECT_DIRECTORY'],
+                                    current_user.username, project)
+    logging.debug(f'sending task run_phame with args {project}, {output_directory}')
     task = celery.send_task('tasks.run_phame',
                             args=[project, output_directory])
     logging.debug('task id: {0}'.format(task.id))

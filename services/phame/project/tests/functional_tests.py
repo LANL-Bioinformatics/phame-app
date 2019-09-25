@@ -395,7 +395,7 @@ class SiteTest(unittest.TestCase):
                 task_id = key
         return task_id
 
-    def get_test_task_state(self, task_name):
+    def wait_task_success(self, project):
         """ Gets task state for running project """
         # task_id = self.get_flower_task_id(task_name)
         # state = None
@@ -403,9 +403,10 @@ class SiteTest(unittest.TestCase):
         state = 'STARTED'
         s = self.get_cookies()
         while state != 'SUCCESS':
-            result = s.get(f'{self.url}/stats/{self.project}')
+            result = s.get(f'{self.url}/stats/{project}')
             result_json = result.json()
             state = result_json['data']
+        s.close()
         return state
 
     def delete_projects(self, projects_list):
@@ -423,8 +424,6 @@ class SiteTest(unittest.TestCase):
         self.delete_projects([self.project, self.project_subset])
         self.run_project('complete')
         time.sleep(6)
-        # if not self.get_test_task_state(self.project):
-        #     self.assertFalse(True)
         self.run_project('complete', delete_duplicate=False)
         self.assertEqual(self.driver.find_element_by_xpath(
             '//p[@class="error"]').text,
@@ -438,7 +437,7 @@ class SiteTest(unittest.TestCase):
             self.upload_files()
             self.delete_projects([self.project, self.project_subset])
             self.run_project('complete')
-            self.get_test_task_state(self.project)
+            self.wait_task_success(self.project)
             self.driver.get(self.url + f"/display/{self.operator_credentials['PHAME_USER_USERNAME']}/{self.project}")
             run_summary = self.driver.find_element_by_xpath(
                 '//*[@class="dataframe run_summary"]/thead').text
@@ -516,9 +515,9 @@ class SiteTest(unittest.TestCase):
             queues.select_by_visible_text("KJ660347.fasta")
             queues.select_by_visible_text("ZEBOV_2002_Ilembe.fna")
             self.driver.find_element_by_name("submit").click()
-            self.get_test_task_state(self.project_subset)
-            # if not self.get_test_task_state(self.project_subset):
-            #     self.assertFalse(True)
+            # time.sleep(0.865)
+            self.wait_task_success(self.project_subset)
+
             self.driver.get(self.url + f"/display/{self.operator_credentials['PHAME_USER_USERNAME']}/{self.project_subset}")
 
             # Run Summary
