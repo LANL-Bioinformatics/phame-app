@@ -78,6 +78,8 @@ def input():
                                    form=form, error=error)
         logging.debug(f'form {request.form}')
         logging.debug(f'form flat {request.form.to_dict(flat=False)}')
+        logging.debug(f'form non-flat {request.form.to_dict()}')
+        logging.debug(f"data type {form.data_type.data}")
         # logging.debug(f'form {request.form.to_dict()}')
         project_dir, ref_dir = project_setup(form)
         # logging.debug(f'ref file {form.reference_file.data}')
@@ -88,7 +90,6 @@ def input():
             return render_template('input.html', title='Phame input',
                                    form=form, error=error)
         if form.validate_on_submit():
-            # logging.debug(f"data {form.data_type.data}")
 
             # Perform validation based on requirements of PhaME
             # if (
@@ -131,7 +132,11 @@ def input():
                 return render_template('input.html', title='Phame input',
                                        form=form, error=error)
             # Create config file
-            create_config_file(request.form.to_dict())
+            logging.debug(f'creating config file for {form.project.data}')
+            logging.debug(f'pre data {form.data_type.data}')
+
+            logging.debug(f'post data {form.data_type.data}')
+            create_config_file(request.form.to_dict(flat=False))
             logging.debug(f'config file created for {form.project.data}, calling runphame')
             return redirect(url_for('phame.runphame',
                                     project=form.project.data))
@@ -294,17 +299,22 @@ def create_config_file(form_dict):
     :param form_dict: dict with fields from InputForm
     :return:
     """
-    # logging.debug(f'form dict {form_dict}')
+
+    form_dict['data_type'] = get_data_type(form_dict['data_type'])
+    #flatten dict
+    for key, val in form_dict.items():
+        form_dict[key] = val[0]
+    logging.debug(f'create config file: form {form_dict}')
     if 'csrf_token' in form_dict.keys():
         form_dict.pop('csrf_token')
     project = form_dict['project']
 
     form_dict['ref_dir'] = f'../{project}/refdir/'
     form_dict['work_dir'] = f'../{project}/workdir/'
-    # logging.debug(f"threads {form_dict['threads']}")
+    logging.debug(f"pre data_type {form_dict['data_type']}")
     # if len(form.reference_file.data) > 0:
     #     form_dict['reference_file'] = form.reference_file.data
-    form_dict['data_type'] = get_data_type(form_dict['data_type'])
+    logging.debug(f"post data_type {form_dict['data_type']}")
     content = render_template('phame.tmpl', form=form_dict)
     # logging.debug(f'content {content}')
 

@@ -133,7 +133,7 @@ class PhameTest(BaseTestCase):
         form = dict(project=self.project_name, ref_dir=self.ref_dir,
                     work_dir=self.work_dir, reference='1',
                     reference_file='KJ660347.fasta', cds_snps='0',
-                    buildSNPdb='1', first_time='1', data_type='4',
+                    buildSNPdb='1', first_time='1', data_type='0',
                     reads='1', aligner='bowtie', tree='1', bootstrap='1',
                     N='100', pos_select='2', code='0', clean='0', threads='2',
                     cutoff='0.2')
@@ -458,7 +458,7 @@ class PhameTest(BaseTestCase):
         form = dict(project=self.project_name, ref_dir=self.ref_dir,
                     work_dir=self.work_dir, reference='1',
                     reference_file='KJ660347.fasta', cds_snps='0',
-                    buildSNPdb='1', first_time='1', data_type='4',
+                    buildSNPdb='1', first_time='1', data_type=['0'],
                     reads='1', aligner='bowtie', tree='1', bootstrap='1',
                     N='100', pos_select='2', code='0',
                     clean='0', threads='2', cutoff='0.2')
@@ -495,7 +495,7 @@ class PhameTest(BaseTestCase):
         self.assertEqual(value, '1')
         value = config_df[config_df['field'] == 'data']['val'].values[0].\
             strip().split('#')[0].strip()
-        self.assertEqual(value, '4')
+        self.assertEqual(value, '0')
         value = config_df[config_df['field'] == 'cdsSNPS']['val'].values[0].\
             strip().split('#')[0].strip()
         self.assertEqual(value, '0')
@@ -529,6 +529,29 @@ class PhameTest(BaseTestCase):
         value = config_df[config_df['field'] == 'cutoff']['val'].values[0].\
             strip().split('#')[0].strip()
         self.assertEqual(value, '0.2')
+
+    def test_create_config_file_with_contigs(self):
+
+        form = dict(project=self.project_name, ref_dir=self.ref_dir,
+                    work_dir=self.work_dir, reference='1',
+                    reference_file='KJ660347.fasta', cds_snps='0',
+                    buildSNPdb='1', first_time='1', data_type='3',
+                    reads='1', aligner='bowtie', tree='1', bootstrap='1',
+                    N='100', pos_select='2', code='0', clean='0',
+                    threads='2', cutoff='0.2')
+        self.add_user()
+        os.makedirs(self.project_dir)
+        with self.client:
+            self.login()
+            create_config_file(form)
+        config_df = pd.read_csv(
+            os.path.join(self.project_dir, 'config.ctl'), sep='=',
+            header=None, names=['field', 'val'])
+        config_df = config_df.loc[pd.notna(config_df['val']), :]
+        config_df['field'] = config_df['field'].apply(lambda x: x.strip())
+        value = config_df[config_df['field'] == 'data']['val'].values[0].strip().split('#')[0].strip()
+        self.assertEqual(value, '3')
+
 
     def test_create_test_config_file(self):
         self.create_test_config_file()
@@ -1012,7 +1035,7 @@ class PhameTest(BaseTestCase):
         self.add_user()
         self.upload_files()
         for f in os.listdir(os.path.join('project', 'tests', 'fixtures')):
-            if f.endswith('.fna') or f.endswith('.gff'):
+            if f.endswith('.gff'):
                 complete_genomes_list.append(f)
             if f.endswith('.fasta'):
                 contigs_list.append(f)
@@ -1029,6 +1052,30 @@ class PhameTest(BaseTestCase):
         soup = BeautifulSoup(str(response.data), "html.parser")
         self.assertEqual(soup.find(style='color: red;'), None)
         self.assertEqual(response.status_code, 302)
+
+    def test_input_full_plus_contigs(self):
+        # current_app.config['PROJECT_DIRECTORY'] = '/test'
+        print(current_app.config['PROJECT_DIRECTORY'])
+        current_app.config['PHAME_UPLOAD_DIR'] = os.path.join('/', 'test', 'uploads')
+        complete_genomes_list = []
+        reads_list, contigs_list = [], []
+        self.add_user()
+        self.upload_files()
+        for f in os.listdir(os.path.join('project', 'tests', 'fixtures')):
+            if f.endswith('.gff'):
+                complete_genomes_list.append(f)
+            if f.endswith('.fasta'):
+                contigs_list.append(f)
+            if f.endswith('.fastq'):
+                reads_list.append(f)
+        form = dict(complete_genomes=complete_genomes_list, reads=reads_list, contigs=contigs_list,
+                    project='test1', reference_file=complete_genomes_list[0], data_type=[0, 1])
+        with self.client:
+            self.login()
+            self.client.post(url_for('phame.input'),
+                             data=dict(form))
+            value = get_config_property(self.project_dir, 'data')
+            self.assertEqual(value, '3')
 
     def DO_NOT_test_project_subset(self):
         print(current_app.config['PROJECT_DIRECTORY'])

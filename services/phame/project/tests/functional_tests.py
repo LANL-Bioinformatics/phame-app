@@ -378,7 +378,7 @@ class SiteTest(unittest.TestCase):
         self.assertNotIn('GCA_000010485.contig.gz', self.driver.find_element_by_xpath("//textarea[@id='uploads']").text)
         # self.delete_user()
 
-    def test_upload_special_char_file(self):
+    def DO_NOT_test_upload_special_char_file(self):
         # self.create_user()
         self.login()
         self.remove_files()
@@ -599,10 +599,10 @@ class SiteTest(unittest.TestCase):
         finally:
             self.delete_projects([self.project, self.project_subset])
 
-    def test_run_project_reads(self):
+    def test_run_project_contig(self):
         self.login()
-        self.upload_files('SRR3359589_R1.fastq', 'SRR3359589_R2.fastq')
-        self.run_project('complete', 'read')
+        self.upload_files('GCA_000010485.contig.gz')
+        self.run_project('complete', 'contig')
 
 
 if __name__ == '__main__':
