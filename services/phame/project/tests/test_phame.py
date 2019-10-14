@@ -35,10 +35,11 @@ class PhameTest(BaseTestCase):
 
     def setUp(self):
         self.project_name = 'test1'
-        self.project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], 'mark', self.project_name)
+        self.user = 'mark'
+        self.project_dir = os.path.join(current_app.config['PROJECT_DIRECTORY'], self.user, self.project_name)
         self.ref_dir = os.path.join(self.project_dir, 'refdir')
         self.work_dir = os.path.join(self.project_dir, 'workdir')
-        self.upload_dir = os.path.join(current_app.config['UPLOAD_DIRECTORY'], 'mark')
+        self.upload_dir = os.path.join(current_app.config['UPLOAD_DIRECTORY'], self.user)
         db.create_all()
         db.session.commit()
 
@@ -130,13 +131,14 @@ class PhameTest(BaseTestCase):
                 os.remove(file_name)
 
     def create_test_config_file(self, field_dict=None):
-        form = dict(project=self.project_name, ref_dir=self.ref_dir,
-                    work_dir=self.work_dir, reference='1',
-                    reference_file='KJ660347.fasta', cds_snps='0',
-                    buildSNPdb='1', first_time='1', data_type='0',
-                    reads='1', aligner='bowtie', tree='1', bootstrap='1',
-                    N='100', pos_select='2', code='0', clean='0', threads='2',
-                    cutoff='0.2')
+        # Creates a default form that can be modified by field_dict
+        form = dict(project=[self.project_name], ref_dir=[self.ref_dir],
+                    work_dir=[self.work_dir], reference=['1'],
+                    reference_file=['KJ660347.fasta'], cds_snps=['0'],
+                    buildSNPdb=['1'], first_time=['1'], data_type=['0'],
+                    reads=['1'], aligner=['bowtie'], tree=['1'], bootstrap=['1'],
+                    N=['100'], pos_select=['2'], code=['0'], clean=['0'], threads=['2'],
+                    cutoff=['0.2'])
         if field_dict is not None:
             form[field_dict['field']] = field_dict['value']
         self.add_user()
@@ -149,9 +151,10 @@ class PhameTest(BaseTestCase):
         self.add_user()
         file_list, fname_list = [], []
         for f in os.listdir(os.path.join('project', 'tests', 'fixtures')):
-            file_list.append(
-                open(os.path.join('project', 'tests', 'fixtures', f), 'rb'))
-            fname_list.append(f)
+            if (f.endswith('.contig') or f.endswith('.fasta') or f.endswith('.fastq') or f.endswith('.fna') or f.endswith('.gff')):
+                file_list.append(
+                    open(os.path.join('project', 'tests', 'fixtures', f), 'rb'))
+                fname_list.append(f)
         data = dict(file=file_list)
         files = self.create_paths(
             os.path.join(current_app.config['PHAME_UPLOAD_DIR'], 'mark'),
@@ -455,13 +458,13 @@ class PhameTest(BaseTestCase):
                                'test1', 'workdir', 'results', 'test1.log'))
 
     def test_create_config_file(self):
-        form = dict(project=self.project_name, ref_dir=self.ref_dir,
-                    work_dir=self.work_dir, reference='1',
-                    reference_file='KJ660347.fasta', cds_snps='0',
-                    buildSNPdb='1', first_time='1', data_type=['0'],
-                    reads='1', aligner='bowtie', tree='1', bootstrap='1',
-                    N='100', pos_select='2', code='0',
-                    clean='0', threads='2', cutoff='0.2')
+        form = dict(project=[self.project_name], ref_dir=[self.ref_dir],
+                    work_dir=[self.work_dir], reference=['1'],
+                    reference_file=['KJ660347.fasta'], cds_snps='0',
+                    buildSNPdb=['1'], first_time=['1'], data_type=['0'],
+                    reads=['1'], aligner=['bowtie'], tree=['1'], bootstrap=['1'],
+                    N=['100'], pos_select=['2'], code=['0'],
+                    clean=['0'], threads=['2'], cutoff=['0.2'])
         self.add_user()
         os.makedirs(self.project_dir)
         with self.client:
@@ -532,13 +535,13 @@ class PhameTest(BaseTestCase):
 
     def test_create_config_file_with_contigs(self):
 
-        form = dict(project=self.project_name, ref_dir=self.ref_dir,
-                    work_dir=self.work_dir, reference='1',
-                    reference_file='KJ660347.fasta', cds_snps='0',
-                    buildSNPdb='1', first_time='1', data_type='3',
-                    reads='1', aligner='bowtie', tree='1', bootstrap='1',
-                    N='100', pos_select='2', code='0', clean='0',
-                    threads='2', cutoff='0.2')
+        form = dict(project=[self.project_name], ref_dir=[self.ref_dir],
+                    work_dir=[self.work_dir], reference=['1'],
+                    reference_file=['KJ660347.fasta'], cds_snps=['0'],
+                    buildSNPdb=['1'], first_time=['1'], data_type=['3'],
+                    reads=['1'], aligner=['bowtie'], tree=['1'], bootstrap=['1'],
+                    N=['100'], pos_select=['2'], code=['0'], clean=['0'],
+                    threads=['2'], cutoff=['0.2'])
         self.add_user()
         os.makedirs(self.project_dir)
         with self.client:
@@ -574,6 +577,8 @@ class PhameTest(BaseTestCase):
         self.assertEqual(value, '../test1/workdir/')
         value = get_config_property(self.project_dir, 'project')
         self.assertEqual(value, 'test1')
+        value = get_config_property(self.project_dir, 'data')
+        self.assertEqual(value, '0')
         value = get_config_property(self.project_dir, 'reffile')
         self.assertEqual(value, 'KJ660347.fasta')
         value = get_config_property(self.project_dir, 'buildSNPdb')
@@ -594,7 +599,8 @@ class PhameTest(BaseTestCase):
             self.assertFalse(value)
 
     def test_get_config_property_empty(self):
-        self.create_test_config_file({'field':'reference_file', 'value': ''})
+
+        self.create_test_config_file({'field':'reference_file', 'value': ['']})
         value = get_config_property(self.project_dir, 'reffile')
         print(value)
         self.assertEqual(value, None)
@@ -1026,7 +1032,7 @@ class PhameTest(BaseTestCase):
         for genome, fname in zip_list:
             self.assertEqual(genome.get_text(), fname)
 
-    def test_input_post(self):
+    def test_input_post_full_genomes(self):
         # current_app.config['PROJECT_DIRECTORY'] = '/test'
         print(current_app.config['PROJECT_DIRECTORY'])
         current_app.config['PHAME_UPLOAD_DIR'] = os.path.join('/', 'test', 'uploads')
@@ -1047,13 +1053,13 @@ class PhameTest(BaseTestCase):
             self.login()
             response = self.client.post(url_for('phame.input'),
                                         data=dict(form))
-        with open('project/tests/fixtures/test_input.html', 'w') as fp:
-            fp.write(str(response.data))
+        # with open('project/tests/fixtures/test_input.html', 'w') as fp:
+        #     fp.write(str(response.data))
         soup = BeautifulSoup(str(response.data), "html.parser")
         self.assertEqual(soup.find(style='color: red;'), None)
         self.assertEqual(response.status_code, 302)
 
-    def test_input_full_plus_contigs(self):
+    def test_input_post_full_genomes_contigs(self):
         # current_app.config['PROJECT_DIRECTORY'] = '/test'
         print(current_app.config['PROJECT_DIRECTORY'])
         current_app.config['PHAME_UPLOAD_DIR'] = os.path.join('/', 'test', 'uploads')
@@ -1072,10 +1078,15 @@ class PhameTest(BaseTestCase):
                     project='test1', reference_file=complete_genomes_list[0], data_type=[0, 1])
         with self.client:
             self.login()
-            self.client.post(url_for('phame.input'),
-                             data=dict(form))
-            value = get_config_property(self.project_dir, 'data')
-            self.assertEqual(value, '3')
+            response = self.client.post(url_for('phame.input'),
+                                        data=dict(form))
+        with open('project/tests/fixtures/test_input.html', 'w') as fp:
+            fp.write(str(response.data))
+        value = get_config_property(self.project_dir, 'data')
+        self.assertEqual(value, '3')
+        soup = BeautifulSoup(str(response.data), "html.parser")
+        self.assertEqual(soup.find(style='color: red;'), None)
+        self.assertEqual(response.status_code, 302)
 
     def DO_NOT_test_project_subset(self):
         print(current_app.config['PROJECT_DIRECTORY'])

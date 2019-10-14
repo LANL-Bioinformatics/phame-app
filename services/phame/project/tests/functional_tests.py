@@ -241,7 +241,7 @@ class SiteTest(unittest.TestCase):
                 "//input[@id='data_type-1']").click()
             self.driver.find_element_by_xpath("//select[@id='contigs']/following-sibling::div/button/span[@class='multiselect-selected-text']").click()
             self.driver.find_element_by_xpath(
-                "//input[@value='multiselect-all']").click()
+                "//input[@value='GCA_000010485.contig']").click()
         if 'read' in options:
             self.driver.find_element_by_xpath(
                 "//input[@id='data_type-2']").click()
@@ -603,7 +603,29 @@ class SiteTest(unittest.TestCase):
         self.login()
         self.upload_files('GCA_000010485.contig.gz')
         self.run_project('complete', 'contig')
+        self.wait_task_success(self.project)
+        self.driver.get(
+            self.url + f"/display/{self.operator_credentials['PHAME_USER_USERNAME']}/{self.project}")
+        run_summary = self.driver.find_element_by_xpath(
+            '//*[@class="dataframe run_summary"]/thead').text
+        self.assertIn(
+            '# of genomes analyzed # of contigs # of reads # of full genomes reference genome used project name',
+            run_summary)
+        self.assertEqual('4', self.driver.find_element_by_xpath(
+            '//*[@class="dataframe run_summary"]/tbody/tr/td[1]').text)
+        self.assertEqual('1', self.driver.find_element_by_xpath(
+            '//*[@class="dataframe run_summary"]/tbody/tr/td[2]').text)
+        self.assertEqual('KJ660347', self.driver.find_element_by_xpath(
+            '//*[@class="dataframe run_summary"]/tbody/tr/td[5]').text)
+        self.assertEqual(self.project, self.driver.find_element_by_xpath(
+            '//*[@class="dataframe run_summary"]/tbody/tr/td[6]').text)
 
+        self.assertEqual('GCA_000010485_contig', self.driver.find_element_by_xpath(
+            '//*[@class="dataframe coverage"]/tbody/tr/td[1]').text)
+        self.assertEqual('18959', self.driver.find_element_by_xpath(
+            '//*[@class="dataframe coverage"]/tbody/tr/td[2]').text)
+        self.assertEqual('0.0', self.driver.find_element_by_xpath(
+            '//*[@class="dataframe coverage"]/tbody/tr/td[3]').text)
 
 if __name__ == '__main__':
     unittest.main()
