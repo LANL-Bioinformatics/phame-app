@@ -1,2 +1,0 @@
-HTTP_PROXY=http://proxyout.lanl.gov:8080
-HTTPS_PROXY=http://proxout.lanl.gov:8080

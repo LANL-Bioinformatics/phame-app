@@ -11,8 +11,6 @@ services:
     build:
       context: ./services/nginx
       dockerfile: Dockerfile-dev
-    env_file:
-      - ./.envs/.test/.proxy
     restart: always
     ports:
       - 80:80
@@ -24,8 +22,9 @@ services:
     build:
       context: ./services/phame-app
       dockerfile: Dockerfile
-    env_file:
-      - ./.envs/.test/.proxy
+      args:
+        http_proxy: http://proxyout.lanl.gov:8080
+        https_proxy: http://proxyout.lanl.gov:8080
     depends_on:
       - redis
     expose:
@@ -39,6 +38,9 @@ services:
     build:
       context: ./services/phame
       dockerfile: Dockerfile-dev
+      args:
+        http_proxy: http://proxyout.lanl.gov:8080
+        https_proxy: http://proxyout.lanl.gov:8080
     volumes:
       - './services/phame:/usr/src/app'
       - phame_data:/phame_api/media
@@ -62,6 +64,9 @@ services:
     build:
       context: ./services/phame/project/db
       dockerfile: Dockerfile
+      args:
+        http_proxy: http://proxyout.lanl.gov:8080
+        https_proxy: http://proxyout.lanl.gov:8080
     volumes:
       - postgres_data_local:/var/lib/postgresql/data
       - postgres_backup_local:/backups
@@ -75,10 +80,11 @@ services:
     build:
       context: ./services/celery-queue
       dockerfile: Dockerfile
+      args:
+        http_proxy: http://proxyout.lanl.gov:8080
+        https_proxy: http://proxyout.lanl.gov:8080
     ports:
      - "5555:5555"
-    env_file:
-      - ./.envs/.test/.proxy
     entrypoint: flower
     command:  -A tasks --port=5555 --broker=redis://redis:6379/0
     depends_on:
