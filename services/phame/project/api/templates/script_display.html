@@ -1,0 +1,97 @@
+<html>
+    <head>
+
+       <link rel="stylesheet" href="static/css/jquery.mobile.1.4.3.min.css">
+    <link rel="stylesheet" href="static/css/bootstrap.min.css">
+    <script type="text/javascript" src="static/javascript/jquery-2.1.1.min.js"></script>
+    <script type="text/javascript" src="static/javascript/uploadr.js"></script>
+
+    <link rel="stylesheet" href="static/css/jquery.mobile.1.4.3.min.css">
+
+    <link rel="stylesheet" href="static/css/bootstrap.min.css">
+<script type="text/javascript" src="static/javascript/jquery-2.1.1.min.js"></script>
+<script type="text/javascript" src="static/javascript/bootstrap.min.js"></script>
+
+<style>
+  .jumbotron {
+    margin-bottom: 10px;
+    height: 200px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+	.navbar {
+	    margin-bottom: 0;
+	    background-color: #2d2d30;
+	    border: 0;
+	    font-size: 11px !important;
+	    letter-spacing: 4px;
+	    opacity:0.9;
+	}
+
+	/* Add a gray color to all navbar links */
+	.navbar li a, .navbar .navbar-brand {
+		    color: #d5d5d5 !important;
+	}
+
+	/* On hover, the links will turn white */
+	.navbar-nav li a:hover {
+		    color: #fff !important;
+	}
+
+	/* The active link */
+	.navbar-nav li.active a {
+		    color: #fff !important;
+			        background-color:#29292c !important;
+	}
+
+	/* Remove border color from the collapsible button */
+	.navbar-default .navbar-toggle {
+		    border-color: transparent;
+	}
+  .main {
+    margin-top: 80px;
+    margin-left: 150px;
+  }
+
+    </style>
+    <!-- For MS IE/Edge compatibility:-->
+    <meta http-equiv="X-UA-Compatible" content="IE=100">
+
+
+    <!-- CSS for jQuery UI: -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.0/themes/base/jquery-ui.css">
+
+
+
+  <link rel=stylesheet type=text/css href="static/css/phame-output.css">
+  <link rel=stylesheet type=text/css href="static/css/phame-loading.css">
+
+    <script src="static/javascript/jquery-1.12.4.js"></script>
+    <script src="static/javascript/jquery-ui.js"></script>
+    <script>
+        function preloader(){
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("content").style.display = "block";
+            }//preloader
+            window.onload = preloader;
+    </script>
+    </head>
+    <body>
+        <div class="container">
+
+        </div>
+        <div class="main">
+
+
+        <div id="loading"></div>
+<div id="content">
+
+  <div>
+  {% for table1 in tables %}
+    <h2>{{titles[loop.index-1]}}</h2>
+    {{ table1|safe }}
+  {% endfor %}
+  </div>
+        </div>
+    </body>
+</html>
