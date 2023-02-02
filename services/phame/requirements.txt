@@ -30,7 +30,7 @@ requests
 selenium
 tornado==5.0.2
 vine==1.1.4
-Werkzeug==0.15.3
+Werkzeug==0.15.5
 requests
 IPython
-Werkzeug==0.15.3
+Werkzeug==0.15.5
