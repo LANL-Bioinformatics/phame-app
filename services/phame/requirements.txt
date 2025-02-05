@@ -28,7 +28,7 @@ pyyaml
 redis==4.4.4
 requests
 selenium
-tornado==5.0.2
+tornado==6.4.2
 vine==1.1.4
 Werkzeug==0.15.3
 requests
