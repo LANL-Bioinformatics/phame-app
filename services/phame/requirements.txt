@@ -15,7 +15,7 @@ flask_migrate==2.2.0
 Flask-SQLAlchemy==2.3.2
 Flask-Testing==0.6.2
 flask-wtf
-gunicorn==19.9.0
+gunicorn==23.0.0
 itsdangerous==0.24
 Jinja2==3.1.6
 kombu==4.2.0
